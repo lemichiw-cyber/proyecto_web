@@ -2,7 +2,7 @@
   "name": "INCOA",
   "short_name": "INCOA",
   "description": "Plataforma educativa del Instituto Nacional de la Colonia Ciudad Obrera de Apopa.",
-  "start_url": "plataforma-eventos-escolares.html",
+  "start_url": "index.html",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",

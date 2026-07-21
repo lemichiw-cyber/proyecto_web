@@ -1,6 +1,6 @@
 var CACHE_NAME = 'edugest-v4';
 var urlsToCache = [
-  'plataforma-eventos-escolares.html',
+  'index.html',
   'manifest.json',
   'icon-192.png',
   'icon-512.png'
