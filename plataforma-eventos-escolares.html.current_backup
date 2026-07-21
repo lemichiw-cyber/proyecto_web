@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="EduGest — Ecosistema integral para bachilleratos: gestión académica, picker, recursos digitales, analítica y más.">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="EduGest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>EduGest · Bachillerato</title>
+  <style>
+    :root {
+      --primary: #2563eb; --primary-dark: #1d4ed8; --primary-light: #dbebff;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+      --gray-300: #d1d5db; --gray-500: #6b7280; --gray-700: #374151; --gray-900: #111827;
+      --radius: 12px; --green: #16a34a; --green-light: #dcfce7;
+      --red: #dc2626; --red-light: #fef2f2; --amber: #d97706; --amber-light: #fef3c7;
+      --purple: #7c3aed; --purple-light: #ede9fe; --teal: #0d9488; --teal-light: #ccfbf1;
+      --pink: #db2777; --pink-light: #fce7f3; --orange: #ea580c; --orange-light: #ffedd5;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color: var(--gray-900); background: #fff; line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+    @media (min-width: 768px) { .container { padding: 0 1.5rem; } }
+    .hidden { display: none !important; }
+
+    /* ===== HEADER ===== */
+    .app-header { background: #fff; border-bottom: 1px solid var(--gray-200); padding: .6rem 0; position: sticky; top: 0; z-index: 100; }
+    .app-header .container { display: flex; align-items: center; gap: .5rem; }
+    .logo-link { display: flex; align-items: center; gap: .5rem; text-decoration: none; color: var(--gray-900); font-weight: 800; font-size: 1.1rem; flex-shrink: 0; }
+    .logo-link svg { width: 28px; height: 28px; flex-shrink: 0; }
+    .main-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex: 1; }
+    .main-nav::-webkit-scrollbar { display: none; }
+    .main-nav ul { display: flex; gap: .15rem; list-style: none; white-space: nowrap; padding: .15rem 0; }
+    .main-nav a { padding: .4rem .6rem; border-radius: 8px; text-decoration: none; color: var(--gray-600); font-weight: 500; font-size: .78rem; transition: .2s; cursor: pointer; display: inline-block; }
+    .main-nav a:hover, .main-nav a.active { background: var(--primary-light); color: var(--primary); }
+
+    /* ===== BUTTONS ===== */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .55rem 1rem; border: none; border-radius: 10px; font: inherit; font-weight: 600; font-size: .85rem; cursor: pointer; transition: .2s; text-decoration: none; min-height: 40px; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+    .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-sm { padding: .35rem .7rem; font-size: .78rem; min-height: 32px; }
+    .btn-block { width: 100%; }
+
+    /* ===== SECTIONS ===== */
+    .section { padding: 2rem 0; }
+    .section-title { text-align: center; font-size: 1.3rem; margin-bottom: .3rem; padding: 0 1rem; }
+    .section-sub { text-align: center; color: var(--gray-500); margin-bottom: 1.5rem; font-size: .88rem; padding: 0 1rem; }
+    .bg-gray { background: var(--gray-50); }
+
+    /* ===== APP GRID ===== */
+    .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+    @media (min-width: 480px) { .app-grid { grid-template-columns: repeat(3, 1fr); } }
+    .app-card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 1rem .75rem; text-align: center; cursor: pointer; transition: .15s; }
+    .app-card:active { background: var(--gray-50); }
+    .app-card .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto .4rem; font-weight: 800; font-size: 1rem; }
+    .app-card h4 { font-size: .82rem; margin-bottom: .15rem; }
+    .app-card p { font-size: .7rem; color: var(--gray-500); }
+
+    /* ===== FORMS ===== */
+    .form-group { margin-bottom: .75rem; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: .25rem; font-size: .82rem; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: .65rem .75rem; border: 1px solid var(--gray-300); border-radius: 10px; font: inherit; font-size: .9rem; transition: .2s; -webkit-appearance: none; appearance: none; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .form-row { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .form-row .form-group { flex: 1; min-width: 140px; }
+
+    /* ===== TABLE ===== */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -.5rem; padding: 0 .5rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .78rem; min-width: 500px; }
+    th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--gray-200); }
+    th { background: var(--gray-100); font-weight: 600; white-space: nowrap; }
+    tfoot td { background: var(--gray-50); font-weight: 600; border-top: 2px solid var(--gray-300); }
+
+    /* ===== BADGES ===== */
+    .badge { display: inline-block; font-size: .65rem; font-weight: 600; padding: .12rem .45rem; border-radius: 99px; white-space: nowrap; }
+    .badge-blue { background: var(--primary-light); color: var(--primary); }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-amber { background: var(--amber-light); color: var(--amber); }
+    .badge-red { background: var(--red-light); color: var(--red); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+    .badge-orange { background: var(--orange-light); color: var(--orange); }
+    .badge-teal { background: var(--teal-light); color: var(--teal); }
+    .badge-pink { background: var(--pink-light); color: var(--pink); }
+
+    /* ===== CARD ===== */
+    .card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 1.25rem; }
+    .card h3 { font-size: .95rem; margin-bottom: .85rem; display: flex; align-items: center; gap: .5rem; }
+
+    /* ===== TOAST ===== */
+    .toast { position: fixed; bottom: 1.5rem; left: 1rem; right: 1rem; padding: .85rem 1.25rem; border-radius: var(--radius); color: #fff; font-weight: 600; font-size: .88rem; text-align: center; transform: translateY(calc(100% + 2rem)); opacity: 0; transition: .35s; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: var(--green); }
+    .toast-error { background: var(--red); }
+
+    /* ===== LAYOUT ===== */
+    .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .6rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    .grid-3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+    @media (min-width: 480px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+    .grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+
+    /* ===== STATS ===== */
+    .stat-box { text-align: center; padding: .85rem .5rem; background: var(--gray-50); border-radius: 10px; }
+    .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+    .stat-label { font-size: .72rem; color: var(--gray-500); }
+
+    /* ===== EMPTY ===== */
+    .empty-msg { text-align: center; padding: 1.5rem; color: var(--gray-500); font-style: italic; font-size: .85rem; }
+
+    /* ===== PICKER ===== */
+    .picker-stage { max-width: 100%; margin: 0 auto; text-align: center; }
+    .picker-display { width: 160px; height: 160px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 1.4rem; font-weight: 800; padding: .5rem; text-align: center; word-break: break-word; transition: .15s; box-shadow: 0 8px 24px rgba(37,99,235,.25); }
+    @media (min-width: 480px) { .picker-display { width: 200px; height: 200px; font-size: 1.7rem; } }
+    .picker-spinning { animation: pulse .4s infinite alternate; }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+
+    .progress-bar { height: 6px; background: var(--gray-200); border-radius: 99px; overflow: hidden; margin: .4rem 0; }
+    .progress-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width .4s; }
+
+    /* ===== TABS ===== */
+    .tab-bar { display: flex; gap: 0; background: var(--gray-100); border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
+    .tab-bar button { flex: 1; padding: .5rem .4rem; border: none; background: transparent; font-weight: 600; font-size: .78rem; cursor: pointer; transition: .2s; color: var(--gray-500); white-space: nowrap; }
+    .tab-bar button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.06); border-radius: 8px; margin: 2px; }
+
+    /* ===== EXAM VIEWS ===== */
+    .exam-creator .pregunta-item { background: var(--gray-50); border-radius: 10px; padding: 1rem; margin-bottom: .75rem; border-left: 3px solid var(--primary); }
+    .exam-creator .pregunta-item .opt-row { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
+    .exam-creator .pregunta-item .opt-row input[type="text"] { flex: 1; padding: .4rem .6rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: .85rem; }
+    .exam-creator .pregunta-item .opt-row input[type="radio"] { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+    .exam-creator .pregunta-item .opt-label { font-size: .8rem; font-weight: 600; color: var(--gray-500); min-width: 20px; }
+    .pregunta-textarea { width: 100%; padding: .5rem .7rem; border: 1px solid var(--gray-300); border-radius: 8px; font: inherit; font-size: .88rem; resize: vertical; min-height: 50px; margin-bottom: .4rem; }
+
+    .exam-student .exam-info { text-align: center; padding: 1.5rem; }
+    .exam-student .timer { font-size: 2.5rem; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; }
+    .exam-student .timer.warning { color: var(--amber); }
+    .exam-student .timer.danger { color: var(--red); animation: pulse .6s infinite alternate; }
+    .exam-student .q-block { background: var(--gray-50); border-radius: 10px; padding: 1rem; margin-bottom: .75rem; }
+    .exam-student .q-block .q-text { font-weight: 600; margin-bottom: .5rem; font-size: .95rem; }
+    .exam-student .q-block .opt-row { display: flex; align-items: center; gap: .6rem; padding: .4rem; border-radius: 8px; cursor: pointer; transition: .1s; }
+    .exam-student .q-block .opt-row:hover { background: var(--gray-100); }
+    .exam-student .q-block .opt-row input[type="radio"] { width: 18px; height: 18px; cursor: pointer; }
+    .exam-resultado { text-align: center; padding: 2rem; border-radius: var(--radius); }
+    .exam-resultado.aprobado { background: var(--green-light); color: var(--green); }
+    .exam-resultado.reprobado { background: var(--red-light); color: var(--red); }
+    .exam-resultado .nota { font-size: 3rem; font-weight: 800; }
+    .exam-resultado .mensaje { font-size: 1.1rem; font-weight: 600; margin-top: .5rem; }
+
+    /* ===== SEMESTRE ===== */
+    .semestre-badge { display: inline-block; font-size: .65rem; font-weight: 600; padding: .12rem .4rem; border-radius: 4px; background: var(--gray-100); color: var(--gray-700); white-space: nowrap; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; justify-content: center; align-items: flex-end; padding: 1rem; }
+    @media (min-width: 500px) { .modal-overlay { align-items: center; } }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: var(--radius) var(--radius) 0 0; padding: 1.5rem; max-width: 400px; width: 100%; box-shadow: 0 -8px 24px rgba(0,0,0,.1); max-height: 90vh; overflow-y: auto; }
+    @media (min-width: 500px) { .modal { border-radius: var(--radius); } }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray-500); padding: .25rem; line-height: 1; }
+
+    /* ===== HERO ===== */
+    .hero-section { background: linear-gradient(135deg,#1e3a5f,#2563eb,#1d4ed8); color: #fff; padding: 3rem 1rem 2.5rem; text-align: center; }
+    .hero-section h1 { font-size: 1.6rem; line-height: 1.25; margin-bottom: .6rem; }
+    .hero-section p { font-size: .9rem; opacity: .9; max-width: 500px; margin: 0 auto 1.25rem; }
+
+    /* ===== FOOTER ===== */
+    .app-footer { background: var(--gray-900); color: var(--gray-400); padding: 1.5rem 0; text-align: center; font-size: .78rem; }
+    .app-footer a { color: var(--gray-400); }
+
+    /* ===== UTILITIES ===== */
+    .mt-0 { margin-top: 0; }
+    .mb-0 { margin-bottom: 0; }
+    .gap-0 { gap: 0; }
+    .w-full { width: 100%; }
+
+    @media (max-width: 480px) {
+      .hide-mobile { display: none !important; }
+      .section-title { font-size: 1.15rem; }
+      .app-header { padding: .4rem 0; }
+      .logo-link { font-size: .95rem; gap: .35rem; }
+      .logo-link svg { width: 24px; height: 24px; }
+      .main-nav a { font-size: .72rem; padding: .3rem .5rem; }
+      .btn { font-size: .8rem; padding: .5rem .85rem; min-height: 36px; }
+      .card { padding: 1rem; }
+      .grid-3 { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+      .stat-num { font-size: 1.3rem; }
+      .picker-display { width: 130px; height: 130px; font-size: 1.1rem; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+
+    @media (min-width: 481px) and (max-width: 768px) {
+      .hero-section { padding: 3.5rem 1.5rem 3rem; }
+      .hero-section h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="app-header">
+    <div class="container">
+      <a href="#" class="logo-link" onclick="mostrarApp(null)">
+        <svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#2563eb"/><text x="16" y="22" text-anchor="middle" font-family="system-ui" font-size="18" font-weight="bold" fill="white">B</text></svg>
+        <span>EduGest · Bachillerato</span>
+      </a>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul>
+          <li><a data-app="inicio" class="active">Inicio</a></li>
+          <li><a data-app="picker">Picker</a></li>
+          <li><a data-app="digital">Digital</a></li>
+          <li><a data-app="parents">Parents</a></li>
+          <li><a data-app="auth">Auth</a></li>
+          <li><a data-app="experiencias">Experiencias</a></li>
+          <li><a data-app="examenes">Exámenes</a></li>
+          <li><a data-app="tareas">Tareas</a></li>
+          <li><a data-app="asistencias">Asistencias</a></li>
+          <li><a data-app="sabi">SABI</a></li>
+        </ul>
+      </nav>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <button class="btn btn-outline btn-sm" id="btn-login">Ingresar</button>
+        <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
+          <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
+          <button class="btn btn-sm" id="btn-logout" style="background:var(--gray-100);color:var(--gray-700);">Salir</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== LOGIN MODAL ========== -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal">
+      <div class="flex-between"><h3>Iniciar sesión</h3><button class="modal-close" id="modal-login-close">&times;</button></div>
+      <form id="form-login">
+        <div class="form-group"><label>Correo institucional</label><input type="email" id="login-email" placeholder="profesor@bachillerato.edu" required></div>
+        <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" required minlength="6"></div>
+        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+        <div id="login-error" class="alert alert-error" role="alert" hidden style="margin-top:.75rem;background:var(--red-light);color:#991b1b;border:1px solid #fecaca;padding:.65rem 1rem;border-radius:8px;font-size:.85rem;">Credenciales inválidas.</div>
+      </form>
+      <p style="margin-top:.75rem;font-size:.8rem;text-align:center;color:var(--gray-500);"><a href="#" id="link-olvide">Olvidé mi contraseña</a></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+  <!-- ========== MAIN ========== -->
+  <main>
+
+    <!-- ===== INICIO ===== -->
+    <section id="app-inicio">
+      <div class="hero-section">
+        <div class="container">
+          <p style="font-size:.8rem;text-transform:uppercase;letter-spacing:2px;opacity:.7;margin-bottom:.5rem;">Ecosistema Integral para Bachilleratos</p>
+          <h1 style="font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.2;margin-bottom:.75rem;">Tu bachillerato, más inteligente</h1>
+          <p style="font-size:1rem;opacity:.9;max-width:600px;margin:0 auto 1.5rem;">6 aplicaciones diseñadas para estudiantes, docentes, coordinadores y padres de familia en educación media superior.</p>
+          <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
+            <button class="btn" style="background:#fff;color:var(--primary);" onclick="document.getElementById('btn-login').click()">Ingresar ahora</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="section" style="padding:2.5rem 0;">
+        <div class="container">
+          <div class="app-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));">
+            <div class="app-card" onclick="mostrarApp('picker')"><div class="icon" style="background:var(--purple-light);color:var(--purple);">P</div><h4>Picker</h4><p>Participación en el aula</p></div>
+            <div class="app-card" onclick="mostrarApp('digital')"><div class="icon" style="background:var(--green-light);color:var(--green);">D</div><h4>Digital</h4><p>Recursos de bachillerato</p></div>
+            <div class="app-card" onclick="mostrarApp('parents')"><div class="icon" style="background:var(--amber-light);color:var(--amber);">P</div><h4>Parents</h4><p>Seguimiento académico</p></div>
+            <div class="app-card" onclick="mostrarApp('auth')"><div class="icon" style="background:var(--primary-light);color:var(--primary);">A</div><h4>Auth</h4><p>Usuarios y roles</p></div>
+            <div class="app-card" onclick="mostrarApp('experiencias')"><div class="icon" style="background:var(--pink-light);color:var(--pink);">E</div><h4>Experiencias</h4><p>Rutas de aprendizaje</p></div>
+            <div class="app-card" onclick="mostrarApp('examenes')"><div class="icon" style="background:var(--purple-light);color:var(--purple);">E</div><h4>Exámenes</h4><p>Creador y simulador</p></div>
+            <div class="app-card" onclick="mostrarApp('asistencias')"><div class="icon" style="background:var(--orange-light);color:var(--orange);">A</div><h4>Asistencias</h4><p>Control de asistencia</p></div>
+            <div class="app-card" onclick="mostrarApp('tareas')"><div class="icon" style="background:var(--pink-light);color:var(--pink);">T</div><h4>Tareas</h4><p>Sube tus trabajos</p></div>
+            <div class="app-card" onclick="mostrarApp('sabi')"><div class="icon" style="background:var(--teal-light);color:var(--teal);">S</div><h4>SABI</h4><p>Analítica educativa</p></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ===== PICKER ===== -->
+    <section id="app-picker" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#127922; Picker · Participación en Bachillerato</h2>
+        <p class="section-sub">Selecciona estudiantes al azar para promover la participación equitativa en clase.</p>
+        <div class="grid-2">
+          <div class="card picker-stage">
+            <div class="picker-display" id="picker-display">—</div>
+            <div class="flex-between" style="margin-bottom:.75rem;">
+              <select id="picker-grupo" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;flex:1;margin-right:.5rem;">
+                <option value="todos">Todos los grupos</option>
+                <option value="1A">1° Semestre A</option>
+                <option value="1B">1° Semestre B</option>
+                <option value="2A">2° Semestre A</option>
+                <option value="2B">2° Semestre B</option>
+                <option value="3A">3° Semestre A</option>
+                <option value="3B">3° Semestre B</option>
+              </select>
+              <button class="btn btn-primary" id="btn-picker-spin">&#9654; Girar</button>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="picker-progress" style="width:0%"></div></div>
+            <p style="font-size:.82rem;color:var(--gray-500);margin-top:.5rem;">&#128337; Últimos seleccionados:</p>
+            <div id="picker-history" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem;"></div>
+          </div>
+          <div class="card">
+            <div class="flex-between"><h3>&#128221; Estudiantes del grupo</h3><button class="btn btn-outline btn-sm" id="btn-picker-add">+ Agregar</button></div>
+            <div id="picker-list"><div class="empty-msg">No hay estudiantes registrados.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== DIGITAL ===== -->
+    <section id="app-digital" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#128214; Digital · Recursos para Bachillerato</h2>
+        <p class="section-sub">Biblioteca digital con libros, guías y materiales para educación media superior.</p>
+        <div class="flex-between" style="margin-bottom:1.5rem;">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <select id="digital-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <option value="todos">Todos</option>
+              <option value="matematicas">Matemáticas</option>
+              <option value="fisica">Física</option>
+              <option value="quimica">Química</option>
+              <option value="biologia">Biología</option>
+              <option value="literatura">Literatura</option>
+              <option value="historia">Historia</option>
+              <option value="ingles">Inglés</option>
+            </select>
+            <input type="text" id="digital-buscar" placeholder="Buscar recurso..." style="padding:.5rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;min-width:180px;">
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-digital-add">+ Subir recurso</button>
+        </div>
+        <div id="digital-grid" class="grid-3"></div>
+      </div>
+    </section>
+
+    <!-- ===== PARENTS ===== -->
+    <section id="app-parents" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#128101; Parents · Seguimiento de Bachillerato</h2>
+        <p class="section-sub">Panel para padres de familia con información académica en tiempo real de sus hijos.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>&#128200; Rendimiento académico</h3>
+            <div class="grid-4" style="margin-bottom:1rem;">
+              <div class="stat-box"><div class="stat-num" id="parent-promedio">8.6</div><div class="stat-label">Promedio general</div></div>
+              <div class="stat-box"><div class="stat-num" id="parent-asistencia">95%</div><div class="stat-label">Asistencia</div></div>
+              <div class="stat-box"><div class="stat-num" id="parent-actividades">12</div><div class="stat-label">Actividades</div></div>
+              <div class="stat-box"><div class="stat-num" id="parent-pendientes">2</div><div class="stat-label">Pendientes</div></div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:95%"></div></div>
+            <p style="font-size:.82rem;color:var(--gray-500);">Progreso del semestre</p>
+          </div>
+          <div class="card">
+            <div class="flex-between"><h3>&#128276; Notificaciones del bachillerato</h3></div>
+            <div id="parent-notif"><div class="empty-msg">Sin notificaciones recientes.</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1.25rem;">
+          <h3>&#128220; Calificaciones por materia</h3>
+          <div id="parent-calif-grid" class="grid-3"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== AUTH ===== -->
+    <section id="app-auth" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#128272; Auth · Usuarios del Bachillerato</h2>
+        <p class="section-sub">Gestión de cuentas de docentes, estudiantes, coordinadores y padres de familia.</p>
+        <div class="flex-between" style="margin-bottom:1rem;">
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="auth-buscar" placeholder="Buscar usuario..." style="padding:.5rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;min-width:200px;">
+            <select id="auth-rol-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <option value="todos">Todos los roles</option>
+              <option value="director">Director</option>
+              <option value="coordinador">Coordinador</option>
+              <option value="docente">Docente</option>
+              <option value="estudiante">Estudiante</option>
+              <option value="padre">Padre</option>
+            </select>
+            <select id="auth-semestre-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <option value="todos">Todos los semestres</option>
+              <option value="1">1° Semestre</option>
+              <option value="2">2° Semestre</option>
+              <option value="3">3° Semestre</option>
+              <option value="4">4° Semestre</option>
+              <option value="5">5° Semestre</option>
+              <option value="6">6° Semestre</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-auth-add">+ Nuevo usuario</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">Usuario</th><th scope="col">Nombre</th><th scope="col">Rol</th><th scope="col">Semestre</th><th scope="col">Estado</th><th scope="col">Acción</th></tr></thead>
+          <tbody id="auth-tabla"></tbody>
+          <tfoot><tr><td colspan="4"><strong>Total</strong></td><td id="auth-total" colspan="2"><strong>6 usuarios</strong></td></tr></tfoot>
+        </table></div>
+        <div id="auth-empty" class="empty-msg hidden">Sin resultados.</div>
+      </div>
+    </section>
+
+    <!-- ===== EXPERIENCIAS ===== -->
+    <section id="app-experiencias" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#127775; Experiencias · Aprendizaje en Bachillerato</h2>
+        <p class="section-sub">Rutas de aprendizaje personalizadas para estudiantes de educación media superior.</p>
+        <div class="flex-between" style="margin-bottom:1.25rem;">
+          <div class="tab-bar" id="exp-tabs" style="width:auto;">
+            <button class="active" data-exp-tab="disponibles">Disponibles</button>
+            <button data-exp-tab="creadas">Mis creaciones</button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-exp-crear">+ Crear experiencia</button>
+        </div>
+        <div id="exp-grid" class="grid-3"></div>
+      </div>
+    </section>
+
+    <!-- ===== EXÁMENES (Profesor + Estudiante) ===== -->
+    <section id="app-examenes" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#128221; Exámenes</h2>
+        <p class="section-sub">Crea exámenes como profesor o simúlalos como estudiante.</p>
+
+        <div class="tab-bar" style="max-width:350px;margin:0 auto 1.5rem;">
+          <button class="active" data-exam-tab="profesor">👨‍🏫 Profesor</button>
+          <button data-exam-tab="estudiante">👨‍🎓 Estudiante</button>
+        </div>
+
+        <!-- ===== TAB PROFESOR: CREADOR ===== -->
+        <div id="exam-tab-profesor">
+          <div class="card exam-creator">
+            <h3>&#9997; Crear nuevo examen</h3>
+            <div class="form-row">
+              <div class="form-group"><label>Título del examen <strong>*</strong></label><input type="text" id="exam-titulo" placeholder="Ej: Examen de Cálculo Diferencial"></div>
+              <div class="form-group" style="max-width:160px;"><label>Tiempo (minutos) <strong>*</strong></label><input type="number" id="exam-tiempo" min="1" max="180" value="60"></div>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
+            <div class="flex-between" style="margin-bottom:.75rem;">
+              <h3 style="font-size:.9rem;margin:0;">&#128220; Preguntas</h3>
+              <button class="btn btn-primary btn-sm" id="btn-exam-add-q">+ Añadir pregunta</button>
+            </div>
+            <div id="exam-q-list"></div>
+            <div style="margin-top:1rem;">
+              <button class="btn btn-primary" id="btn-exam-guardar">💾 Guardar examen</button>
+              <span id="exam-guardar-msg" style="margin-left:.75rem;font-size:.85rem;color:var(--green);"></span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:1rem;">
+            <h3>&#128203; Exámenes guardados</h3>
+            <div id="exam-lista-guardados"></div>
+          </div>
+        </div>
+
+        <!-- ===== TAB ESTUDIANTE: SIMULADOR ===== -->
+        <div id="exam-tab-estudiante" class="hidden">
+          <div id="exam-selector" class="card exam-student">
+            <h3>&#128218; Seleccionar examen</h3>
+            <div class="form-row" style="align-items:end;">
+              <div class="form-group"><label>Examen disponible</label>
+                <select id="exam-select">
+                  <option value="">— Sin exámenes disponibles —</option>
+                </select>
+              </div>
+              <div style="padding-bottom:.85rem;"><button class="btn btn-primary" id="btn-exam-start">&#9654; Comenzar</button></div>
+            </div>
+          </div>
+
+          <div id="exam-simulador" class="hidden">
+            <div class="card exam-student" style="text-align:center;">
+              <div class="flex-between" style="justify-content:center;gap:2rem;">
+                <div><p style="font-size:.8rem;color:var(--gray-500);">Tiempo restante</p><div class="timer" id="exam-timer">00:00</div></div>
+                <div><p style="font-size:.8rem;color:var(--gray-500);">Progreso</p><div style="font-size:1.5rem;font-weight:800;color:var(--primary);" id="exam-progress">0/0</div></div>
+              </div>
+              <div class="progress-bar" style="max-width:400px;margin:.75rem auto;"><div class="progress-fill" id="exam-progress-bar" style="width:0%"></div></div>
+            </div>
+
+            <div id="exam-preguntas" class="exam-student" style="margin-top:.75rem;"></div>
+
+            <div style="text-align:center;margin-top:1rem;">
+              <button class="btn btn-danger" id="btn-exam-enviar">&#128681; Enviar examen</button>
+            </div>
+          </div>
+
+          <div id="exam-resultado" class="hidden exam-resultado" style="margin-top:1rem;">
+            <div class="nota" id="exam-nota">0/0</div>
+            <div class="mensaje" id="exam-mensaje"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ASISTENCIAS ===== -->
+    <section id="app-asistencias" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#128203; Asistencias · Control diario</h2>
+        <p class="section-sub">Registra la asistencia de tus estudiantes por grupo y fecha.</p>
+
+        <div class="flex-between" style="margin-bottom:1rem;">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;flex:1;">
+            <select id="asist-grupo" style="padding:.55rem;border:1px solid var(--gray-300);border-radius:10px;font:inherit;font-size:.85rem;flex:1;min-width:140px;">
+              <option value="1A">1° Semestre A</option>
+              <option value="1B">1° Semestre B</option>
+              <option value="2A">2° Semestre A</option>
+              <option value="2B">2° Semestre B</option>
+              <option value="3A">3° Semestre A</option>
+              <option value="3B">3° Semestre B</option>
+            </select>
+            <input type="date" id="asist-fecha" style="padding:.55rem;border:1px solid var(--gray-300);border-radius:10px;font:inherit;font-size:.85rem;flex:1;min-width:140px;">
+            <button class="btn btn-outline btn-sm" id="btn-asist-marcar-todos">✓ Marcar todos</button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-asist-guardar">💾 Guardar</button>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;background:var(--gray-100);font-weight:600;font-size:.78rem;padding:.6rem .75rem;border-bottom:1px solid var(--gray-200);">
+            <span>Estudiante</span>
+            <span style="text-align:center;">Estado</span>
+            <span style="text-align:right;">Acción</span>
+          </div>
+          <div id="asist-lista"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1rem;">
+          <div class="stat-box"><div class="stat-num" id="asist-presentes" style="color:var(--green);">0</div><div class="stat-label">Presentes</div></div>
+          <div class="stat-box"><div class="stat-num" id="asist-ausentes" style="color:var(--red);">0</div><div class="stat-label">Ausentes</div></div>
+          <div class="stat-box"><div class="stat-num" id="asist-justificados" style="color:var(--amber);">0</div><div class="stat-label">Justificados</div></div>
+        </div>
+
+        <div class="card" style="margin-top:1.25rem;">
+          <div class="flex-between"><h3>&#128203; Historial de asistencias</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th scope="col">Fecha</th><th scope="col">Grupo</th><th scope="col">Presentes</th><th scope="col">Ausentes</th><th scope="col">Justificados</th><th scope="col">Total</th></tr></thead>
+            <tbody id="asist-historial"></tbody>
+            <tfoot><tr><td colspan="6" id="asist-hist-total"><strong>Sin registros</strong></td></tr></tfoot>
+          </table></div>
+          <div id="asist-hist-empty" class="empty-msg">Aún no hay registros de asistencia.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAREAS ===== -->
+    <section id="app-tareas" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#128203; Tareas · Sube tus trabajos</h2>
+        <p class="section-sub">Comparte tus tareas con el grupo o docente.</p>
+        <div class="card">
+          <div class="flex-between"><h3>&#128194; Subir archivo</h3></div>
+          <div class="form-group">
+            <label for="tar-titulo">Título de la tarea</label>
+            <input type="text" id="tar-titulo" placeholder="Ej: Reporte de física" class="w-full">
+          </div>
+          <div class="form-group">
+            <label for="tar-grupo">Grupo</label>
+            <select id="tar-grupo" class="w-full">
+              <option value="1A">1°A</option>
+              <option value="1B">1°B</option>
+              <option value="2A">2°A</option>
+              <option value="2B">2°B</option>
+              <option value="3A">3°A</option>
+              <option value="3B">3°B</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="tar-materia">Materia</label>
+            <select id="tar-materia" class="w-full">
+              <option value="matematicas">Matemáticas</option>
+              <option value="fisica">Física</option>
+              <option value="quimica">Química</option>
+              <option value="biologia">Biología</option>
+              <option value="literatura">Literatura</option>
+              <option value="historia">Historia</option>
+              <option value="ingles">Inglés</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="tar-file">Archivo</label>
+            <input type="file" id="tar-file" class="w-full">
+          </div>
+          <button class="btn btn-primary" id="btn-tar-subir">&#128228; Subir tarea</button>
+          <div id="tar-msg" style="margin-top:.5rem;font-size:.85rem;color:var(--green);"></div>
+        </div>
+        <div class="card">
+          <div class="flex-between">
+            <h3>&#128195; Tareas subidas</h3>
+            <button class="btn btn-outline btn-sm" id="btn-tar-refresh">&#8635; Refrescar</button>
+          </div>
+          <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;">
+            <select id="tar-filtro-grupo" class="w-full" style="max-width:180px;">
+              <option value="todos">Todos los grupos</option>
+              <option value="1A">1°A</option>
+              <option value="1B">1°B</option>
+              <option value="2A">2°A</option>
+              <option value="2B">2°B</option>
+              <option value="3A">3°A</option>
+              <option value="3B">3°B</option>
+            </select>
+            <select id="tar-filtro-materia" class="w-full" style="max-width:180px;">
+              <option value="todos">Todas las materias</option>
+              <option value="matematicas">Matemáticas</option>
+              <option value="fisica">Física</option>
+              <option value="quimica">Química</option>
+              <option value="biologia">Biología</option>
+              <option value="literatura">Literatura</option>
+              <option value="historia">Historia</option>
+              <option value="ingles">Inglés</option>
+            </select>
+          </div>
+          <div id="tar-lista"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SABI ===== -->
+    <section id="app-sabi" class="section hidden">
+      <div class="container">
+        <h2 class="section-title">&#129302; SABI · Analítica del Bachillerato</h2>
+        <p class="section-sub">Inteligencia educativa para la toma de decisiones basada en datos del bachillerato.</p>
+        <div class="grid-3" style="margin-bottom:1.5rem;">
+          <div class="stat-box"><div class="stat-num" id="sabi-promedio">82%</div><div class="stat-label">Rendimiento general</div></div>
+          <div class="stat-box"><div class="stat-num" id="sabi-riesgo">5</div><div class="stat-label">Estudiantes en riesgo</div></div>
+          <div class="stat-box"><div class="stat-num" id="sabi-recomendaciones">8</div><div class="stat-label">Recomendaciones activas</div></div>
+        </div>
+        <div class="card">
+          <div class="flex-between"><h3>&#128200; Recomendaciones inteligentes para bachillerato</h3></div>
+          <div id="sabi-recomendaciones-list"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="app-footer">
+    <div class="container">
+      <p>&copy; 2026 EduGest · Bachillerato. Ecosistema educativo para educación media superior.</p>
+      <div style="display:flex;gap:.75rem;justify-content:center;margin-top:.5rem;">
+        <a href="#" style="color:var(--gray-400);">Términos</a>
+        <a href="#" style="color:var(--gray-400);">Privacidad</a>
+        <a href="#" style="color:var(--gray-400);">Soporte</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var logueado = false;
+      var apps = ['inicio','picker','digital','parents','auth','experiencias','examenes','tareas','asistencias','sabi'];
+      var appsProtegidas = ['picker','digital','parents','auth','experiencias','examenes','tareas','asistencias','sabi'];
+
+      function $(id) { return document.getElementById(id); }
+
+      var toastEl = $('toast');
+      var toastTimeout;
+      function mostrarToast(msg, tipo) {
+        clearTimeout(toastTimeout);
+        toastEl.textContent = msg;
+        toastEl.className = 'toast toast-' + tipo + ' show';
+        toastTimeout = setTimeout(function () { toastEl.classList.remove('show'); }, 3500);
+      }
+
+      window.mostrarApp = function (app) {
+        if (app && appsProtegidas.indexOf(app) !== -1 && !logueado) {
+          $('modal-login').classList.add('open');
+          mostrarToast('Inicia sesión para acceder.', 'error');
+          return;
+        }
+        apps.forEach(function (a) {
+          var el = $('app-' + a);
+          if (el) el.classList.toggle('hidden', a !== (app || 'inicio'));
+        });
+        document.querySelectorAll('[data-app]').forEach(function (link) {
+          link.classList.toggle('active', link.dataset.app === (app || 'inicio'));
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      document.querySelectorAll('[data-app]').forEach(function (link) {
+        link.addEventListener('click', function (e) { e.preventDefault(); mostrarApp(this.dataset.app); });
+      });
+
+      /* ===== LOGIN ===== */
+      var modalLogin = $('modal-login');
+      $('btn-login').addEventListener('click', function () { modalLogin.classList.add('open'); });
+      $('modal-login-close').addEventListener('click', function () { modalLogin.classList.remove('open'); });
+      modalLogin.addEventListener('click', function (e) { if (e.target === modalLogin) modalLogin.classList.remove('open'); });
+
+      $('form-login').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = $('login-email').value.trim();
+        var pass = $('login-pass').value.trim();
+        if (!email || pass.length < 6) {
+          $('login-error').hidden = false; mostrarToast('Correo o contraseña inválidos.', 'error'); return;
+        }
+        $('login-error').hidden = true;
+        logueado = true;
+        modalLogin.classList.remove('open');
+        $('btn-login').style.display = 'none';
+        var ui = $('user-info');
+        ui.style.display = 'flex'; ui.classList.remove('hidden');
+        $('user-email-display').textContent = email;
+        mostrarToast('Bienvenido, ' + email, 'success');
+        $('form-login').reset();
+      });
+
+      $('btn-logout').addEventListener('click', function () {
+        logueado = false;
+        $('btn-login').style.display = '';
+        var ui = $('user-info'); ui.style.display = 'none'; ui.classList.add('hidden');
+        mostrarApp('inicio');
+        mostrarToast('Sesión cerrada.', 'success');
+      });
+
+      $('link-olvide').addEventListener('click', function (e) {
+        e.preventDefault(); modalLogin.classList.remove('open');
+        mostrarToast('Te enviamos un enlace de recuperación al correo.', 'success');
+      });
+
+      function escapeHtml(s) { if (typeof s !== 'string') return s; var d = document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML; }
+
+      /* ===================================================================
+         PICKER — Bachillerato
+         =================================================================== */
+      var pickerStudents = [
+        { nombre: 'Ana García López', grupo: '1A' },
+        { nombre: 'Carlos Mendoza Ruiz', grupo: '1A' },
+        { nombre: 'María Torres Silva', grupo: '1B' },
+        { nombre: 'Luis Fernández Vega', grupo: '2A' },
+        { nombre: 'Sofía Ramírez Cruz', grupo: '2A' },
+        { nombre: 'Diego Castillo Pérez', grupo: '3A' },
+        { nombre: 'Valentina Ortiz Mora', grupo: '1B' },
+        { nombre: 'Emiliano Rivas Soto', grupo: '3A' },
+        { nombre: 'Ximena Herrera Ríos', grupo: '2B' },
+        { nombre: 'Mateo Delgado Gil', grupo: '3B' },
+      ];
+
+      var pickerHistory = [];
+
+      function renderPickerList() {
+        var g = $('picker-grupo').value;
+        var filtrados = g === 'todos' ? pickerStudents : pickerStudents.filter(function (s) { return s.grupo === g; });
+        var el = $('picker-list');
+        if (filtrados.length === 0) { el.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>'; return; }
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + filtrados.map(function (s, i) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gray-50);border-radius:6px;">' +
+            '<span>' + escapeHtml(s.nombre) + ' <span class="semestre-badge">' + s.grupo + '</span></span>' +
+            '<button class="btn btn-sm picker-del" data-idx="' + pickerStudents.indexOf(s) + '" style="background:var(--red);color:#fff;padding:.15rem .4rem;font-size:.7rem;">×</button></div>';
+        }).join('') + '</div>';
+        el.querySelectorAll('.picker-del').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            pickerStudents.splice(parseInt(this.dataset.idx), 1);
+            renderPickerList();
+            mostrarToast('Estudiante eliminado.', 'success');
+          });
+        });
+      }
+
+      $('btn-picker-add').addEventListener('click', function () {
+        var name = prompt('Nombre del estudiante:');
+        if (name && name.trim()) {
+          pickerStudents.push({ nombre: name.trim(), grupo: '1A' });
+          renderPickerList();
+          mostrarToast('Estudiante agregado.', 'success');
+        }
+      });
+
+      $('picker-grupo').addEventListener('change', renderPickerList);
+
+      var spinning = false;
+      $('btn-picker-spin').addEventListener('click', function () {
+        if (spinning) return;
+        var g = $('picker-grupo').value;
+        var pool = g === 'todos' ? pickerStudents : pickerStudents.filter(function (s) { return s.grupo === g; });
+        if (pool.length === 0) { mostrarToast('No hay disponibles.', 'error'); return; }
+        spinning = true;
+        var display = $('picker-display');
+        display.classList.add('picker-spinning');
+        var progress = $('picker-progress');
+        var pct = 0;
+        var spinInterval = setInterval(function () {
+          var r = Math.floor(Math.random() * pool.length);
+          display.textContent = pool[r].nombre.split(' ')[0];
+          pct += 5;
+          if (pct > 100) pct = 100;
+          progress.style.width = pct + '%';
+        }, 80);
+        setTimeout(function () {
+          clearInterval(spinInterval);
+          display.classList.remove('picker-spinning');
+          var winner = Math.floor(Math.random() * pool.length);
+          var sel = pool[winner];
+          display.textContent = sel.nombre;
+          progress.style.width = '100%';
+          pickerHistory.unshift(sel.nombre);
+          if (pickerHistory.length > 6) pickerHistory.pop();
+          $('picker-history').innerHTML = pickerHistory.map(function (n) {
+            return '<span style="background:var(--primary-light);color:var(--primary);padding:.2rem .6rem;border-radius:99px;font-size:.78rem;">' + escapeHtml(n) + '</span>';
+          }).join('');
+          spinning = false;
+          setTimeout(function () { progress.style.width = '0%'; }, 800);
+          mostrarToast('&#9654; ' + sel.nombre + ' (' + sel.grupo + ')', 'success');
+        }, 2500);
+      });
+
+      renderPickerList();
+
+      /* ===================================================================
+         DIGITAL — Bachillerato
+         =================================================================== */
+      var recursos = [
+        { titulo: 'Cálculo Diferencial', materia: 'matematicas', tipo: 'Libro', autor: 'EduGest', semestre: '3°' },
+        { titulo: 'Física: Mecánica Clásica', materia: 'fisica', tipo: 'Guía', autor: 'EduGest', semestre: '2°' },
+        { titulo: 'Química Orgánica', materia: 'quimica', tipo: 'Libro', autor: 'EduGest', semestre: '3°' },
+        { titulo: 'Biología Celular', materia: 'biologia', tipo: 'PDF', autor: 'EduGest', semestre: '1°' },
+        { titulo: 'Literatura Hispanoamericana', materia: 'literatura', tipo: 'Libro', autor: 'EduGest', semestre: '4°' },
+        { titulo: 'Historia de México', materia: 'historia', tipo: 'Guía', autor: 'EduGest', semestre: '2°' },
+        { titulo: 'Inglés Técnico', materia: 'ingles', tipo: 'Audio', autor: 'EduGest', semestre: '5°' },
+        { titulo: 'Álgebra Lineal', materia: 'matematicas', tipo: 'Video', autor: 'EduGest', semestre: '1°' },
+        { titulo: 'Física: Electromagnetismo', materia: 'fisica', tipo: 'Libro', autor: 'EduGest', semestre: '4°' },
+        { titulo: 'Guía para la PAES', materia: 'historia', tipo: 'Guía', autor: 'EduGest', semestre: '6°' },
+      ];
+
+      function renderDigital() {
+        var filtro = $('digital-filtro').value;
+        var busqueda = $('digital-buscar').value.toLowerCase().trim();
+        var items = recursos.filter(function (r) {
+          return (filtro === 'todos' || r.materia === filtro) &&
+                 (busqueda === '' || r.titulo.toLowerCase().indexOf(busqueda) !== -1);
+        });
+        var grid = $('digital-grid');
+        if (items.length === 0) { grid.innerHTML = '<div class="empty-msg" style="grid-column:1/-1;">Sin resultados.</div>'; return; }
+        grid.innerHTML = items.map(function (r) {
+          var c = { matematicas: 'blue', fisica: 'purple', quimica: 'orange', biologia: 'green', literatura: 'pink', historia: 'amber', ingles: 'teal' }[r.materia] || 'blue';
+          var icons = { Libro: '📘', Guía: '📋', PDF: '📄', Video: '🎬', Audio: '🎧' };
+          return '<div class="card" style="cursor:default;">' +
+            '<div style="font-size:1.8rem;margin-bottom:.5rem;">' + (icons[r.tipo] || '📘') + '</div>' +
+            '<h4 style="font-size:.95rem;margin-bottom:.25rem;">' + escapeHtml(r.titulo) + '</h4>' +
+            '<p style="font-size:.78rem;color:var(--gray-500);">' + r.tipo + ' · ' + escapeHtml(r.autor) + '</p>' +
+            '<div style="display:flex;gap:.3rem;margin-top:.4rem;flex-wrap:wrap;">' +
+            '<span class="badge badge-' + c + '">' + r.materia + '</span>' +
+            '<span class="semestre-badge">' + r.semestre + ' Sem.</span></div></div>';
+        }).join('');
+      }
+
+      $('digital-filtro').addEventListener('change', renderDigital);
+      $('digital-buscar').addEventListener('input', renderDigital);
+
+      $('btn-digital-add').addEventListener('click', function () {
+        var t = prompt('Título del recurso:');
+        if (t && t.trim()) {
+          recursos.push({ titulo: t.trim(), materia: 'matematicas', tipo: 'PDF', autor: 'Docente', semestre: '1°' });
+          renderDigital();
+          mostrarToast('Recurso subido: ' + t.trim(), 'success');
+        }
+      });
+
+      renderDigital();
+
+      /* ===================================================================
+         PARENTS — Bachillerato
+         =================================================================== */
+      var notificaciones = [
+        { texto: 'Entrega de calificaciones del 2° parcial', fecha: 'Hoy' },
+        { texto: 'Nueva actividad: Proyecto de Física', fecha: 'Ayer' },
+        { texto: 'Inasistencia registrada — 12 de marzo', fecha: '2 días' },
+        { texto: 'Reunión de padres — 20 de marzo', fecha: 'Próximo' },
+        { texto: 'Inscripción a PAES disponible', fecha: 'Este mes' },
+      ];
+
+      var califMaterias = [
+        { materia: 'Matemáticas', calif: '8.9', color: 'blue' },
+        { materia: 'Física', calif: '8.2', color: 'purple' },
+        { materia: 'Química', calif: '9.1', color: 'orange' },
+        { materia: 'Literatura', calif: '8.5', color: 'pink' },
+        { materia: 'Historia', calif: '7.8', color: 'amber' },
+        { materia: 'Inglés', calif: '9.0', color: 'teal' },
+      ];
+
+      function renderParents() {
+        var el = $('parent-notif');
+        el.innerHTML = notificaciones.map(function (n) {
+          return '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--gray-200);font-size:.85rem;">' +
+            '<span>' + escapeHtml(n.texto) + '</span>' +
+            '<span style="color:var(--gray-500);font-size:.75rem;">' + n.fecha + '</span></div>';
+        }).join('') || '<div class="empty-msg">Sin notificaciones.</div>';
+
+        var cg = $('parent-calif-grid');
+        cg.innerHTML = califMaterias.map(function (c) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+            '<span style="font-size:.85rem;">' + c.materia + '</span>' +
+            '<span class="badge badge-' + c.color + '" style="font-size:.8rem;">' + c.calif + '</span></div>';
+        }).join('');
+      }
+      renderParents();
+
+      /* ===================================================================
+         AUTH — Bachillerato
+         =================================================================== */
+      var usuarios = [
+        { user: 'agarcia', nombre: 'Ana García', email: 'ana@bachillerato.edu', rol: 'estudiante', semestre: '1', activo: true },
+        { user: 'cmendoza', nombre: 'Carlos Mendoza', email: 'carlos@bachillerato.edu', rol: 'estudiante', semestre: '1', activo: true },
+        { user: 'mtorres', nombre: 'María Torres', email: 'maria@bachillerato.edu', rol: 'estudiante', semestre: '2', activo: true },
+        { user: 'lfernandez', nombre: 'Luis Fernández', email: 'luis@bachillerato.edu', rol: 'estudiante', semestre: '3', activo: false },
+        { user: 'profgarcia', nombre: 'Prof. Roberto García', email: 'rgarcia@bachillerato.edu', rol: 'docente', semestre: '', activo: true },
+        { user: 'coordlopez', nombre: 'Mtra. Elena López', email: 'elopez@bachillerato.edu', rol: 'coordinador', semestre: '', activo: true },
+      ];
+
+      function renderAuth() {
+        var busq = $('auth-buscar').value.toLowerCase().trim();
+        var rf = $('auth-rol-filtro').value;
+        var sf = $('auth-semestre-filtro').value;
+        var items = usuarios.filter(function (u) {
+          var matchRol = rf === 'todos' || u.rol === rf;
+          var matchSem = sf === 'todos' || u.semestre === sf;
+          var matchBusq = busq === '' || u.user.indexOf(busq) !== -1 || u.email.indexOf(busq) !== -1 || u.nombre.toLowerCase().indexOf(busq) !== -1;
+          return matchRol && matchSem && matchBusq;
+        });
+        var tbody = $('auth-tabla');
+        var empty = $('auth-empty');
+        var total = $('auth-total');
+        if (items.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); total.innerHTML = '0 usuarios'; return; }
+        empty.classList.add('hidden');
+        var rolesBadge = { director: 'badge-red', coordinador: 'badge-orange', docente: 'badge-blue', estudiante: 'badge-green', padre: 'badge-amber' };
+        tbody.innerHTML = items.map(function (u, i) {
+          var idx = usuarios.indexOf(u);
+          return '<tr>' +
+            '<th scope="row">' + escapeHtml(u.user) + '</th>' +
+            '<td>' + escapeHtml(u.nombre) + '</td>' +
+            '<td><span class="badge ' + (rolesBadge[u.rol] || 'badge-blue') + '">' + u.rol + '</span></td>' +
+            '<td>' + (u.semestre ? u.semestre + '° Semestre' : '—') + '</td>' +
+            '<td><span class="badge ' + (u.activo ? 'badge-green' : 'badge-amber') + '">' + (u.activo ? 'Activo' : 'Inactivo') + '</span></td>' +
+            '<td><button class="btn btn-outline btn-sm auth-toggle" data-idx="' + idx + '">' + (u.activo ? 'Desactivar' : 'Activar') + '</button></td></tr>';
+        }).join('');
+        total.innerHTML = items.length + ' usuario' + (items.length !== 1 ? 's' : '');
+        tbody.querySelectorAll('.auth-toggle').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var idx = parseInt(this.dataset.idx);
+            usuarios[idx].activo = !usuarios[idx].activo;
+            renderAuth();
+            mostrarToast('Estado de usuario actualizado.', 'success');
+          });
+        });
+      }
+
+      $('auth-buscar').addEventListener('input', renderAuth);
+      $('auth-rol-filtro').addEventListener('change', renderAuth);
+      $('auth-semestre-filtro').addEventListener('change', renderAuth);
+
+      $('btn-auth-add').addEventListener('click', function () {
+        var nom = prompt('Nombre completo:');
+        if (!nom || !nom.trim()) return;
+        var email = prompt('Correo institucional:');
+        if (!email || !email.trim()) return;
+        var user = email.split('@')[0];
+        usuarios.push({ user: user, nombre: nom.trim(), email: email.trim(), rol: 'estudiante', semestre: '1', activo: true });
+        renderAuth();
+        mostrarToast('Usuario ' + nom.trim() + ' creado.', 'success');
+      });
+
+      renderAuth();
+
+      /* ===================================================================
+         EXPERIENCIAS — Bachillerato
+         =================================================================== */
+      var experiencias = [
+        { titulo: 'Explorando el ADN', desc: 'Laboratorio virtual de genética para 3° semestre', materia: 'biologia', duracion: '50 min' },
+        { titulo: 'Análisis literario', desc: 'Lectura guiada de cuentos contemporáneos', materia: 'literatura', duracion: '60 min' },
+        { titulo: 'Leyes de Newton', desc: 'Experimentos interactivos de física', materia: 'fisica', duracion: '45 min' },
+        { titulo: 'Ecuaciones cuadráticas', desc: 'Resolución paso a paso con ejercicios', materia: 'matematicas', duracion: '40 min' },
+        { titulo: 'La Revolución Industrial', desc: 'Línea del tiempo interactiva', materia: 'historia', duracion: '35 min' },
+      ];
+      var expCreadas = [];
+
+      function renderExp() {
+        var tab = document.querySelector('[data-exp-tab].active');
+        var esCreadas = tab && tab.dataset.expTab === 'creadas';
+        var items = esCreadas ? expCreadas : experiencias;
+        var grid = $('exp-grid');
+        if (items.length === 0) { grid.innerHTML = '<div class="empty-msg" style="grid-column:1/-1;">' + (esCreadas ? 'Aún no has creado experiencias.' : 'No hay experiencias disponibles.') + '</div>'; return; }
+        var matColors = { biologia: 'green', literatura: 'pink', fisica: 'purple', matematicas: 'blue', historia: 'amber', quimica: 'orange', ingles: 'teal' };
+        grid.innerHTML = items.map(function (e) {
+          var mc = matColors[e.materia] || 'blue';
+          return '<div class="card">' +
+            '<div style="font-size:1.5rem;margin-bottom:.5rem;">🎯</div>' +
+            '<h4 style="font-size:.95rem;">' + escapeHtml(e.titulo) + '</h4>' +
+            '<p style="font-size:.82rem;color:var(--gray-500);margin:.3rem 0;">' + escapeHtml(e.desc) + '</p>' +
+            '<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem;">' +
+            '<span class="badge badge-' + mc + '">' + e.materia + '</span>' +
+            '<span class="semestre-badge">' + e.duracion + '</span></div></div>';
+        }).join('');
+      }
+
+      document.querySelectorAll('[data-exp-tab]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          document.querySelectorAll('[data-exp-tab]').forEach(function (t) { t.classList.remove('active'); });
+          this.classList.add('active');
+          renderExp();
+        });
+      });
+
+      $('btn-exp-crear').addEventListener('click', function () {
+        var t = prompt('Título de la experiencia:');
+        if (!t || !t.trim()) return;
+        var d = prompt('Descripción:') || 'Sin descripción';
+        expCreadas.push({ titulo: t.trim(), desc: d.trim(), materia: 'matematicas', duracion: '45 min' });
+        document.querySelectorAll('[data-exp-tab]').forEach(function (t) { t.classList.remove('active'); });
+        document.querySelector('[data-exp-tab="creadas"]').classList.add('active');
+        renderExp();
+        mostrarToast('Experiencia creada: ' + t.trim(), 'success');
+      });
+
+      renderExp();
+
+      /* ===================================================================
+         EXÁMENES — Creador (Profesor) + Simulador (Estudiante)
+         =================================================================== */
+      var EXAM_KEY = 'bachillerato_examenes';
+      var examenes = JSON.parse(localStorage.getItem(EXAM_KEY) || '[]');
+      var examQCount = 0;
+      var examTimerId = null;
+      var examEnCurso = null;
+
+      function examGuardarStorage() { localStorage.setItem(EXAM_KEY, JSON.stringify(examenes)); }
+
+      function examRenderGuardados() {
+        var container = $('exam-lista-guardados');
+        if (examenes.length === 0) { container.innerHTML = '<div class="empty-msg">Aún no hay exámenes guardados.</div>'; return; }
+        container.innerHTML = '<div style="display:grid;gap:.5rem;">' +
+          examenes.map(function (e, idx) {
+            var preg = e.preguntas ? e.preguntas.length : 0;
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+              '<div><strong style="font-size:.9rem;">' + escapeHtml(e.titulo) + '</strong><br><span style="font-size:.78rem;color:var(--gray-500);">' + preg + ' preg · ' + e.tiempo + ' min</span></div>' +
+              '<button class="btn btn-sm btn-outline" onclick="examEliminar(' + idx + ')">🗑️</button></div>';
+          }).join('') + '</div>';
+      }
+
+      function examEliminar(idx) {
+        if (!confirm('¿Eliminar este examen?')) return;
+        examenes.splice(idx, 1);
+        examGuardarStorage();
+        examRenderGuardados();
+        examCargarSelect();
+      }
+
+      function examAddPregunta() {
+        examQCount++;
+        var id = 'q-' + examQCount;
+        var div = document.createElement('div');
+        div.className = 'pregunta-item';
+        div.id = id;
+        div.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.4rem;">' +
+            '<strong style="font-size:.85rem;">Pregunta ' + examQCount + '</strong>' +
+            '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.2rem;padding:0 4px;">×</button>' +
+          '</div>' +
+          '<textarea class="pregunta-textarea" placeholder="Escribe la pregunta..." data-idx="' + examQCount + '"></textarea>' +
+          '<div class="opt-row"><span class="opt-label">A)</span><input type="text" placeholder="Opción A" data-idx="' + examQCount + '" data-opt="0"><input type="radio" name="correcta-' + examQCount + '" value="0"></div>' +
+          '<div class="opt-row"><span class="opt-label">B)</span><input type="text" placeholder="Opción B" data-idx="' + examQCount + '" data-opt="1"><input type="radio" name="correcta-' + examQCount + '" value="1"></div>' +
+          '<div class="opt-row"><span class="opt-label">C)</span><input type="text" placeholder="Opción C" data-idx="' + examQCount + '" data-opt="2"><input type="radio" name="correcta-' + examQCount + '" value="2"></div>';
+        $('exam-q-list').appendChild(div);
+      }
+
+      function examGetPreguntas() {
+        var items = document.querySelectorAll('#exam-q-list .pregunta-item');
+        var preguntas = [];
+        items.forEach(function (item) {
+          var idx = item.querySelector('.pregunta-textarea').dataset.idx;
+          var texto = item.querySelector('.pregunta-textarea').value.trim();
+          var optA = item.querySelector('input[data-opt="0"]').value.trim();
+          var optB = item.querySelector('input[data-opt="1"]').value.trim();
+          var optC = item.querySelector('input[data-opt="2"]').value.trim();
+          var correcta = item.querySelector('input[name="correcta-' + idx + '"]:checked');
+          if (!texto) return; // skip empty
+          preguntas.push({
+            texto: texto,
+            opciones: [optA || '—', optB || '—', optC || '—'],
+            correcta: correcta ? parseInt(correcta.value, 10) : 0
+          });
+        });
+        return preguntas;
+      }
+
+      function examGuardar() {
+        var titulo = $('exam-titulo').value.trim();
+        var tiempo = parseInt($('exam-tiempo').value, 10) || 60;
+        if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
+        var preguntas = examGetPreguntas();
+        if (preguntas.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Agrega al menos 1 pregunta.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
+        examenes.push({ titulo: titulo, tiempo: tiempo, preguntas: preguntas });
+        examGuardarStorage();
+        examRenderGuardados();
+        examCargarSelect();
+        $('exam-titulo').value = '';
+        $('exam-tiempo').value = '60';
+        $('exam-q-list').innerHTML = '';
+        examQCount = 0;
+        $('exam-guardar-msg').textContent = '✔️ Examen guardado correctamente.';
+        $('exam-guardar-msg').style.color = 'var(--green)';
+        setTimeout(function () { $('exam-guardar-msg').textContent = ''; }, 3000);
+      }
+
+      function examCargarSelect() {
+        var sel = $('exam-select');
+        sel.innerHTML = '';
+        if (examenes.length === 0) {
+          sel.innerHTML = '<option value="">— Sin exámenes disponibles —</option>'; return;
+        }
+        examenes.forEach(function (e, i) {
+          var opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = e.titulo + ' (' + e.preguntas.length + ' preg, ' + e.tiempo + ' min)';
+          sel.appendChild(opt);
+        });
+      }
+
+      function examComenzar() {
+        var idx = parseInt($('exam-select').value, 10);
+        if (isNaN(idx) || !examenes[idx]) { mostrarToast('Selecciona un examen válido.', 'error'); return; }
+        examEnCurso = {
+          idx: idx,
+          examen: JSON.parse(JSON.stringify(examenes[idx])),
+          respuestas: [],
+          tiempoRestante: examenes[idx].tiempo * 60,
+          iniciado: Date.now()
+        };
+        examRenderSimulador();
+        examIniciarTimer();
+      }
+
+      function examRenderSimulador() {
+        if (!examEnCurso) return;
+        $('exam-selector').classList.add('hidden');
+        $('exam-simulador').classList.remove('hidden');
+        $('exam-resultado').classList.add('hidden');
+        var ex = examEnCurso.examen;
+        var t = examEnCurso.tiempoRestante;
+        var m = Math.floor(t / 60);
+        var s = t % 60;
+        $('exam-timer').textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        $('exam-timer').className = 'timer';
+        $('exam-progress').textContent = '0/' + ex.preguntas.length;
+        $('exam-progress-bar').style.width = '0%';
+
+        var container = $('exam-preguntas');
+        container.innerHTML = ex.preguntas.map(function (q, qi) {
+          return '<div class="q-block">' +
+            '<div class="q-text">' + (qi + 1) + '. ' + escapeHtml(q.texto) + '</div>' +
+            q.opciones.map(function (opt, oi) {
+              return '<label class="opt-row"><input type="radio" name="exam-resp-' + qi + '" value="' + oi + '"> <span>' + String.fromCharCode(65 + oi) + ') ' + escapeHtml(opt) + '</span></label>';
+            }).join('') +
+          '</div>';
+        }).join('');
+
+        container.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+          radio.addEventListener('change', function () { examActualizarProgreso(); });
+        });
+      }
+
+      function examActualizarProgreso() {
+        if (!examEnCurso) return;
+        var total = examEnCurso.examen.preguntas.length;
+        var respondidas = 0;
+        for (var i = 0; i < total; i++) {
+          var radios = document.querySelectorAll('input[name="exam-resp-' + i + '"]');
+          for (var j = 0; j < radios.length; j++) {
+            if (radios[j].checked) { respondidas++; break; }
+          }
+        }
+        $('exam-progress').textContent = respondidas + '/' + total;
+        $('exam-progress-bar').style.width = (respondidas / total * 100) + '%';
+      }
+
+      function examIniciarTimer() {
+        if (examTimerId) clearInterval(examTimerId);
+        examTimerId = setInterval(function () {
+          if (!examEnCurso) { clearInterval(examTimerId); return; }
+          examEnCurso.tiempoRestante--;
+          var t = examEnCurso.tiempoRestante;
+          var m = Math.floor(t / 60);
+          var s = t % 60;
+          var timerEl = $('exam-timer');
+          timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+          timerEl.className = 'timer';
+          if (t <= 60) timerEl.classList.add('danger');
+          else if (t <= 180) timerEl.classList.add('warning');
+          if (t <= 0) { clearInterval(examTimerId); examEnviar(); }
+        }, 1000);
+      }
+
+      function examRecolectarRespuestas() {
+        if (!examEnCurso) return [];
+        return examEnCurso.examen.preguntas.map(function (q, qi) {
+          var radios = document.querySelectorAll('input[name="exam-resp-' + qi + '"]');
+          var seleccionado = null;
+          for (var j = 0; j < radios.length; j++) {
+            if (radios[j].checked) { seleccionado = parseInt(radios[j].value, 10); break; }
+          }
+          return seleccionado;
+        });
+      }
+
+      function examEnviar() {
+        if (!examEnCurso) return;
+        clearInterval(examTimerId);
+        var respuestas = examRecolectarRespuestas();
+        var correctas = 0;
+        examEnCurso.examen.preguntas.forEach(function (q, i) {
+          if (respuestas[i] !== null && respuestas[i] === q.correcta) correctas++;
+        });
+        var total = examEnCurso.examen.preguntas.length;
+        var porcentaje = total > 0 ? Math.round(correctas / total * 100) : 0;
+        var aprobado = porcentaje >= 60;
+
+        $('exam-simulador').classList.add('hidden');
+        var resultEl = $('exam-resultado');
+        resultEl.className = 'exam-resultado' + (aprobado ? ' aprobado' : ' reprobado');
+        resultEl.classList.remove('hidden');
+        $('exam-nota').textContent = correctas + '/' + total;
+        $('exam-mensaje').textContent = aprobado ? '✅ ¡Aprobado! (' + porcentaje + '%)' : '❌ Reprobado (' + porcentaje + '%). Mínimo 60%';
+        examEnCurso = null;
+      }
+
+      function examResetSimulador() {
+        clearInterval(examTimerId);
+        examEnCurso = null;
+        $('exam-selector').classList.remove('hidden');
+        $('exam-simulador').classList.add('hidden');
+        $('exam-resultado').classList.add('hidden');
+      }
+
+      // Tab switching
+      document.querySelectorAll('[data-exam-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (examEnCurso && !confirm('Hay un examen en curso. ¿Salir?')) return;
+          examResetSimulador();
+          document.querySelectorAll('[data-exam-tab]').forEach(function (b) { b.classList.remove('active'); });
+          this.classList.add('active');
+          var tab = this.dataset.examTab;
+          $('exam-tab-profesor').classList.toggle('hidden', tab !== 'profesor');
+          $('exam-tab-estudiante').classList.toggle('hidden', tab !== 'estudiante');
+        });
+      });
+
+      // Event listeners
+      $('btn-exam-add-q').addEventListener('click', examAddPregunta);
+      $('btn-exam-guardar').addEventListener('click', examGuardar);
+      $('btn-exam-start').addEventListener('click', examComenzar);
+      $('btn-exam-enviar').addEventListener('click', function () {
+        if (confirm('¿Enviar examen? No podrás cambiar respuestas.')) examEnviar();
+      });
+
+      // Init
+      examRenderGuardados();
+      examCargarSelect();
+
+      /* ===================================================================
+         ASISTENCIAS
+         =================================================================== */
+      var asistEstudiantes = {
+        '1A': ['Ana García López','Carlos Mendoza Ruiz','Sofía Ramírez Cruz','Jorge Luis Hernández','Diana Rivas Mora'],
+        '1B': ['María Torres Silva','Valentina Ortiz Mora','Pedro Sánchez Vega','Gabriela Flores Ruiz'],
+        '2A': ['Luis Fernández Vega','Diego Castillo Pérez','Regina Campos Torres','Fernando Soto Ríos'],
+        '2B': ['Ximena Herrera Ríos','Andrés Nava Cruz','Paola Jiménez Díaz'],
+        '3A': ['Emiliano Rivas Soto','Alejandra Luna García','Ricardo Paredes Solís'],
+        '3B': ['Mateo Delgado Gil','Camila Estrada Ríos','Héctor Medina López'],
+      };
+      var asistRegistros = [];
+      var asistActual = {};
+
+      function setAsistFecha() {
+        var hoy = new Date();
+        var dd = String(hoy.getDate()).padStart(2,'0');
+        var mm = String(hoy.getMonth()+1).padStart(2,'0');
+        var yyyy = hoy.getFullYear();
+        $('asist-fecha').value = yyyy + '-' + mm + '-' + dd;
+      }
+
+      function renderAsistencias() {
+        var grupo = $('asist-grupo').value;
+        var estudiantes = asistEstudiantes[grupo] || [];
+        var container = $('asist-lista');
+
+        if (estudiantes.length === 0) {
+          container.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>';
+          actualizarAsistStats(); return;
+        }
+
+        container.innerHTML = estudiantes.map(function (nombre, i) {
+          var estado = asistActual[nombre] || 'presente';
+          var checkedP = estado === 'presente' ? 'checked' : '';
+          var checkedA = estado === 'ausente' ? 'checked' : '';
+          var checkedJ = estado === 'justificado' ? 'checked' : '';
+          var bg = estado === 'presente' ? '2px solid var(--green)' : estado === 'ausente' ? '2px solid var(--red)' : '2px solid var(--amber)';
+
+          return '<div style="display:grid;grid-template-columns:1fr auto auto;gap:.5rem;align-items:center;padding:.55rem .75rem;border-bottom:1px solid var(--gray-100);border-left:' + bg + ';">' +
+            '<span style="font-size:.85rem;font-weight:500;">' + escapeHtml(nombre) + '</span>' +
+            '<div style="display:flex;gap:0;background:var(--gray-100);border-radius:8px;overflow:hidden;">' +
+              '<label style="padding:.3rem .5rem;font-size:.72rem;cursor:pointer;font-weight:600;transition:.1s;background:' + (estado === 'presente' ? 'var(--green)' : 'transparent') + ';color:' + (estado === 'presente' ? '#fff' : 'var(--gray-500)') + ';">' +
+                '<input type="radio" name="asist-' + i + '" value="presente" ' + checkedP + ' style="display:none;"> P' +
+              '</label>' +
+              '<label style="padding:.3rem .5rem;font-size:.72rem;cursor:pointer;font-weight:600;transition:.1s;background:' + (estado === 'ausente' ? 'var(--red)' : 'transparent') + ';color:' + (estado === 'ausente' ? '#fff' : 'var(--gray-500)') + ';">' +
+                '<input type="radio" name="asist-' + i + '" value="ausente" ' + checkedA + ' style="display:none;"> A' +
+              '</label>' +
+              '<label style="padding:.3rem .5rem;font-size:.72rem;cursor:pointer;font-weight:600;transition:.1s;background:' + (estado === 'justificado' ? 'var(--amber)' : 'transparent') + ';color:' + (estado === 'justificado' ? '#fff' : 'var(--gray-500)') + ';">' +
+                '<input type="radio" name="asist-' + i + '" value="justificado" ' + checkedJ + ' style="display:none;"> J' +
+              '</label>' +
+            '</div></div>';
+        }).join('');
+
+        container.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+          radio.addEventListener('change', function () {
+            if (this.checked) {
+              var idx = parseInt(this.name.replace('asist-',''), 10);
+              var nombre = estudiantes[idx];
+              asistActual[nombre] = this.value;
+              renderAsistencias();
+            }
+          });
+        });
+
+        actualizarAsistStats();
+      }
+
+      function actualizarAsistStats() {
+        var presentes = 0, ausentes = 0, justificados = 0;
+        Object.keys(asistActual).forEach(function (nombre) {
+          if (asistActual[nombre] === 'presente') presentes++;
+          else if (asistActual[nombre] === 'ausente') ausentes++;
+          else if (asistActual[nombre] === 'justificado') justificados++;
+        });
+        $('asist-presentes').textContent = presentes;
+        $('asist-ausentes').textContent = ausentes;
+        $('asist-justificados').textContent = justificados;
+      }
+
+      function renderAsistHistorial() {
+        var tbody = $('asist-historial');
+        var empty = $('asist-hist-empty');
+        if (asistRegistros.length === 0) {
+          tbody.innerHTML = ''; empty.style.display = 'block';
+          $('asist-hist-total').innerHTML = '<strong>Sin registros</strong>'; return;
+        }
+        empty.style.display = 'none';
+        tbody.innerHTML = asistRegistros.slice().reverse().map(function (r) {
+          return '<tr><td>' + r.fecha + '</td><td>' + r.grupo + '</td><td>' + r.presentes + '</td><td>' + r.ausentes + '</td><td>' + r.justificados + '</td><td>' + r.total + '</td></tr>';
+        }).join('');
+        $('asist-hist-total').innerHTML = '<strong>' + asistRegistros.length + ' registro' + (asistRegistros.length !== 1 ? 's' : '') + '</strong>';
+      }
+
+      $('asist-grupo').addEventListener('change', function () {
+        asistActual = {};
+        renderAsistencias();
+      });
+
+      $('asist-fecha').addEventListener('change', function () {
+        asistActual = {};
+        renderAsistencias();
+      });
+
+      $('btn-asist-marcar-todos').addEventListener('click', function () {
+        var grupo = $('asist-grupo').value;
+        var estudiantes = asistEstudiantes[grupo] || [];
+        estudiantes.forEach(function (nombre) { asistActual[nombre] = 'presente'; });
+        renderAsistencias();
+        mostrarToast('Todos marcados como presentes.', 'success');
+      });
+
+      $('btn-asist-guardar').addEventListener('click', function () {
+        var grupo = $('asist-grupo').value;
+        var fecha = $('asist-fecha').value;
+        if (!fecha) { mostrarToast('Selecciona una fecha.', 'error'); return; }
+        var estudiantes = asistEstudiantes[grupo] || [];
+        if (estudiantes.length === 0) { mostrarToast('No hay estudiantes en este grupo.', 'error'); return; }
+
+        var presentes = 0, ausentes = 0, justificados = 0;
+        estudiantes.forEach(function (nombre) {
+          var est = asistActual[nombre] || 'presente';
+          if (est === 'presente') presentes++;
+          else if (est === 'ausente') ausentes++;
+          else if (est === 'justificado') justificados++;
+        });
+
+        asistRegistros.push({
+          fecha: fecha,
+          grupo: grupo,
+          presentes: presentes,
+          ausentes: ausentes,
+          justificados: justificados,
+          total: estudiantes.length
+        });
+
+        renderAsistHistorial();
+        mostrarToast('Asistencia del ' + fecha + ' guardada.', 'success');
+      });
+
+      setAsistFecha();
+      renderAsistencias();
+      renderAsistHistorial();
+
+      /* ===================================================================
+         TAREAS — Subida de archivos
+         =================================================================== */
+      var TAR_KEY = 'bachillerato_tareas';
+      var tareas = JSON.parse(localStorage.getItem(TAR_KEY) || '[]');
+      var tarMaxSize = 5 * 1024 * 1024; // 5MB
+
+      function tarGuardarStorage() { localStorage.setItem(TAR_KEY, JSON.stringify(tareas)); }
+
+      function tarFormatearFecha(d) {
+        var date = new Date(d);
+        return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+
+      function tarFormatearTamaño(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+      }
+
+      function tarRender() {
+        var filtroGrupo = $('tar-filtro-grupo').value;
+        var filtroMateria = $('tar-filtro-materia').value;
+        var items = tareas.filter(function (t) {
+          return (filtroGrupo === 'todos' || t.grupo === filtroGrupo) &&
+                 (filtroMateria === 'todos' || t.materia === filtroMateria);
+        });
+        var el = $('tar-lista');
+        if (items.length === 0) {
+          el.innerHTML = '<div class="empty-msg">No hay tareas subidas aún.</div>'; return;
+        }
+        var matNombres = { matematicas: 'Matemáticas', fisica: 'Física', quimica: 'Química', biologia: 'Biología', literatura: 'Literatura', historia: 'Historia', ingles: 'Inglés' };
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
+          items.slice().reverse().map(function (t, i) {
+            var realIdx = tareas.indexOf(t);
+            return '<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;border-left:3px solid var(--primary);">' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-weight:600;font-size:.85rem;">' + escapeHtml(t.titulo) + '</div>' +
+                '<div style="font-size:.75rem;color:var(--gray-500);display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.15rem;">' +
+                  '<span>' + escapeHtml(t.alumno) + '</span>' +
+                  '<span class="badge badge-blue">' + (matNombres[t.materia] || t.materia) + '</span>' +
+                  '<span class="semestre-badge">' + t.grupo + '</span>' +
+                  '<span style="color:var(--gray-400);">' + tarFormatearFecha(t.fecha) + '</span>' +
+                  '<span style="color:var(--gray-400);">' + tarFormatearTamaño(t.size) + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;gap:.3rem;flex-shrink:0;">' +
+                '<button class="btn btn-sm btn-outline tar-descargar" data-idx="' + realIdx + '" style="padding:.2rem .5rem;font-size:.75rem;">&#128229; Ver</button>' +
+                '<button class="btn btn-sm tar-eliminar" data-idx="' + realIdx + '" style="background:var(--red);color:#fff;padding:.2rem .5rem;font-size:.75rem;">&#128465;</button>' +
+              '</div>' +
+            '</div>';
+          }).join('') + '</div>';
+
+        el.querySelectorAll('.tar-descargar').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var idx = parseInt(this.dataset.idx);
+            var t = tareas[idx];
+            if (t && t.dataUrl) {
+              var a = document.createElement('a');
+              a.href = t.dataUrl;
+              a.download = t.fileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+          });
+        });
+        el.querySelectorAll('.tar-eliminar').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            if (!confirm('¿Eliminar esta tarea?')) return;
+            var idx = parseInt(this.dataset.idx);
+            tareas.splice(idx, 1);
+            tarGuardarStorage();
+            tarRender();
+            mostrarToast('Tarea eliminada.', 'success');
+          });
+        });
+      }
+
+      $('btn-tar-subir').addEventListener('click', function () {
+        var titulo = $('tar-titulo').value.trim();
+        var grupo = $('tar-grupo').value;
+        var materia = $('tar-materia').value;
+        var fileInput = $('tar-file');
+        var msgEl = $('tar-msg');
+
+        if (!logueado) { mostrarToast('Inicia sesión para subir tareas.', 'error'); return; }
+        if (!titulo) { msgEl.textContent = '⚠️ Escribe un título.'; msgEl.style.color = 'var(--red)'; return; }
+        if (!fileInput.files || fileInput.files.length === 0) { msgEl.textContent = '⚠️ Selecciona un archivo.'; msgEl.style.color = 'var(--red)'; return; }
+
+        var file = fileInput.files[0];
+        if (file.size > tarMaxSize) { msgEl.textContent = '⚠️ El archivo excede 5 MB.'; msgEl.style.color = 'var(--red)'; return; }
+
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          tareas.push({
+            titulo: titulo,
+            grupo: grupo,
+            materia: materia,
+            alumno: $('user-email-display').textContent || 'Anónimo',
+            fileName: file.name,
+            fileType: file.type || 'application/octet-stream',
+            size: file.size,
+            dataUrl: e.target.result,
+            fecha: new Date().toISOString()
+          });
+          tarGuardarStorage();
+          tarRender();
+          $('tar-titulo').value = '';
+          $('tar-file').value = '';
+          msgEl.textContent = '✔️ Tarea "' + titulo + '" subida correctamente.';
+          msgEl.style.color = 'var(--green)';
+          mostrarToast('Tarea subida: ' + titulo, 'success');
+        };
+        reader.onerror = function () {
+          msgEl.textContent = '⚠️ Error al leer el archivo.';
+          msgEl.style.color = 'var(--red)';
+        };
+        reader.readAsDataURL(file);
+      });
+
+      $('btn-tar-refresh').addEventListener('click', function () { tarRender(); mostrarToast('Lista actualizada.', 'success'); });
+      $('tar-filtro-grupo').addEventListener('change', tarRender);
+      $('tar-filtro-materia').addEventListener('change', tarRender);
+
+      tarRender();
+
+      /* ===================================================================
+         SABI — Analítica del Bachillerato
+         =================================================================== */
+      var recomendaciones = [
+        { texto: 'Ana García (1°A) — riesgo en matemáticas. Reforzar álgebra.', tipo: 'academico' },
+        { texto: 'Carlos Mendoza (1°A) — mejoró 18% en lectura. Mantener método.', tipo: 'logro' },
+        { texto: 'Grupo 2°A — bajo rendimiento en física. Actividad práctica recomendada.', tipo: 'grupo' },
+        { texto: 'María Torres (1°B) — 4 inasistencias consecutivas. Notificar a padres.', tipo: 'alerta' },
+        { texto: 'Luis Fernández (2°A) — destaca en artes. Recomendar taller de literatura.', tipo: 'recomendacion' },
+        { texto: '3° Semestre — preparación para PAES. Programa intensivo sugerido.', tipo: 'grupo' },
+        { texto: 'Valentina Ortiz (1°B) — riesgo en química. Tutoría sugerida.', tipo: 'academico' },
+        { texto: 'Diego Castillo (3°A) — mejor rendimiento del semestre. Felicitar.', tipo: 'logro' },
+      ];
+
+      function renderSabi() {
+        var el = $('sabi-recomendaciones-list');
+        el.innerHTML = recomendaciones.map(function (r) {
+          var icono = { academico: '📚', logro: '🏆', grupo: '👥', alerta: '⚠️', recomendacion: '💡' }[r.tipo] || '📌';
+          return '<div style="display:flex;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--gray-200);align-items:flex-start;font-size:.85rem;">' +
+            '<span style="font-size:1.1rem;">' + icono + '</span>' +
+            '<span>' + escapeHtml(r.texto) + '</span></div>';
+        }).join('');
+      }
+      renderSabi();
+
+      /* ===================================================================
+         INICIO
+         =================================================================== */
+      mostrarApp('inicio');
+
+    })();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        console.log('SW registrado, alcance:', reg.scope);
+      }).catch(function (err) {
+        console.log('Error al registrar SW:', err);
+      });
+    }
+  </script>
+</body>
+</html>
