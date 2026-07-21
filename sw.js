@@ -1,4 +1,4 @@
-var CACHE_NAME = 'edugest-v4';
+var CACHE_NAME = 'edugest-v5';
 var urlsToCache = [
   'index.html',
   'manifest.json',
