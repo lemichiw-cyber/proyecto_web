@@ -1,5 +1,20 @@
 {
-  "dependencies": {
-    "jsdom": "^29.1.1"
+  "name": "escola",
+  "version": "1.0.0",
+  "description": "Plataforma educativa INCOA",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "educacion",
+    "plataforma"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^8.1.5"
   }
 }
