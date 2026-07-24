@@ -8,7 +8,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('incoaSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','configuracion'];
       var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula'];
       function $(id) { return document.getElementById(id); }
 
@@ -120,7 +120,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          THEME — Cambio de tema claro/oscuro/pastel
          =================================================================== */
-      var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp'];
+      var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso'];
       var currentTheme = localStorage.getItem('incoaTheme') || 'light';
 
       /* Asegurar que el valor guardado sea válido */
@@ -130,36 +130,54 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('incoaTheme', theme);
-        var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower' };
+        var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower', paraiso:'sun' };
         var iconFile = themeIcons[theme] || 'moon';
         var btns = document.querySelectorAll('.btn-theme-toggle');
         for (var i = 0; i < btns.length; i++) btns[i].innerHTML = '<img src="' + iconSrc(iconFile) + '" style="width:18px;height:18px;display:block" alt="Tema">';
         var meta = document.querySelector('meta[name="theme-color"]');
-        var metaColor = theme === 'dark' ? '#0f172a' : theme === 'pastel' ? '#f0d9e8' : theme === 'sunset' ? '#2a1810' : theme === 'dawn' ? '#faf0d0' : theme === 'ocean' ? '#d0e8f0' : theme === 'mlp' ? '#e8d0f0' : theme === 'sakura' ? '#160C1E' : '#2563eb';
+        var metaColor = theme === 'dark' ? '#0f172a' : theme === 'pastel' ? '#f0d9e8' : theme === 'sunset' ? '#2a1810' : theme === 'dawn' ? '#faf0d0' : theme === 'ocean' ? '#d0e8f0' : theme === 'mlp' ? '#e8d0f0' : theme === 'sakura' ? '#160C1E' : theme === 'paraiso' ? '#0d0b14' : '#2563eb';
         if (meta) meta.content = metaColor;
-        // Marcar tarjeta activa en el modal si está abierto
-        var cards = document.querySelectorAll('#theme-options .theme-card');
+        // Marcar tarjeta activa en el modal y en la sección
+        var cards = document.querySelectorAll('#theme-options .theme-card, #theme-options-section .theme-card');
         for (var i = 0; i < cards.length; i++) {
           cards[i].classList.toggle('active', cards[i].getAttribute('data-theme') === theme);
         }
       }
       window.aplicarTheme = aplicarTheme;
 
+      var scrollPos = 0;
+      function lockBody() { scrollPos = window.scrollY; document.body.classList.add('no-scroll'); }
+      function unlockBody() { document.body.classList.remove('no-scroll'); }
+      document.addEventListener('touchmove', function(e) {
+        if (document.body.classList.contains('no-scroll') && !e.target.closest('.modal-overlay')) e.preventDefault();
+      }, { passive: false });
+
       function abrirTemas() {
         var modal = $('modal-temas');
-        if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
+        if (modal) { modal.classList.add('open'); lockBody(); }
       }
       window.abrirTemas = abrirTemas;
 
       function cerrarTemas() {
         var modal = $('modal-temas');
-        if (modal) { modal.classList.remove('open'); document.body.classList.remove('no-scroll'); }
+        if (modal) { modal.classList.remove('open'); unlockBody(); }
       }
+
+      function abrirModalTexto(id) {
+        var modal = $('modal-' + id);
+        if (modal) { modal.classList.add('open'); lockBody(); }
+      }
+      window.abrirModalTexto = abrirModalTexto;
+      function cerrarModalTexto(id) {
+        var modal = $('modal-' + id);
+        if (modal) { modal.classList.remove('open'); unlockBody(); }
+      }
+      window.cerrarModalTexto = cerrarModalTexto;
 
       function seleccionarTema(theme) {
         aplicarTheme(theme);
         cerrarTemas();
-        var nombres = { light:'claro', dark:'oscuro', pastel:'pastel', sunset:'atardecer', dawn:'amanecer', ocean:'océano', mlp:'My Little Pony', chicawa:'Chicawa', sakura:'Sakura' };
+        var nombres = { light:'claro', dark:'oscuro', pastel:'pastel', sunset:'atardecer', dawn:'amanecer', ocean:'océano', mlp:'My Little Pony', chicawa:'Chicawa', sakura:'Sakura', paraiso:'Paraíso' };
         mostrarToast('Tema cambiado a ' + (nombres[theme] || theme) + ' 🌸', 'success');
       }
       window.seleccionarTema = seleccionarTema;
@@ -170,12 +188,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var openSidebar = window.openSidebar = function () {
         $('sidebar').classList.add('open');
         $('sidebar-overlay').classList.add('open');
-        document.body.classList.add('no-scroll');
+        lockBody();
       };
       var closeSidebar = window.closeSidebar = function () {
         $('sidebar').classList.remove('open');
         $('sidebar-overlay').classList.remove('open');
-        document.body.classList.remove('no-scroll');
+        unlockBody();
       };
 
       /* ===== DASHBOARD ===== */
@@ -194,6 +212,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:'aulas', icon:'building-community', label:'Aulas Virtuales', desc:'Espacios de clase', color:'var(--purple)' },
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
+        { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
       ];
 
       function renderInicio() {
@@ -233,7 +252,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       window.mostrarApp = function (app) {
         if (app && appsProtegidas.indexOf(app) !== -1 && !logueado) {
           $('modal-login').classList.add('open');
-          document.body.classList.add('no-scroll');
+          lockBody();
           mostrarToast('Inicia sesión para acceder.', 'error');
           return;
         }
@@ -254,6 +273,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         _mostrarApp(app);
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
+        if (app === 'configuracion') {
+          var dest = $('theme-options-section');
+          if (dest && !dest.children.length) {
+            var src = $('theme-options');
+            if (src) dest.innerHTML = src.innerHTML;
+          }
+        }
       };
 
       document.querySelectorAll('[data-app]').forEach(function (link) {
@@ -270,9 +296,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       /* ===== LOGIN CON ROLES ===== */
       var modalLogin = $('modal-login');
-      $('btn-login').addEventListener('click', function () { modalLogin.classList.add('open'); document.body.classList.add('no-scroll'); });
-      $('modal-login-close').addEventListener('click', function () { modalLogin.classList.remove('open'); document.body.classList.remove('no-scroll'); });
-      modalLogin.addEventListener('click', function (e) { if (e.target === modalLogin) { modalLogin.classList.remove('open'); document.body.classList.remove('no-scroll'); } });
+      $('btn-login').addEventListener('click', function () { modalLogin.classList.add('open'); lockBody(); });
+      $('modal-login-close').addEventListener('click', function () { modalLogin.classList.remove('open'); unlockBody(); });
+      modalLogin.addEventListener('click', function (e) { if (e.target === modalLogin) { modalLogin.classList.remove('open'); unlockBody(); } });
 
       var modalTemas = $('modal-temas');
       $('modal-temas-close').addEventListener('click', cerrarTemas);
@@ -944,14 +970,43 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         div.innerHTML =
           '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.4rem;">' +
             '<strong style="font-size:.85rem;">Pregunta ' + examQCount + '</strong>' +
-            '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.2rem;padding:0 4px;">×</button>' +
+            '<div style="display:flex;gap:.5rem;align-items:center;">' +
+              '<select class="tipo-select" data-idx="' + examQCount + '" onchange="examCambiarTipo(this)" style="padding:.25rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;font-size:.78rem;">' +
+                '<option value="multiple">Opción Múltiple</option>' +
+                '<option value="vf">Verdadero/Falso</option>' +
+                '<option value="completar">Completar</option>' +
+              '</select>' +
+              '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.2rem;padding:0 4px;">×</button>' +
+            '</div>' +
           '</div>' +
           '<textarea class="pregunta-textarea" placeholder="Escribe la pregunta..." data-idx="' + examQCount + '"></textarea>' +
-          '<div class="opt-row"><span class="opt-label">A)</span><input type="text" placeholder="Opción A" data-idx="' + examQCount + '" data-opt="0"><input type="radio" name="correcta-' + examQCount + '" value="0"></div>' +
-          '<div class="opt-row"><span class="opt-label">B)</span><input type="text" placeholder="Opción B" data-idx="' + examQCount + '" data-opt="1"><input type="radio" name="correcta-' + examQCount + '" value="1"></div>' +
-          '<div class="opt-row"><span class="opt-label">C)</span><input type="text" placeholder="Opción C" data-idx="' + examQCount + '" data-opt="2"><input type="radio" name="correcta-' + examQCount + '" value="2"></div>';
+          '<div class="pregunta-body" data-idx="' + examQCount + '">' +
+            '<div class="opt-row"><span class="opt-label">A)</span><input type="text" placeholder="Opción A" data-idx="' + examQCount + '" data-opt="0"><input type="radio" name="correcta-' + examQCount + '" value="0"></div>' +
+            '<div class="opt-row"><span class="opt-label">B)</span><input type="text" placeholder="Opción B" data-idx="' + examQCount + '" data-opt="1"><input type="radio" name="correcta-' + examQCount + '" value="1"></div>' +
+            '<div class="opt-row"><span class="opt-label">C)</span><input type="text" placeholder="Opción C" data-idx="' + examQCount + '" data-opt="2"><input type="radio" name="correcta-' + examQCount + '" value="2"></div>' +
+          '</div>';
         $('exam-q-list').appendChild(div);
       }
+      window.examCambiarTipo = function (sel) {
+        var idx = sel.dataset.idx;
+        var body = document.querySelector('.pregunta-body[data-idx="' + idx + '"]');
+        var tipo = sel.value;
+        if (tipo === 'multiple') {
+          body.innerHTML =
+            '<div class="opt-row"><span class="opt-label">A)</span><input type="text" placeholder="Opción A" data-idx="' + idx + '" data-opt="0"><input type="radio" name="correcta-' + idx + '" value="0"></div>' +
+            '<div class="opt-row"><span class="opt-label">B)</span><input type="text" placeholder="Opción B" data-idx="' + idx + '" data-opt="1"><input type="radio" name="correcta-' + idx + '" value="1"></div>' +
+            '<div class="opt-row"><span class="opt-label">C)</span><input type="text" placeholder="Opción C" data-idx="' + idx + '" data-opt="2"><input type="radio" name="correcta-' + idx + '" value="2"></div>';
+        } else if (tipo === 'vf') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Seleccioná la respuesta correcta:</div>' +
+            '<label class="opt-row" style="margin-bottom:.3rem;"><input type="radio" name="correcta-' + idx + '" value="1"> <span>✅ Verdadero</span></label>' +
+            '<label class="opt-row"><input type="radio" name="correcta-' + idx + '" value="0"> <span>❌ Falso</span></label>';
+        } else if (tipo === 'completar') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Escribí la respuesta correcta (sin distinguir mayúsculas):</div>' +
+            '<input type="text" placeholder="Ej: Buenos Aires" data-idx="' + idx + '" data-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        }
+      };
 
       function examGetPreguntas() {
         var items = document.querySelectorAll('#exam-q-list .pregunta-item');
@@ -959,16 +1014,24 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         items.forEach(function (item) {
           var idx = item.querySelector('.pregunta-textarea').dataset.idx;
           var texto = item.querySelector('.pregunta-textarea').value.trim();
-          var optA = item.querySelector('input[data-opt="0"]').value.trim();
-          var optB = item.querySelector('input[data-opt="1"]').value.trim();
-          var optC = item.querySelector('input[data-opt="2"]').value.trim();
-          var correcta = item.querySelector('input[name="correcta-' + idx + '"]:checked');
-          if (!texto) return; // skip empty
-          preguntas.push({
-            texto: texto,
-            opciones: [optA || '—', optB || '—', optC || '—'],
-            correcta: correcta ? parseInt(correcta.value, 10) : 0
-          });
+          if (!texto) return;
+          var tipo = item.querySelector('.tipo-select').value;
+          var q = { texto: texto, tipo: tipo };
+          if (tipo === 'multiple') {
+            var optA = item.querySelector('input[data-opt="0"]').value.trim();
+            var optB = item.querySelector('input[data-opt="1"]').value.trim();
+            var optC = item.querySelector('input[data-opt="2"]').value.trim();
+            var correcta = item.querySelector('input[name="correcta-' + idx + '"]:checked');
+            q.opciones = [optA || '—', optB || '—', optC || '—'];
+            q.correcta = correcta ? parseInt(correcta.value, 10) : 0;
+          } else if (tipo === 'vf') {
+            var correcta = item.querySelector('input[name="correcta-' + idx + '"]:checked');
+            q.correcta = correcta ? parseInt(correcta.value, 10) : 1;
+          } else if (tipo === 'completar') {
+            var respInput = item.querySelector('input[data-resp]');
+            q.respuesta = respInput ? respInput.value.trim() : '';
+          }
+          preguntas.push(q);
         });
         return preguntas;
       }
@@ -1232,16 +1295,26 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         var container = $('exam-preguntas');
         container.innerHTML = ex.preguntas.map(function (q, qi) {
-          return '<div class="q-block">' +
-            '<div class="q-text">' + (qi + 1) + '. ' + escapeHtml(q.texto) + '</div>' +
-            q.opciones.map(function (opt, oi) {
+          var html = '<div class="q-block"><div class="q-text">' + (qi + 1) + '. ' + escapeHtml(q.texto) + '</div>';
+          if (q.tipo === 'multiple') {
+            html += q.opciones.map(function (opt, oi) {
               return '<label class="opt-row"><input type="radio" name="exam-resp-' + qi + '" value="' + oi + '"> <span>' + String.fromCharCode(65 + oi) + ') ' + escapeHtml(opt) + '</span></label>';
-            }).join('') +
-          '</div>';
+            }).join('');
+          } else if (q.tipo === 'vf') {
+            html += '<label class="opt-row"><input type="radio" name="exam-resp-' + qi + '" value="1"> <span>✅ Verdadero</span></label>' +
+                    '<label class="opt-row"><input type="radio" name="exam-resp-' + qi + '" value="0"> <span>❌ Falso</span></label>';
+          } else if (q.tipo === 'completar') {
+            html += '<div style="margin-top:.4rem;"><input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta..." style="width:100%;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></div>';
+          }
+          html += '</div>';
+          return html;
         }).join('');
 
         container.querySelectorAll('input[type="radio"]').forEach(function (radio) {
           radio.addEventListener('change', function () { examActualizarProgreso(); });
+        });
+        container.querySelectorAll('.exam-fill-input').forEach(function (input) {
+          input.addEventListener('input', function () { examActualizarProgreso(); });
         });
       }
 
@@ -1251,9 +1324,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var respondidas = 0;
         for (var i = 0; i < total; i++) {
           var radios = document.querySelectorAll('input[name="exam-resp-' + i + '"]');
+          var responded = false;
           for (var j = 0; j < radios.length; j++) {
-            if (radios[j].checked) { respondidas++; break; }
+            if (radios[j].checked) { responded = true; break; }
           }
+          if (!responded) {
+            var fill = document.querySelector('.exam-fill-input[data-qi="' + i + '"]');
+            if (fill && fill.value.trim()) responded = true;
+          }
+          if (responded) respondidas++;
         }
         $('exam-progress').textContent = respondidas + '/' + total;
         $('exam-progress-bar').style.width = (respondidas / total * 100) + '%';
@@ -1279,12 +1358,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function examRecolectarRespuestas() {
         if (!examEnCurso) return [];
         return examEnCurso.examen.preguntas.map(function (q, qi) {
-          var radios = document.querySelectorAll('input[name="exam-resp-' + qi + '"]');
-          var seleccionado = null;
-          for (var j = 0; j < radios.length; j++) {
-            if (radios[j].checked) { seleccionado = parseInt(radios[j].value, 10); break; }
+          if (q.tipo === 'completar') {
+            var fill = document.querySelector('.exam-fill-input[data-qi="' + qi + '"]');
+            return fill ? fill.value.trim().toLowerCase() : '';
+          } else {
+            var radios = document.querySelectorAll('input[name="exam-resp-' + qi + '"]');
+            for (var j = 0; j < radios.length; j++) {
+              if (radios[j].checked) return parseInt(radios[j].value, 10);
+            }
+            return null;
           }
-          return seleccionado;
         });
       }
 
@@ -1295,7 +1378,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var respuestas = examRecolectarRespuestas();
         var correctas = 0;
         examEnCurso.examen.preguntas.forEach(function (q, i) {
-          if (respuestas[i] !== null && respuestas[i] === q.correcta) correctas++;
+          if (respuestas[i] === null || respuestas[i] === '') return;
+          if (q.tipo === 'completar') {
+            if (respuestas[i] === (q.respuesta || '').toLowerCase()) correctas++;
+          } else {
+            if (respuestas[i] === q.correcta) correctas++;
+          }
         });
         var total = examEnCurso.examen.preguntas.length;
         var porcentaje = total > 0 ? Math.round(correctas / total * 100) : 0;
@@ -2661,13 +2749,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         $('entrega-archivo').value = '';
         $('entrega-archivo-info').textContent = '';
         $('modal-entrega').classList.add('open');
-        document.body.classList.add('no-scroll');
+        lockBody();
         $('entrega-respuesta').focus();
       }
 
       function closeEntregaModal() {
         $('modal-entrega').classList.remove('open');
-        document.body.classList.remove('no-scroll');
+        unlockBody();
       }
 
       $('modal-entrega-close').addEventListener('click', closeEntregaModal);
@@ -2887,6 +2975,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       if (logueado && usuarioActual) {
         var btnLogin = $('btn-login');
         if (btnLogin) btnLogin.style.display = 'none';
+        var btnIngresar = $('btn-ingresar-hero');
+        if (btnIngresar) btnIngresar.style.display = 'none';
         var ui = $('user-info');
         if (ui) { ui.style.display = 'flex'; ui.classList.remove('hidden'); }
         var rolDisplay = { estudiante:'Estudiante', docente:'Docente', director:'Director', subdirector:'Subdirector', coordinador:'Coordinador', padres:'Padre de familia', admin:'Admin' }[usuarioActual.rol] || usuarioActual.rol;
@@ -2905,14 +2995,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       mostrarApp('inicio');
 
     })();
-  </script>
 
-  <script>
-    if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(function (reg) {
         console.log('SW registrado, alcance:', reg.scope);
       }).catch(function (err) {
         console.log('Error al registrar SW:', err);
       });
     }
-  
