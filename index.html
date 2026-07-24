@@ -647,7 +647,7 @@ unicode: "ea6f"
  Entregar tarea</h3><button class="modal-close" id="modal-entrega-close">&times;</button></div>
       <div style="margin:1rem 0;">
         <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:.35rem;">Respuesta (opcional)</label>
-        <textarea id="entrega-respuesta" placeholder="Escribe tu respuesta aqu\u00ED..." rows="3" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>
+        <textarea id="entrega-respuesta" placeholder="Escribe tu respuesta aqu&iacute;..." rows="3" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>
       </div>
       <div style="margin-bottom:1rem;">
         <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:.35rem;">Archivo (opcional)</label>
@@ -655,7 +655,7 @@ unicode: "ea6f"
           <input type="file" id="entrega-archivo" accept=".pdf,.doc,.docx,.txt,.zip,.png,.jpg,.jpeg" style="flex:1;font-size:.85rem;">
           <span id="entrega-archivo-info" style="font-size:.78rem;color:var(--gray-500);"></span>
         </div>
-        <div style="font-size:.75rem;color:var(--gray-400);margin-top:.25rem;">M\u00E1ximo 2 MB. Formatos: PDF, DOC, DOCX, TXT, ZIP, PNG, JPG.</div>
+        <div style="font-size:.75rem;color:var(--gray-400);margin-top:.25rem;">M&aacute;ximo 2 MB. Formatos: PDF, DOC, DOCX, TXT, ZIP, PNG, JPG.</div>
       </div>
       <div style="display:flex;gap:.5rem;justify-content:flex-end;">
         <button class="btn btn-outline" id="btn-entrega-cancelar">Cancelar</button>
@@ -2077,30 +2077,6 @@ unicode: "ea39"
           <button class="btn btn-primary btn-sm" id="btn-digital-add">+ Subir recurso</button>
            </div>
         </div>
-
-        <!-- ===== TAB INSCRIPCIÓN ===== -->
-        <div id="aula-tab-inscripcion" class="hidden">
-          <div class="card">
-            <h3>\uD83D\uDC65 Inscripci\u00F3n de Estudiantes en Aulas</h3>
-            <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin:.75rem 0;">
-              <div class="form-group" style="flex:1;min-width:180px;">
-                <label>Aula</label>
-                <select id="insc-aula" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
-              </div>
-              <div class="form-group" style="flex:1;min-width:180px;">
-                <label>Estudiante</label>
-                <select id="insc-estudiante" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
-              </div>
-              <div style="display:flex;align-items:flex-end;">
-                <button class="btn btn-primary" id="btn-insc-agregar">\u2795 Inscribir</button>
-              </div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:.75rem;">
-            <h3>Estudiantes inscritos</h3>
-            <div id="insc-lista"><div class="empty-msg">Selecciona un aula para ver sus estudiantes inscritos.</div></div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -2299,45 +2275,7 @@ unicode: "eb2e"
             <button class="active" data-exp-tab="disponibles">Disponibles</button>
             <button data-exp-tab="creadas">Mis creaciones</button>
           </div>
-          <button class="btn btn-primary btn-sm" id="btn-exp-crear">+ Crear experiencia</button>
-          </div>
-        </div>
-
-        <!-- ===== TAB SALA VIRTUAL ===== -->
-        <div id="aula-tab-sala" class="hidden">
-          <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;">
-            <div class="form-group" style="flex:1;min-width:180px;">
-              <label>Aula</label>
-              <select id="sala-aula-select" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
-            <!-- Chat -->
-            <div class="card" style="display:flex;flex-direction:column;max-height:500px;">
-              <h3>\uD83D\uDCAC Chat del Aula</h3>
-              <div id="sala-chat-mensajes" style="flex:1;overflow-y:auto;max-height:350px;padding:.5rem;background:var(--gray-50);border-radius:8px;margin:.5rem 0;font-size:.85rem;"></div>
-              <div style="display:flex;gap:.5rem;">
-                <input type="text" id="sala-chat-input" placeholder="Escribe un mensaje..." style="flex:1;padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
-                <button class="btn btn-primary btn-sm" id="sala-chat-enviar">\uD83D\uDE80</button>
-              </div>
-            </div>
-            <!-- Pizarra -->
-            <div class="card" style="display:flex;flex-direction:column;">
-              <h3>\uD83C\uDFA8 Pizarra</h3>
-              <div style="display:flex;gap:.5rem;margin:.5rem 0;align-items:center;flex-wrap:wrap;">
-                <input type="color" id="sala-pizarra-color" value="#000000" style="width:32px;height:32px;border:none;cursor:pointer;">
-                <input type="range" id="sala-pizarra-size" min="1" max="20" value="3" style="width:80px;">
-                <span id="sala-pizarra-size-val" style="font-size:.78rem;">3px</span>
-                <button class="btn btn-sm btn-outline" id="sala-pizarra-borrar">\uD83E\uDDF9 Limpiar</button>
-              </div>
-              <canvas id="sala-pizarra-canvas" width="500" height="300" style="width:100%;border:1px solid var(--gray-300);border-radius:8px;cursor:crosshair;background:#fff;"></canvas>
-            </div>
-          </div>
-          <!-- Videoconferencia -->
-          <div class="card" style="margin-top:.75rem;">
-            <h3>\uD83C\uDFAC Videoconferencia</h3>
-            <p style="font-size:.82rem;color:var(--gray-500);margin-bottom:.5rem;">Inicia una videollamada con los estudiantes del aula. Se abrir\u00E1 en una nueva pesta\u00F1a.</p>
-            <button class="btn btn-primary" id="sala-video-iniciar">\uD83D\uDCF1 Iniciar videollamada (Jitsi)</button>
+           <button class="btn btn-primary btn-sm" id="btn-exp-crear">+ Crear experiencia</button>
           </div>
         </div>
       </div>
@@ -2967,7 +2905,7 @@ unicode: "ea6f"
               <line x1="19" y1="8" x2="19" y2="14"/>
               <line x1="22" y1="11" x2="16" y2="11"/>
             </svg>
- Inscripci\u00F3n</button>
+ Inscripci&#243;n</button>
           <button data-aula-tab="sala">
             <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z"/>
@@ -3319,6 +3257,65 @@ unicode: "ea5e"
  Tareas entregadas</h3></div>
               <div id="aula-tarea-entregadas-lista"><div class="empty-msg">A&uacute;n no has entregado tareas.</div></div>
             </div>
+          </div>
+        </div>
+
+        <!-- ===== TAB INSCRIPCIÓN ===== -->
+        <div id="aula-tab-inscripcion" class="hidden">
+          <div class="card">
+            <h3>&#x1F465; Inscripci&oacute;n de Estudiantes en Aulas</h3>
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin:.75rem 0;">
+              <div class="form-group" style="flex:1;min-width:180px;">
+                <label>Aula</label>
+                <select id="insc-aula" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+              </div>
+              <div class="form-group" style="flex:1;min-width:180px;">
+                <label>Estudiante</label>
+                <select id="insc-estudiante" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+              </div>
+              <div style="display:flex;align-items:flex-end;">
+                <button class="btn btn-primary" id="btn-insc-agregar">+ Inscribir</button>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:.75rem;">
+            <h3>Estudiantes inscritos</h3>
+            <div id="insc-lista"><div class="empty-msg">Selecciona un aula para ver sus estudiantes inscritos.</div></div>
+          </div>
+        </div>
+
+        <!-- ===== TAB SALA VIRTUAL ===== -->
+        <div id="aula-tab-sala" class="hidden">
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;">
+            <div class="form-group" style="flex:1;min-width:180px;">
+              <label>Aula</label>
+              <select id="sala-aula-select" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+            <div class="card" style="display:flex;flex-direction:column;max-height:500px;">
+              <h3>&#x1F4AC; Chat del Aula</h3>
+              <div id="sala-chat-mensajes" style="flex:1;overflow-y:auto;max-height:350px;padding:.5rem;background:var(--gray-50);border-radius:8px;margin:.5rem 0;font-size:.85rem;"></div>
+              <div style="display:flex;gap:.5rem;">
+                <input type="text" id="sala-chat-input" placeholder="Escribe un mensaje..." style="flex:1;padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+                <button class="btn btn-primary btn-sm" id="sala-chat-enviar">&#x1F680;</button>
+              </div>
+            </div>
+            <div class="card" style="display:flex;flex-direction:column;">
+              <h3>&#x1F3A8; Pizarra</h3>
+              <div style="display:flex;gap:.5rem;margin:.5rem 0;align-items:center;flex-wrap:wrap;">
+                <input type="color" id="sala-pizarra-color" value="#000000" style="width:32px;height:32px;border:none;cursor:pointer;">
+                <input type="range" id="sala-pizarra-size" min="1" max="20" value="3" style="width:80px;">
+                <span id="sala-pizarra-size-val" style="font-size:.78rem;">3px</span>
+                <button class="btn btn-sm btn-outline" id="sala-pizarra-borrar">&#x1F9F9; Limpiar</button>
+              </div>
+              <canvas id="sala-pizarra-canvas" width="500" height="300" style="width:100%;border:1px solid var(--gray-300);border-radius:8px;cursor:crosshair;background:#fff;"></canvas>
+            </div>
+          </div>
+          <div class="card" style="margin-top:.75rem;">
+            <h3>&#x1F3AC; Videoconferencia</h3>
+            <p style="font-size:.82rem;color:var(--gray-500);margin-bottom:.5rem;">Inicia una videollamada con los estudiantes del aula. Se abrir&aacute; en una nueva pesta&ntilde;a.</p>
+            <button class="btn btn-primary" id="sala-video-iniciar">&#x1F4F1; Iniciar videollamada (Jitsi)</button>
           </div>
         </div>
       </div>
