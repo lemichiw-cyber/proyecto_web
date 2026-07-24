@@ -1927,14 +1927,47 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          AULAS VIRTUALES — CRUD + ESTUDIANTES
          =================================================================== */
       var aulas = JSON.parse(localStorage.getItem('aulas') || '[]');
+      var editingAulaId = null;
       function aulasGuardarStorage() { localStorage.setItem('aulas', JSON.stringify(aulas)); }
+      function aulaResetForm() {
+        $('aula-nombre').value = ''; $('aula-capacidad').value = '30';
+        $('aula-ubicacion').value = ''; $('aula-tipo').value = 'salon';
+        $('aula-equipamiento').value = 'basico'; $('aula-desc').value = '';
+        $('aula-especialidad').value = 'general';
+        $('aula-anio').value = '1';
+        $('aula-seccion').value = 'A';
+        editingAulaId = null;
+        $('btn-aula-crear').textContent = '\u2795 Crear Aula';
+        $('btn-aula-crear').classList.remove('btn-warning');
+        $('btn-aula-crear').classList.add('btn-primary');
+        if ($('btn-aula-cancelar-edicion')) $('btn-aula-cancelar-edicion').remove();
+      }
 
       var tipoIconos = { salon:'\uD83C\uDFEB', laboratorio:'\uD83D\uDD2C', taller:'\uD83D\uDD27', auditorio:'\uD83C\uDF9F\uFE0F', cancha:'\u26BD' };
       var tipoColores = { salon:'blue', laboratorio:'purple', taller:'orange', auditorio:'green', cancha:'teal' };
 
       function aulasRenderGrid() {
         var filtro = $('aula-filtro-tipo').value;
-        var items = filtro === 'todos' ? aulas : aulas.filter(function (a) { return a.tipo === filtro; });
+        var buscar = ($('aula-buscar') ? $('aula-buscar').value : '').trim().toLowerCase();
+        var orden = $('aula-ordenar') ? $('aula-ordenar').value : 'nombre-asc';
+        var items = filtro === 'todos' ? aulas.slice() : aulas.filter(function (a) { return a.tipo === filtro; });
+        if (buscar) {
+          items = items.filter(function (a) {
+            return a.nombre.toLowerCase().indexOf(buscar) !== -1 ||
+                   (a.desc || '').toLowerCase().indexOf(buscar) !== -1 ||
+                   (a.ubicacion || '').toLowerCase().indexOf(buscar) !== -1;
+          });
+        }
+        items.sort(function (a, b) {
+          switch (orden) {
+            case 'nombre-asc': return a.nombre.localeCompare(b.nombre);
+            case 'nombre-desc': return b.nombre.localeCompare(a.nombre);
+            case 'capacidad-desc': return b.capacidad - a.capacidad;
+            case 'capacidad-asc': return a.capacidad - b.capacidad;
+            case 'tipo': return a.tipo.localeCompare(b.tipo);
+            default: return 0;
+          }
+        });
         var container = $('aulas-grid');
         var total = $('aulas-total');
         if (items.length === 0) {
@@ -1971,6 +2004,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var idx = parseInt(this.dataset.idx);
             var a = aulas[idx];
             if (!a) return;
+            editingAulaId = a.id;
             $('aula-nombre').value = a.nombre;
             $('aula-capacidad').value = a.capacidad;
             $('aula-ubicacion').value = a.ubicacion || '';
@@ -1980,10 +2014,19 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             $('aula-especialidad').value = a.especialidad || 'general';
             $('aula-anio').value = a.anio || '1';
             $('aula-seccion').value = a.seccion || 'A';
-            aulas.splice(idx, 1);
-            aulasGuardarStorage();
-            aulasRenderGrid();
-            mostrarToast('Editando aula. Completa y crea de nuevo.', 'success');
+            $('btn-aula-crear').textContent = '\u270F\uFE0F Actualizar Aula';
+            $('btn-aula-crear').classList.remove('btn-primary');
+            $('btn-aula-crear').classList.add('btn-warning');
+            if (!$('btn-aula-cancelar-edicion')) {
+              var cancelBtn = document.createElement('button');
+              cancelBtn.id = 'btn-aula-cancelar-edicion';
+              cancelBtn.className = 'btn btn-sm btn-outline';
+              cancelBtn.textContent = '\u274C Cancelar';
+              cancelBtn.style.marginTop = '.5rem';
+              cancelBtn.addEventListener('click', aulaResetForm);
+              $('btn-aula-crear').parentNode.insertBefore(cancelBtn, $('btn-aula-limpiar'));
+            }
+            mostrarToast('Editando aula "' + a.nombre + '". Modifica y actualiza.', 'info');
             $('aula-nombre').focus();
           });
         });
@@ -2040,27 +2083,59 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var seccion = $('aula-seccion').value;
           if (!nombre) { mostrarToast('El nombre del aula es obligatorio.', 'error'); $('aula-nombre').focus(); return; }
           if (!capacidad || capacidad < 1) { mostrarToast('Capacidad inv\u00E1lida.', 'error'); $('aula-capacidad').focus(); return; }
-          aulas.push({ nombre: nombre, capacidad: capacidad, ubicacion: ubicacion, tipo: tipo, equipamiento: equipamiento, desc: desc, especialidad: especialidad, anio: anio, seccion: seccion });
-          aulasGuardarStorage();
-          aulasRenderGrid();
-          $('aula-nombre').value = ''; $('aula-capacidad').value = '30';
-          $('aula-ubicacion').value = ''; $('aula-tipo').value = 'salon';
-          $('aula-equipamiento').value = 'basico'; $('aula-desc').value = '';
-          $('aula-especialidad').value = 'general';
-          $('aula-anio').value = '1';
-          $('aula-seccion').value = 'A';
-          mostrarToast('Aula "' + nombre + '" creada.', 'success');
+          var dup = aulas.some(function (a) { return a.nombre.toLowerCase() === nombre.toLowerCase() && a.id !== editingAulaId; });
+          if (dup) { mostrarToast('Ya existe un aula con ese nombre.', 'error'); $('aula-nombre').focus(); return; }
+          if (editingAulaId !== null) {
+            for (var ai = 0; ai < aulas.length; ai++) {
+              if (aulas[ai].id === editingAulaId) {
+                aulas[ai].nombre = nombre;
+                aulas[ai].capacidad = capacidad;
+                aulas[ai].ubicacion = ubicacion;
+                aulas[ai].tipo = tipo;
+                aulas[ai].equipamiento = equipamiento;
+                aulas[ai].desc = desc;
+                aulas[ai].especialidad = especialidad;
+                aulas[ai].anio = anio;
+                aulas[ai].seccion = seccion;
+                break;
+              }
+            }
+            aulaResetForm();
+            aulasGuardarStorage();
+            aulasRenderGrid();
+            mostrarToast('Aula actualizada correctamente.', 'success');
+          } else {
+            aulas.push({ id: Date.now(), nombre: nombre, capacidad: capacidad, ubicacion: ubicacion, tipo: tipo, equipamiento: equipamiento, desc: desc, especialidad: especialidad, anio: anio, seccion: seccion });
+            aulasGuardarStorage();
+            aulaResetForm();
+            aulasRenderGrid();
+            mostrarToast('Aula "' + nombre + '" creada.', 'success');
+          }
           $('aula-nombre').focus();
         });
-        $('btn-aula-limpiar').addEventListener('click', function () {
-          $('aula-nombre').value = ''; $('aula-capacidad').value = '30';
-          $('aula-ubicacion').value = ''; $('aula-tipo').value = 'salon';
-          $('aula-equipamiento').value = 'basico'; $('aula-desc').value = '';
-          $('aula-especialidad').value = 'general';
-          $('aula-anio').value = '1';
-          $('aula-seccion').value = 'A';
-        });
+        $('btn-aula-limpiar').addEventListener('click', aulaResetForm);
         $('aula-filtro-tipo').addEventListener('change', aulasRenderGrid);
+        if ($('aula-buscar')) $('aula-buscar').addEventListener('input', aulasRenderGrid);
+        if ($('aula-ordenar')) $('aula-ordenar').addEventListener('change', aulasRenderGrid);
+        if ($('btn-aula-csv')) $('btn-aula-csv').addEventListener('click', function () {
+          if (aulas.length === 0) { mostrarToast('No hay aulas para exportar.', 'error'); return; }
+          var rows = [['Nombre', 'Tipo', 'Capacidad', 'Ubicaci\u00F3n', 'Equipamiento', 'Especialidad', 'A\u00F1o', 'Secci\u00F3n', 'Descripci\u00F3n']];
+          aulas.forEach(function (a) {
+            rows.push([a.nombre, a.tipo, a.capacidad, a.ubicacion || '', a.equipamiento || '', a.especialidad || '', a.anio || '', a.seccion || '', a.desc || '']);
+          });
+          var csv = rows.map(function (r) {
+            return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(',');
+          }).join('\n');
+          var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+          var link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'aulas_' + new Date().toISOString().slice(0,10) + '.csv';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(link.href);
+          mostrarToast('CSV de aulas exportado.', 'success');
+        });
         aulasRenderGrid();
 
         // Tab switching gesti\u00F3n / estudiantes / tareas
@@ -2072,7 +2147,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             $('aula-tab-gestion').classList.toggle('hidden', tab !== 'gestion');
             $('aula-tab-estudiantes').classList.toggle('hidden', tab !== 'estudiantes');
             $('aula-tab-tareas').classList.toggle('hidden', tab !== 'tareas');
+            if ($('aula-tab-inscripcion')) $('aula-tab-inscripcion').classList.toggle('hidden', tab !== 'inscripcion');
+            if ($('aula-tab-sala')) $('aula-tab-sala').classList.toggle('hidden', tab !== 'sala');
             if (tab === 'tareas') renderAulaTareas();
+            if (tab === 'inscripcion') renderInscripcion();
+            if (tab === 'sala') renderSala();
           });
         });
 
@@ -2096,9 +2175,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
       /* ===================================================================
-         ESTUDIANTES DB \u2014 Datos simulados
+         ESTUDIANTES DB — Datos simulados + persistencia
          =================================================================== */
-      var ESTUDIANTES_DB = [
+      var ESTUDIANTES_DEFAULT = [
         { id:1, nombre:'Ana Sof\u00EDa Garc\u00EDa L\u00F3pez',      anio:1, especialidad:'software',      seccion:'C', asistencia:true  },
         { id:2, nombre:'Carlos Eduardo Mendoza Ruiz',  anio:1, especialidad:'software',      seccion:'C', asistencia:false },
         { id:3, nombre:'Mar\u00EDa Jos\u00E9 Torres Silva',      anio:1, especialidad:'software',      seccion:'C', asistencia:true  },
@@ -2112,6 +2191,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:11,nombre:'Regina Campos Torres',         anio:2, especialidad:'software',      seccion:'A', asistencia:false },
         { id:12,nombre:'Fernando Soto R\u00EDos',           anio:2, especialidad:'software',      seccion:'A', asistencia:true  },
       ];
+      var ESTUDIANTES_DB = JSON.parse(localStorage.getItem('estudiantes_db'));
+      if (!Array.isArray(ESTUDIANTES_DB) || ESTUDIANTES_DB.length === 0) {
+        ESTUDIANTES_DB = ESTUDIANTES_DEFAULT.map(function (e) { return Object.assign({}, e); });
+      }
+      var asistenciaHistorial = JSON.parse(localStorage.getItem('asistencia_historial') || '[]');
+      function estudiantesGuardar() { localStorage.setItem('estudiantes_db', JSON.stringify(ESTUDIANTES_DB)); }
+      function asistenciaGuardar() { localStorage.setItem('asistencia_historial', JSON.stringify(asistenciaHistorial)); }
 
       var estPresentes = 0;
       var estAusentes = 0;
@@ -2175,9 +2261,17 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             for (var j = 0; j < ESTUDIANTES_DB.length; j++) {
               if (ESTUDIANTES_DB[j].id === id) {
                 ESTUDIANTES_DB[j].asistencia = this.checked;
+                asistenciaHistorial.push({
+                  estudianteId: id,
+                  nombre: ESTUDIANTES_DB[j].nombre,
+                  presente: this.checked,
+                  fecha: new Date().toISOString()
+                });
                 break;
               }
             }
+            estudiantesGuardar();
+            asistenciaGuardar();
             estRenderTabla();
           });
         });
@@ -2612,6 +2706,76 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       renderProtegido();
 
       /* ===================================================================
+         AULAS — Inscripción de estudiantes
+         =================================================================== */
+      var aulaInscripciones = JSON.parse(localStorage.getItem('aula_inscripciones') || '[]');
+      function inscripcionesGuardar() { localStorage.setItem('aula_inscripciones', JSON.stringify(aulaInscripciones)); }
+
+      function renderInscripcion() {
+        var aulaSel = $('insc-aula');
+        var estSel = $('insc-estudiante');
+        if (!aulaSel || !estSel) return;
+        var curAula = aulaSel.value;
+        aulaSel.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
+          aulas.map(function (a) {
+            var count = aulaInscripciones.filter(function (i) { return i.aulaId === a.id; }).length;
+            return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + ' (' + count + '/' + a.capacidad + ')</option>';
+          }).join('');
+        if (curAula) aulaSel.value = curAula;
+        estSel.innerHTML = '<option value="">-- Seleccionar estudiante --</option>' +
+          ESTUDIANTES_DB.map(function (e) {
+            return '<option value="' + e.id + '">' + escapeHtml(e.nombre) + ' (' + e.anio + '.° ' + e.seccion + ')</option>';
+          }).join('');
+        renderInscLista();
+      }
+
+      function renderInscLista() {
+        var aulaId = $('insc-aula') ? parseInt($('insc-aula').value, 10) : 0;
+        var el = $('insc-lista');
+        if (!el) return;
+        if (!aulaId) { el.innerHTML = '<div class="empty-msg">Selecciona un aula para ver sus estudiantes inscritos.</div>'; return; }
+        var inscritos = aulaInscripciones.filter(function (i) { return i.aulaId === aulaId; });
+        if (inscritos.length === 0) { el.innerHTML = '<div class="empty-msg">No hay estudiantes inscritos en esta aula.</div>'; return; }
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' +
+          inscritos.map(function (insc) {
+            var est = ESTUDIANTES_DB.find(function (e) { return e.id === insc.estudianteId; });
+            var name = est ? escapeHtml(est.nombre) : '(desconocido)';
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+              '<span>' + name + '</span>' +
+              '<button class="btn btn-sm btn-outline insc-remover" data-est="' + insc.estudianteId + '" data-aula="' + aulaId + '" style="color:var(--red);font-size:.78rem;">\u274C Quitar</button></div>';
+          }).join('') + '</div>';
+        el.querySelectorAll('.insc-remover').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var eid = parseInt(this.dataset.est, 10);
+            var aid = parseInt(this.dataset.aula, 10);
+            aulaInscripciones = aulaInscripciones.filter(function (i) { return !(i.aulaId === aid && i.estudianteId === eid); });
+            inscripcionesGuardar();
+            renderInscripcion();
+            mostrarToast('Estudiante removido del aula.', 'success');
+          });
+        });
+      }
+
+      if ($('btn-insc-agregar')) {
+        $('btn-insc-agregar').addEventListener('click', function () {
+          var aulaId = parseInt($('insc-aula').value, 10);
+          var estId = parseInt($('insc-estudiante').value, 10);
+          if (!aulaId || !estId) { mostrarToast('Selecciona un aula y un estudiante.', 'error'); return; }
+          var aula = aulas.find(function (a) { return a.id === aulaId; });
+          if (!aula) return;
+          var inscritos = aulaInscripciones.filter(function (i) { return i.aulaId === aulaId; });
+          if (inscritos.length >= aula.capacidad) { mostrarToast('El aula ha alcanzado su capacidad m\u00E1xima (' + aula.capacidad + ').', 'error'); return; }
+          var yaInscrito = aulaInscripciones.some(function (i) { return i.aulaId === aulaId && i.estudianteId === estId; });
+          if (yaInscrito) { mostrarToast('Este estudiante ya est\u00E1 inscrito en esta aula.', 'error'); return; }
+          aulaInscripciones.push({ aulaId: aulaId, estudianteId: estId, fecha: new Date().toISOString() });
+          inscripcionesGuardar();
+          renderInscripcion();
+          mostrarToast('Estudiante inscrito correctamente.', 'success');
+        });
+        if ($('insc-aula')) $('insc-aula').addEventListener('change', renderInscLista);
+      }
+
+      /* ===================================================================
          AULAS — Tareas (docente asigna, estudiante entrega)
          =================================================================== */
       var AULA_TAREAS_KEY = 'aula_tareas';
@@ -2628,6 +2792,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         $('aula-tarea-docente').classList.toggle('hidden', !puedeCrear);
         $('aula-tarea-estudiante').classList.toggle('hidden', !soyEst);
+
+        // Populate aula select for task creation
+        var aulaSelect = $('aula-tarea-aula');
+        if (aulaSelect) {
+          var curVal = aulaSelect.value;
+          aulaSelect.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
+            aulas.map(function (a) { return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + ' (' + a.tipo + ')</option>'; }).join('');
+          if (curVal) aulaSelect.value = curVal;
+        }
+
         // Mostrar mensaje si no hay sesi\u00F3n activa
         if (!usuarioActual) {
           $('aula-tarea-docente').classList.add('hidden');
@@ -2650,20 +2824,40 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           creadasEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             aulaTareas.map(function (t, i) {
               var entregadas = aulaEntregas.filter(function (e) { return e.tareaIdx === i; }).length;
-              return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+              var aulaObj = aulas.find(function (a) { return a.id === t.aulaId; });
+              var aulaLabel = aulaObj ? escapeHtml(aulaObj.nombre) : '(sin aula)';
+              var calCount = aulaCalificaciones.filter(function (c) { return c.tareaIdx === i; }).length;
+              return '<div style="padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
                 '<div><strong>' + escapeHtml(t.titulo) + '</strong><br>' +
-                '<span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(t.materia || '') + ' &middot; ' + escapeHtml(t.grupo || '') + ' &middot; ' + (t.fecha || 'Sin fecha') + '</span></div>' +
+                '<span style="font-size:.82rem;color:var(--gray-500);">\uD83C\uDFEB ' + aulaLabel + ' &middot; ' + escapeHtml(t.materia || '') + ' &middot; ' + escapeHtml(t.grupo || '') + ' &middot; ' + (t.fecha || 'Sin fecha') + '</span></div>' +
                 '<div style="display:flex;align-items:center;gap:.5rem;">' +
                 '<span class="semestre-badge">' + entregadas + ' entrega' + (entregadas !== 1 ? 's' : '') + '</span>' +
-                '<button class="btn btn-sm aula-tarea-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div></div>';
+                (calCount > 0 ? '<span class="semestre-badge" style="background:#d4edda;color:#155724;">' + calCount + ' calificada' + (calCount !== 1 ? 's' : '') + '</span>' : '') +
+                '<button class="btn btn-sm btn-primary aula-tarea-ver-entregas" data-idx="' + i + '" style="font-size:.78rem;">\uD83D\uDC41 Ver entregas</button>' +
+                '<button class="btn btn-sm aula-tarea-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div></div></div>';
             }).join('') + '</div>';
           creadasEl.querySelectorAll('.aula-tarea-del').forEach(function (btn) {
             btn.addEventListener('click', function () {
               var idx = parseInt(this.dataset.idx);
-              aulaTareas.splice(idx, 1);
-              aulaTareaGuardar();
-              renderAulaTareas();
-              mostrarToast('Tarea eliminada.', 'success');
+              var t = aulaTareas[idx];
+              dialogConfirm('\u00BFEliminar la tarea "' + (t ? t.titulo : '') + '" permanentemente?', 'Eliminar tarea').then(function (ok) {
+                if (!ok) return;
+                aulaTareas.splice(idx, 1);
+                aulaEntregas = aulaEntregas.filter(function (e) { return e.tareaIdx !== idx; });
+                aulaCalificaciones = aulaCalificaciones.filter(function (c) { return c.tareaIdx !== idx; });
+                aulaTareaGuardar();
+                aulaEntregaGuardar();
+                aulaCalifGuardar();
+                renderAulaTareas();
+                mostrarToast('Tarea eliminada.', 'success');
+              });
+            });
+          });
+          creadasEl.querySelectorAll('.aula-tarea-ver-entregas').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var idx = parseInt(this.dataset.idx);
+              openEntregasModal(idx);
             });
           });
         }
@@ -2679,9 +2873,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           pendientesEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             pendientes.map(function (t) {
               var idx = aulaTareas.indexOf(t);
+              var aulaObj = aulas.find(function (a) { return a.id === t.aulaId; });
+              var aulaLabel = aulaObj ? escapeHtml(aulaObj.nombre) : '';
               return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
                 '<div><strong>' + escapeHtml(t.titulo) + '</strong><br>' +
-                '<span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(t.desc || '') + ' &middot; Vence: ' + (t.fecha || 'Sin fecha') + '</span></div>' +
+                '<span style="font-size:.82rem;color:var(--gray-500);">' + (aulaLabel ? '\uD83C\uDFEB ' + aulaLabel + ' &middot; ' : '') + escapeHtml(t.desc || '') + ' &middot; Vence: ' + (t.fecha || 'Sin fecha') + '</span></div>' +
                 '<button class="btn btn-sm btn-primary aula-tarea-entregar" data-idx="' + idx + '">Entregar</button></div>';
             }).join('') + '</div>';
           pendientesEl.querySelectorAll('.aula-tarea-entregar').forEach(function (btn) {
@@ -2703,13 +2899,24 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           entregadasEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             misEntregas.map(function (e) {
               var t = aulaTareas[e.tareaIdx];
+              var eidx = aulaEntregas.indexOf(e);
+              var cal = aulaCalificaciones.find(function (c) { return c.entregaIdx === eidx; });
               var tieneArchivo = e.archivo && e.archivoNombre;
+              var notaHtml = '';
+              if (cal) {
+                var colorNota = cal.nota >= 70 ? 'var(--green)' : cal.nota >= 50 ? '#e67e22' : 'var(--red)';
+                notaHtml = '<span style="font-size:.85rem;font-weight:700;color:' + colorNota + ';">' + cal.nota + '/100</span>' +
+                  (cal.retroealimentacion ? '<br><span style="font-size:.78rem;color:var(--gray-500);font-style:italic;">\uD83D\uDCA1 ' + escapeHtml(cal.retroealimentacion) + '</span>' : '');
+              } else {
+                notaHtml = '<span style="font-size:.78rem;color:var(--gray-400);">Sin calificar</span>';
+              }
               return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-                '<div><strong>' + (t ? escapeHtml(t.titulo) : '(eliminada)') + '</strong><br>' +
-                '<span style="font-size:.82rem;color:var(--gray-500);">Entregado: ' + e.fecha + (tieneArchivo ? ' &middot; \uD83D\uDCCE ' + escapeHtml(e.archivoNombre) : '') + '</span></div>' +
+                '<div style="flex:1;"><strong>' + (t ? escapeHtml(t.titulo) : '(eliminada)') + '</strong><br>' +
+                '<span style="font-size:.82rem;color:var(--gray-500);">Entregado: ' + e.fecha + (tieneArchivo ? ' &middot; \uD83D\uDCCE ' + escapeHtml(e.archivoNombre) : '') + '</span>' +
+                '<div style="margin-top:.25rem;">' + notaHtml + '</div></div>' +
                 '<div style="display:flex;gap:.35rem;">' +
-                (tieneArchivo ? '<button class="btn btn-sm btn-outline aula-entrega-descargar" data-idx="' + aulaEntregas.indexOf(e) + '" style="font-size:.78rem;">\u2B07 Descargar</button>' : '') +
-                (e.respuesta ? '<button class="btn btn-sm aula-entrega-ver" data-idx="' + aulaEntregas.indexOf(e) + '">Ver</button>' : '') +
+                (tieneArchivo ? '<button class="btn btn-sm btn-outline aula-entrega-descargar" data-idx="' + eidx + '" style="font-size:.78rem;">\u2B07 Descargar</button>' : '') +
+                (e.respuesta ? '<button class="btn btn-sm aula-entrega-ver" data-idx="' + eidx + '">Ver</button>' : '') +
                 '</div></div>';
             }).join('') + '</div>';
           entregadasEl.querySelectorAll('.aula-entrega-ver').forEach(function (btn) {
@@ -2772,6 +2979,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           this.value = '';
           return;
         }
+        var allowedExts = /\.(pdf|doc|docx|txt|zip|png|jpg|jpeg)$/i;
+        if (!allowedExts.test(file.name)) {
+          mostrarToast('Formato no permitido. Usa: PDF, DOC, DOCX, TXT, ZIP, PNG o JPG.', 'error');
+          this.value = '';
+          return;
+        }
         entregaArchivoNombre = file.name;
         $('entrega-archivo-info').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
         var reader = new FileReader();
@@ -2809,8 +3022,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var materia = $('aula-tarea-materia').value;
         var grupo = $('aula-tarea-grupo').value;
         var fecha = $('aula-tarea-fecha').value;
+        var aulaId = $('aula-tarea-aula') ? $('aula-tarea-aula').value : '';
         if (!titulo) { mostrarToast('El t\u00EDtulo es obligatorio.', 'error'); $('aula-tarea-titulo').focus(); return; }
-        aulaTareas.push({ titulo: titulo, desc: desc, materia: materia, grupo: grupo, fecha: fecha });
+        if (!aulaId) { mostrarToast('Selecciona un aula para la tarea.', 'error'); return; }
+        aulaTareas.push({ id: Date.now(), titulo: titulo, desc: desc, materia: materia, grupo: grupo, fecha: fecha, aulaId: parseInt(aulaId, 10) });
         aulaTareaGuardar();
         $('aula-tarea-titulo').value = '';
         $('aula-tarea-desc').value = '';
@@ -2818,6 +3033,223 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         renderAulaTareas();
         mostrarToast('Tarea asignada.', 'success');
       });
+
+      /* ===================================================================
+         CALIFICACIONES — Docente califica entregas
+         =================================================================== */
+      var aulaCalificaciones = JSON.parse(localStorage.getItem('aula_calificaciones') || '[]');
+      function aulaCalifGuardar() { localStorage.setItem('aula_calificaciones', JSON.stringify(aulaCalificaciones)); }
+
+      function openEntregasModal(tareaIdx) {
+        var entregas = aulaEntregas.filter(function (e) { return e.tareaIdx === tareaIdx; });
+        if (entregas.length === 0) { mostrarToast('No hay entregas para esta tarea.', 'info'); return; }
+        var t = aulaTareas[tareaIdx];
+        $('modal-entregas-title').textContent = '\uD83D\uDC41 Entregas de "' + (t ? t.titulo : '') + '"';
+        var html = '';
+        entregas.forEach(function (e) {
+          var realIdx = aulaEntregas.indexOf(e);
+          var cal = aulaCalificaciones.find(function (c) { return c.entregaIdx === realIdx; });
+          var nota = cal ? cal.nota : '';
+          var retro = cal ? cal.retroealimentacion : '';
+          var tieneArchivo = e.archivo && e.archivoNombre;
+          var borderColor = nota !== '' ? 'var(--green)' : 'var(--gray-300)';
+          html += '<div style="padding:.75rem;margin-bottom:.5rem;background:var(--gray-50);border-radius:8px;border-left:3px solid ' + borderColor + ';">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">' +
+            '<strong>' + escapeHtml(e.estudiante) + '</strong>' +
+            '<span style="font-size:.78rem;color:var(--gray-500);">' + e.fecha + '</span></div>' +
+            (e.respuesta ? '<p style="font-size:.85rem;margin:.3rem 0;">' + escapeHtml(e.respuesta) + '</p>' : '<p style="font-size:.82rem;color:var(--gray-400);font-style:italic;">Sin texto</p>') +
+            (tieneArchivo ? '<div style="margin:.3rem 0;"><a href="' + e.archivo + '" download="' + escapeHtml(e.archivoNombre) + '" style="font-size:.82rem;color:var(--blue);">\uD83D\uDCCE ' + escapeHtml(e.archivoNombre) + '</a></div>' : '') +
+            '<div style="display:flex;gap:.5rem;align-items:flex-end;margin-top:.5rem;flex-wrap:wrap;">' +
+            '<div style="flex:0 0 80px;"><label style="font-size:.78rem;font-weight:600;">Nota (0-100)</label>' +
+            '<input type="number" min="0" max="100" class="cal-nota" data-eidx="' + realIdx + '" value="' + nota + '" style="width:100%;padding:.3rem;border:1px solid var(--gray-300);border-radius:6px;font-size:.85rem;"></div>' +
+            '<div style="flex:1;min-width:150px;"><label style="font-size:.78rem;font-weight:600;">Retroalimentaci\u00F3n</label>' +
+            '<input type="text" class="cal-retro" data-eidx="' + realIdx + '" value="' + escapeHtml(retro) + '" placeholder="Comentario..." style="width:100%;padding:.3rem;border:1px solid var(--gray-300);border-radius:6px;font-size:.85rem;"></div>' +
+            '</div></div>';
+        });
+        $('modal-entregas-body').innerHTML = html;
+        $('modal-entregas').classList.add('open');
+        lockBody();
+      }
+
+      function closeEntregasModal() {
+        document.querySelectorAll('.cal-nota').forEach(function (inp) {
+          var eidx = parseInt(inp.dataset.eidx, 10);
+          var retroEl = document.querySelector('.cal-retro[data-eidx="' + eidx + '"]');
+          var notaVal = inp.value.trim();
+          var retroVal = retroEl ? retroEl.value.trim() : '';
+          if (notaVal !== '') {
+            var notaNum = parseInt(notaVal, 10);
+            if (notaNum < 0) notaNum = 0;
+            if (notaNum > 100) notaNum = 100;
+            var existIdx = -1;
+            for (var ci = 0; ci < aulaCalificaciones.length; ci++) {
+              if (aulaCalificaciones[ci].entregaIdx === eidx) { existIdx = ci; break; }
+            }
+            if (existIdx >= 0) {
+              aulaCalificaciones[existIdx].nota = notaNum;
+              aulaCalificaciones[existIdx].retroealimentacion = retroVal;
+              aulaCalificaciones[existIdx].fechaCalificacion = new Date().toISOString();
+            } else {
+              aulaCalificaciones.push({ entregaIdx: eidx, tareaIdx: aulaEntregas[eidx] ? aulaEntregas[eidx].tareaIdx : -1, nota: notaNum, retroealimentacion: retroVal, fechaCalificacion: new Date().toISOString() });
+            }
+          }
+        });
+        aulaCalifGuardar();
+        $('modal-entregas').classList.remove('open');
+        unlockBody();
+        renderAulaTareas();
+      }
+
+      $('modal-entregas-close').addEventListener('click', closeEntregasModal);
+      $('modal-entregas').addEventListener('click', function (e) { if (e.target === this) closeEntregasModal(); });
+      $('btn-modal-calif-guardar').addEventListener('click', function () {
+        closeEntregasModal();
+        mostrarToast('Calificaciones guardadas.', 'success');
+      });
+
+      /* ===================================================================
+         SALA VIRTUAL — Chat (BroadcastChannel) + Pizarra + Video
+         =================================================================== */
+      var salaChannel = null;
+      var salaChatMensajes = [];
+      var salaNombre = usuarioActual ? (usuarioActual.nombre || usuarioActual.email || 'Anon') : 'Anon';
+
+      function renderSala() {
+        var sel = $('sala-aula-select');
+        if (!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
+          aulas.map(function (a) { return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + '</option>'; }).join('');
+        if (cur) sel.value = cur;
+        sel.addEventListener('change', function () {
+          salaConnect(parseInt(this.value, 10));
+        }, { once: true });
+      }
+
+      function salaConnect(aulaId) {
+        if (salaChannel) { salaChannel.close(); salaChannel = null; }
+        if (!aulaId) return;
+        salaChannel = new BroadcastChannel('sala_aula_' + aulaId);
+        salaChatMensajes = [];
+        salaRenderChat();
+        salaChannel.onmessage = function (ev) {
+          var data = ev.data;
+          if (data && data.type === 'chat') {
+            salaChatMensajes.push(data);
+            salaRenderChat();
+          } else if (data && data.type === 'draw') {
+            salaDrawRemote(data);
+          } else if (data && data.type === 'clear') {
+            var c = $('sala-pizarra-canvas');
+            if (c) { var ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); }
+          }
+        };
+      }
+
+      function salaRenderChat() {
+        var el = $('sala-chat-mensajes');
+        if (!el) return;
+        el.innerHTML = salaChatMensajes.map(function (m) {
+          return '<div style="margin-bottom:.3rem;"><strong>' + escapeHtml(m.from) + ':</strong> ' + escapeHtml(m.text) + ' <span style="font-size:.72rem;color:var(--gray-400);">' + (m.time || '') + '</span></div>';
+        }).join('');
+        el.scrollTop = el.scrollHeight;
+      }
+
+      if ($('sala-chat-enviar')) {
+        $('sala-chat-enviar').addEventListener('click', function () {
+          var input = $('sala-chat-input');
+          var text = input.value.trim();
+          if (!text || !salaChannel) return;
+          var msg = { type: 'chat', from: salaNombre, text: text, time: new Date().toLocaleTimeString() };
+          salaChannel.postMessage(msg);
+          salaChatMensajes.push(msg);
+          salaRenderChat();
+          input.value = '';
+        });
+        $('sala-chat-input').addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); $('sala-chat-enviar').click(); }
+        });
+      }
+
+      // Pizarra
+      (function initPizarra() {
+        var canvas = $('sala-pizarra-canvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var drawing = false;
+        var lastX = 0, lastY = 0;
+
+        function getPos(e) {
+          var rect = canvas.getBoundingClientRect();
+          var scaleX = canvas.width / rect.width;
+          var scaleY = canvas.height / rect.height;
+          var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function startDraw(e) { drawing = true; var p = getPos(e); lastX = p.x; lastY = p.y; }
+        function stopDraw() { drawing = false; }
+        function draw(e) {
+          if (!drawing) return;
+          e.preventDefault();
+          var p = getPos(e);
+          ctx.beginPath();
+          ctx.strokeStyle = $('sala-pizarra-color').value;
+          ctx.lineWidth = parseInt($('sala-pizarra-size').value, 10);
+          ctx.lineCap = 'round';
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+          if (salaChannel) {
+            salaChannel.postMessage({ type: 'draw', x1: lastX, y1: lastY, x2: p.x, y2: p.y, color: ctx.strokeStyle, size: ctx.lineWidth });
+          }
+          lastX = p.x; lastY = p.y;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseleave', stopDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchend', stopDraw);
+        canvas.addEventListener('touchmove', draw, { passive: false });
+
+        if ($('sala-pizarra-size')) {
+          $('sala-pizarra-size').addEventListener('input', function () {
+            $('sala-pizarra-size-val').textContent = this.value + 'px';
+          });
+        }
+
+        if ($('sala-pizarra-borrar')) {
+          $('sala-pizarra-borrar').addEventListener('click', function () {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (salaChannel) salaChannel.postMessage({ type: 'clear' });
+          });
+        }
+
+        window.salaDrawRemote = function (data) {
+          ctx.beginPath();
+          ctx.strokeStyle = data.color;
+          ctx.lineWidth = data.size;
+          ctx.lineCap = 'round';
+          ctx.moveTo(data.x1, data.y1);
+          ctx.lineTo(data.x2, data.y2);
+          ctx.stroke();
+        };
+      })();
+
+      if ($('sala-video-iniciar')) {
+        $('sala-video-iniciar').addEventListener('click', function () {
+          var sel = $('sala-aula-select');
+          var aulaId = sel ? sel.value : '';
+          if (!aulaId) { mostrarToast('Selecciona un aula primero.', 'error'); return; }
+          var roomName = 'INCOA-Aula-' + aulaId;
+          var url = 'https://meet.jit.si/' + encodeURIComponent(roomName);
+          window.open(url, '_blank');
+          mostrarToast('Abriendo videollamada en nueva pesta\u00F1a...', 'info');
+        });
+      }
 
       /* ===================================================================
          PLANIFICACIÓN DOCENTE
