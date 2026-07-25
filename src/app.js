@@ -118,6 +118,36 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
       /* ===================================================================
+         EMPTY STATE — Componente reutilizable para estados vacíos
+         =================================================================== */
+      var EMPTY_ICONS = {
+        actividades: '📋', foros: '💬', agenda: '📅', calendario: '📆',
+        horario: '🗓️', clases: '🎥', mensajes: '✉️', grupales: '👥',
+        protegido: '🛡️', tareas: '📝', aulas: '🏫', planificacion: '📑',
+        matricula: '🎓', examenes: '📄', auth: '👤', picker: '🎲',
+        estudiantes: '📚', inscripcion: '📋', entregas: '📦', default: '📭'
+      };
+      function emptyMsg(msg, opts) {
+        opts = opts || {};
+        var icon = opts.icon || EMPTY_ICONS.default;
+        var title = opts.title || '';
+        var desc = opts.desc || '';
+        var actionHtml = '';
+        if (opts.actionText && opts.actionFn) {
+          var id = 'empty-action-' + Math.random().toString(36).substring(2, 8);
+          actionHtml = '<button class="btn btn-outline btn-sm" id="' + id + '">' + escapeHtml(opts.actionText) + '</button>';
+          setTimeout(function () { var b = $(id); if (b) b.addEventListener('click', opts.actionFn); }, 0);
+        }
+        var gridStyle = opts.fullWidth ? ' style="grid-column:1/-1;"' : '';
+        return '<div class="empty-msg" data-icon="' + icon + '"' + gridStyle + '>' +
+          (title ? '<div class="empty-msg-title">' + escapeHtml(title) + '</div>' : '') +
+          '<div>' + escapeHtml(msg) + '</div>' +
+          (desc ? '<div class="empty-msg-desc">' + escapeHtml(desc) + '</div>' : '') +
+          actionHtml +
+          '</div>';
+      }
+
+      /* ===================================================================
          THEME — Cambio de tema claro/oscuro/pastel
          =================================================================== */
       var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso'];
@@ -464,7 +494,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var g = $('picker-grupo').value;
         var filtrados = g === 'todos' ? pickerStudents : pickerStudents.filter(function (s) { return s.grupo === g; });
         var el = $('picker-list');
-        if (filtrados.length === 0) { el.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>'; return; }
+        if (filtrados.length === 0) { el.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '🎲', title: 'Picker' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + filtrados.map(function (s, i) {
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gray-50);border-radius:6px;">' +
             '<span>' + escapeHtml(s.nombre) + ' <span class="semestre-badge">' + s.grupo + '</span></span>' +
@@ -552,7 +582,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
                  (busqueda === '' || r.titulo.toLowerCase().indexOf(busqueda) !== -1);
         });
         var grid = $('digital-grid');
-        if (items.length === 0) { grid.innerHTML = '<div class="empty-msg" style="grid-column:1/-1;">Sin resultados.</div>'; return; }
+        if (items.length === 0) { grid.innerHTML = emptyMsg('Sin resultados.', { icon: '🔍', title: 'Biblioteca digital', desc: 'No se encontraron recursos con esos filtros.', fullWidth: true }); return; }
         grid.innerHTML = items.map(function (r) {
           var c = { matematicas: 'blue', fisica: 'purple', quimica: 'orange', biologia: 'green', literatura: 'pink', historia: 'amber', ingles: 'teal' }[r.materia] || 'blue';
           var icons = { Libro:'book-2', Guía:'clipboard', PDF:'file-text', Video:'movie', Audio:'headphones' };
@@ -606,7 +636,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           return '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--gray-200);font-size:.85rem;">' +
             '<span>' + escapeHtml(n.texto) + '</span>' +
             '<span style="color:var(--gray-500);font-size:.75rem;">' + n.fecha + '</span></div>';
-        }).join('') || '<div class="empty-msg">Sin notificaciones.</div>';
+        }).join('') || emptyMsg('Sin notificaciones.', { icon: '🔔', title: 'Notificaciones' });
 
         var cg = $('parent-calif-grid');
         cg.innerHTML = califMaterias.map(function (c) {
@@ -700,7 +730,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var esCreadas = tab && tab.dataset.expTab === 'creadas';
         var items = esCreadas ? expCreadas : experiencias;
         var grid = $('exp-grid');
-        if (items.length === 0) { grid.innerHTML = '<div class="empty-msg" style="grid-column:1/-1;">' + (esCreadas ? 'Aún no has creado experiencias.' : 'No hay experiencias disponibles.') + '</div>'; return; }
+        if (items.length === 0) { grid.innerHTML = emptyMsg(esCreadas ? 'Aún no has creado experiencias.' : 'No hay experiencias disponibles.', { icon: '🎯', title: 'Experiencias', fullWidth: true }); return; }
         var matColors = { biologia: 'green', literatura: 'pink', fisica: 'purple', matematicas: 'blue', historia: 'amber', quimica: 'orange', ingles: 'teal' };
         grid.innerHTML = items.map(function (e) {
           var mc = matColors[e.materia] || 'blue';
@@ -748,7 +778,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function examRenderGuardados() {
         var container = $('exam-lista-guardados');
-        if (examenes.length === 0) { container.innerHTML = '<div class="empty-msg">Aún no hay exámenes guardados.</div>'; return; }
+        if (examenes.length === 0) { container.innerHTML = emptyMsg('Aún no hay exámenes guardados.', { icon: '📄', title: 'Exámenes', desc: 'Creá un examen desde el formulario de arriba.' }); return; }
         container.innerHTML = '<div style="display:grid;gap:.5rem;">' +
           examenes.map(function (e, idx) {
             var preg = e.preguntas ? e.preguntas.length : 0;
@@ -882,7 +912,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
 
         if (filas.length === 0) {
-          container.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>'; return;
+          container.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '📚', title: 'Estudiantes' }); return;
         }
 
         var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
@@ -1164,7 +1194,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
 
         if (filas.length === 0) {
-          container.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>'; return;
+          container.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '📚', title: 'Estudiantes' }); return;
         }
 
         var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
@@ -1555,7 +1585,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
 
         if (filas.length === 0) {
-          container.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>'; return;
+          container.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '📚', title: 'Estudiantes' }); return;
         }
 
         var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
@@ -1661,7 +1691,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var container = $('asist-lista');
 
         if (estudiantes.length === 0) {
-          container.innerHTML = '<div class="empty-msg">No hay estudiantes en este grupo.</div>';
+          container.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '📚', title: 'Estudiantes' });
           actualizarAsistStats(); return;
         }
 
@@ -1815,7 +1845,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function tareaRenderCreadas() {
         var container = $('tarea-creadas-lista');
-        if (tareas.length === 0) { container.innerHTML = '<div class="empty-msg">Aún no has creado tareas.</div>'; return; }
+        if (tareas.length === 0) { container.innerHTML = emptyMsg('Aún no has creado tareas.', { icon: '📝', title: 'Tareas', desc: 'Creá tareas para que tus estudiantes las resuelvan.' }); return; }
         container.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           tareas.map(function (t, i) {
             var materiaColors = { matematicas: 'blue', fisica: 'purple', quimica: 'orange', biologia: 'green', literatura: 'pink', historia: 'amber', ingles: 'teal' };
@@ -1848,7 +1878,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           return !entregas.some(function (e) { return e.tareaIdx === tareas.indexOf(t); });
         });
         var pContainer = $('tarea-estudiante-lista');
-        if (pendientes.length === 0) { pContainer.innerHTML = '<div class="empty-msg">No hay tareas pendientes.</div>'; }
+        if (pendientes.length === 0) { pContainer.innerHTML = emptyMsg('No hay tareas pendientes.', { icon: '✅', title: '¡Todo al día!', desc: 'No tenés tareas pendientes por ahora.' }); }
         else {
           pContainer.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             pendientes.map(function (t) {
@@ -1876,7 +1906,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         // Entregadas
         var misEntregas = entregas.filter(function (e) { return e.estudiante === 'Yo'; });
         var eContainer = $('tarea-entregadas-lista');
-        if (misEntregas.length === 0) { eContainer.innerHTML = '<div class="empty-msg">No has entregado tareas aún.</div>'; }
+        if (misEntregas.length === 0) { eContainer.innerHTML = emptyMsg('No has entregado tareas aún.', { icon: '📦', title: 'Entregas', desc: 'Tus entregas aparecerán aquí una vez que envíes una tarea.' }); }
         else {
           eContainer.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             misEntregas.map(function (e) {
@@ -1971,7 +2001,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var container = $('aulas-grid');
         var total = $('aulas-total');
         if (items.length === 0) {
-          container.innerHTML = '<div class="empty-msg">' + (aulas.length === 0 ? 'No hay aulas registradas.' : 'Ninguna aula coincide con el filtro.') + '</div>';
+          container.innerHTML = emptyMsg(aulas.length === 0 ? 'No hay aulas registradas. Crea la primera desde el formulario.' : 'Ninguna aula coincide con el filtro.', { icon: '🏫', title: 'Aulas', fullWidth: true });
           total.textContent = '0 aulas'; return;
         }
         container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem;">' +
@@ -2344,7 +2374,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderActividades() {
         var el = $('act-lista');
-        if (actividades.length === 0) { el.innerHTML = '<div class="empty-msg">No hay actividades registradas.</div>'; return; }
+        if (actividades.length === 0) { el.innerHTML = emptyMsg('No hay actividades registradas.', { icon: '📋', title: 'Actividades', desc: 'Creá actividades para que tus estudiantes se mantengan al día.', actionText: '+ Nueva actividad', actionFn: function() { $('btn-act-add').click(); } }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           actividades.map(function (a, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2376,7 +2406,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderForos() {
         var el = $('foro-lista');
-        if (foros.length === 0) { el.innerHTML = '<div class="empty-msg">No hay foros activos.</div>'; return; }
+        if (foros.length === 0) { el.innerHTML = emptyMsg('No hay foros activos.', { icon: '💬', title: 'Foros', desc: 'Creá un foro para iniciar una discusión con tu grupo.', actionText: '+ Nuevo foro', actionFn: function() { $('btn-foro-add').click(); } }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           foros.map(function (f, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2407,7 +2437,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderAgenda() {
         var el = $('agenda-lista');
-        if (agendaItems.length === 0) { el.innerHTML = '<div class="empty-msg">Sin eventos para hoy.</div>'; return; }
+        if (agendaItems.length === 0) { el.innerHTML = emptyMsg('Sin eventos para hoy.', { icon: '📅', title: 'Agenda del día', desc: 'Agregá eventos para organizar tu jornada.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           agendaItems.map(function (a, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2438,7 +2468,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderCalendario() {
         var el = $('cal-lista');
-        if (calEventos.length === 0) { el.innerHTML = '<div class="empty-msg">No hay eventos registrados.</div>'; return; }
+        if (calEventos.length === 0) { el.innerHTML = emptyMsg('No hay eventos registrados.', { icon: '📆', title: 'Calendario', desc: 'Agregá eventos importantes, exámenes y fechas clave.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           calEventos.map(function (e, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2470,7 +2500,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function renderHorario() {
         var el = $('horario-tabla-wrap');
         if (horarioItems.length === 0) {
-          el.innerHTML = '<div class="empty-msg">Horario vacío. Presiona "+ Agregar fila" para crear el horario.</div>';
+          el.innerHTML = emptyMsg('Horario vacío. Presioná "+ Agregar fila" para crear el horario.', { icon: '🗓️', title: 'Horario semanal' });
           return;
         }
         var dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
@@ -2580,7 +2610,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderClases() {
         var el = $('clase-lista');
-        if (clasesItems.length === 0) { el.innerHTML = '<div class="empty-msg">No hay clases programadas.</div>'; return; }
+        if (clasesItems.length === 0) { el.innerHTML = emptyMsg('No hay clases programadas.', { icon: '🎥', title: 'Clases en línea', desc: 'Agregá enlaces de tus próximas clases virtuales.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           clasesItems.map(function (c, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2614,7 +2644,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderMensajes() {
         var el = $('msg-lista');
-        if (mensajesItems.length === 0) { el.innerHTML = '<div class="empty-msg">Bandeja vac\u00EDa.</div>'; return; }
+        if (mensajesItems.length === 0) { el.innerHTML = emptyMsg('Bandeja vacía.', { icon: '✉️', title: 'Mensajes', desc: 'No tenés mensajes nuevos.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           mensajesItems.map(function (m, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2645,7 +2675,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderGrupos() {
         var el = $('grupo-lista');
-        if (gruposItems.length === 0) { el.innerHTML = '<div class="empty-msg">No hay grupos activos.</div>'; return; }
+        if (gruposItems.length === 0) { el.innerHTML = emptyMsg('No hay grupos activos.', { icon: '👥', title: 'Actividades grupales', desc: 'Creá un grupo para trabajar en equipo.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           gruposItems.map(function (g, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2676,7 +2706,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderProtegido() {
         var el = $('prot-lista');
-        if (protegidoItems.length === 0) { el.innerHTML = '<div class="empty-msg">Sin incidentes reportados.</div>'; return; }
+        if (protegidoItems.length === 0) { el.innerHTML = emptyMsg('Sin incidentes reportados.', { icon: '🛡️', title: 'Colegio Protegido', desc: 'No hay incidentes reportados. ¡Todo tranquilo!' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           protegidoItems.map(function (p, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -2733,9 +2763,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var aulaId = $('insc-aula') ? parseInt($('insc-aula').value, 10) : 0;
         var el = $('insc-lista');
         if (!el) return;
-        if (!aulaId) { el.innerHTML = '<div class="empty-msg">Selecciona un aula para ver sus estudiantes inscritos.</div>'; return; }
+        if (!aulaId) { el.innerHTML = emptyMsg('Seleccioná un aula para ver sus estudiantes inscritos.', { icon: '📋', title: 'Inscripción' }); return; }
         var inscritos = aulaInscripciones.filter(function (i) { return i.aulaId === aulaId; });
-        if (inscritos.length === 0) { el.innerHTML = '<div class="empty-msg">No hay estudiantes inscritos en esta aula.</div>'; return; }
+        if (inscritos.length === 0) { el.innerHTML = emptyMsg('No hay estudiantes inscritos en esta aula.', { icon: '📚', title: 'Sin inscriptos', desc: 'Inscribí estudiantes desde la pestaña Inscripción.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' +
           inscritos.map(function (insc) {
             var est = ESTUDIANTES_DB.find(function (e) { return e.id === insc.estudianteId; });
@@ -2819,7 +2849,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         // Vista docente
         var creadasEl = $('aula-tarea-creadas-lista');
         if (aulaTareas.length === 0) {
-          creadasEl.innerHTML = '<div class="empty-msg">A\u00FAn no has asignado tareas.</div>';
+          creadasEl.innerHTML = emptyMsg('Aún no has asignado tareas.', { icon: '📝', title: 'Tareas del aula', desc: 'Asigná tareas desde el formulario de arriba.' });
         } else {
           creadasEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             aulaTareas.map(function (t, i) {
@@ -2868,7 +2898,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           return !aulaEntregas.some(function (e) { return e.tareaIdx === i; });
         });
         if (pendientes.length === 0) {
-          pendientesEl.innerHTML = '<div class="empty-msg">No hay tareas pendientes.</div>';
+          pendientesEl.innerHTML = emptyMsg('No hay tareas pendientes.', { icon: '✅', title: '¡Todo al día!', desc: 'Completaste todas las tareas del aula.' });
         } else {
           pendientesEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             pendientes.map(function (t) {
@@ -2894,7 +2924,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           return t;
         });
         if (misEntregas.length === 0) {
-          entregadasEl.innerHTML = '<div class="empty-msg">A\u00FAn no has entregado tareas.</div>';
+          entregadasEl.innerHTML = emptyMsg('Aún no has entregado tareas.', { icon: '📦', title: 'Entregas', desc: 'Tus entregas del aula aparecerán aquí.' });
         } else {
           entregadasEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             misEntregas.map(function (e) {
@@ -3262,7 +3292,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var items = filtro === '0' ? planificaciones : planificaciones.filter(function (p) { return p.materia === filtro; });
         var el = $('planif-lista');
         if (items.length === 0) {
-          el.innerHTML = '<div class="empty-msg">' + (planificaciones.length === 0 ? 'No hay planificaciones registradas.' : 'Ninguna planificación coincide con el filtro.') + '</div>';
+          el.innerHTML = emptyMsg(planificaciones.length === 0 ? 'No hay planificaciones registradas.' : 'Ninguna planificación coincide con el filtro.', { icon: '📑', title: 'Planificación', fullWidth: true });
           return;
         }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
@@ -3336,7 +3366,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function renderMatSolicitudes() {
         var el = $('mat-solicitudes');
         if (matSolicitudes.length === 0) {
-          el.innerHTML = '<div class="empty-msg">No hay solicitudes.</div>';
+          el.innerHTML = emptyMsg('No hay solicitudes.', { icon: '🎓', title: 'Matrícula', desc: 'Las solicitudes de inscripción aparecerán aquí.' });
           return;
         }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +

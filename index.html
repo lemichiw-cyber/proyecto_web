@@ -445,9 +445,9 @@ unicode: "eaf8"
   </aside>
 
   <!-- ========== LOGIN MODAL (con roles) ========== -->
-  <div class="modal-overlay" id="modal-login">
+  <div class="modal-overlay" id="modal-login" role="dialog" aria-modal="true">
     <div class="modal">
-      <div class="flex-between"><h3>Iniciar sesión</h3><button class="modal-close" id="modal-login-close">&times;</button></div>
+      <div class="flex-between"><h3>Iniciar sesión</h3><button class="modal-close" id="modal-login-close" aria-label="Cerrar">&times;</button></div>
       <form id="form-login">
         <div class="form-group">
           <label>Rol</label>
@@ -612,7 +612,7 @@ unicode: "eb20"
   </div>
 
   <!-- ===== CUSTOM DIALOG ===== -->
-  <div class="modal-overlay" id="modal-dialog">
+  <div class="modal-overlay" id="modal-dialog" role="dialog" aria-modal="true">
     <div class="modal" style="max-width:380px;text-align:center;">
       <div class="modal-dialog-content" id="dialog-content"></div>
       <div id="dialog-input-wrap" class="hidden" style="margin:.75rem 0;">
@@ -623,7 +623,7 @@ unicode: "eb20"
   </div>
 
   <!-- Modal para entregar tarea con archivo -->
-  <div class="modal-overlay" id="modal-entrega">
+  <div class="modal-overlay" id="modal-entrega" role="dialog" aria-modal="true">
     <div class="modal" style="max-width:480px;">
       <div class="flex-between"><h3><!--
 category: Document
@@ -644,7 +644,7 @@ unicode: "ea6f"
   <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
   <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" />
 </svg>
- Entregar tarea</h3><button class="modal-close" id="modal-entrega-close">&times;</button></div>
+ Entregar tarea</h3><button class="modal-close" id="modal-entrega-close" aria-label="Cerrar">&times;</button></div>
       <div style="margin:1rem 0;">
         <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:.35rem;">Respuesta (opcional)</label>
         <textarea id="entrega-respuesta" placeholder="Escribe tu respuesta aqu&iacute;..." rows="3" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>
@@ -685,9 +685,9 @@ unicode: "eb47"
   </div>
 
   <!-- Modal entregas + calificación docente -->
-  <div class="modal-overlay" id="modal-entregas">
+  <div class="modal-overlay" id="modal-entregas" role="dialog" aria-modal="true">
     <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;">
-      <div class="flex-between"><h3 id="modal-entregas-title">\uD83D\uDC41 Entregas</h3><button class="modal-close" id="modal-entregas-close">&times;</button></div>
+      <div class="flex-between"><h3 id="modal-entregas-title">\uD83D\uDC41 Entregas</h3><button class="modal-close" id="modal-entregas-close" aria-label="Cerrar">&times;</button></div>
       <div id="modal-entregas-body" style="margin:1rem 0;overflow-y:auto;flex:1;"></div>
       <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem;">
         <button class="btn btn-primary" id="btn-modal-calif-guardar">\uD83D\uDCBE Guardar calificaciones</button>
@@ -696,7 +696,7 @@ unicode: "eb47"
   </div>
 
   <!-- Modal selector de temas -->
-  <div class="modal-overlay" id="modal-temas">
+  <div class="modal-overlay" id="modal-temas" role="dialog" aria-modal="true">
     <div class="modal" style="max-width:420px;">
       <div class="flex-between"><h3><!--
 tags: [color, paint, painter, picture, board, artist, palette, creative, artistic, visual]
@@ -719,7 +719,7 @@ unicode: "eb01"
   <path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
   <path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
 </svg>
- Personalizar tema</h3><button class="modal-close" id="modal-temas-close">&times;</button></div>
+ Personalizar tema</h3><button class="modal-close" id="modal-temas-close" aria-label="Cerrar">&times;</button></div>
       <p style="font-size:.85rem;color:var(--gray-500);margin:.3rem 0 1rem;">Elige el estilo que más te guste.</p>
       <div id="theme-options" class="theme-grid">
         <div class="theme-card" data-theme="light" onclick="seleccionarTema('light')">
@@ -893,9 +893,9 @@ unicode: "ea97"
         <div class="theme-card" data-theme="mlp" onclick="seleccionarTema('mlp')">
           <div class="theme-preview" style="background:#f8f0fa;border:2px solid #e0d5e5;border-radius:10px;padding:.25rem;text-align:center;">
             <div style="height:28px;background:linear-gradient(135deg,#e8d0f0,#9b59b6);border-radius:6px;margin-bottom:.3rem;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <img src="/base64-images/base64-img-10f7429a.png" style="height:24px;width:24px;object-fit:contain;" alt="Rarity">
-              <img src="/base64-images/base64-img-479d6654.png" style="height:24px;width:24px;object-fit:contain;" alt="Fluttershy">
-              <img src="/base64-images/base64-img-17310fac.png" style="height:24px;width:24px;object-fit:contain;" alt="Rainbow Dash">
+              <img src="/base64-images/base64-img-10f7429a.webp" style="height:24px;width:24px;object-fit:contain;" alt="Rarity">
+              <img src="/base64-images/base64-img-479d6654.webp" style="height:24px;width:24px;object-fit:contain;" alt="Fluttershy">
+              <img src="/base64-images/base64-img-17310fac.webp" style="height:24px;width:24px;object-fit:contain;" alt="Rainbow Dash">
             </div>
             <div style="height:4px;width:60%;background:#e0d5e5;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#e0d5e5;border-radius:4px;margin:0 auto;"></div>
@@ -952,14 +952,14 @@ unicode: "eb2e"
 
     <div class="paraiso-deco paraiso-bg">
       <video autoplay muted loop playsinline poster="">
-        <source src="videos/paradise-sunset.1920x1080.mp4" type="video/mp4">
+        <source src="videos/paradise-sunset.720p.mp4" type="video/mp4">
       </video>
     </div>
 
     <!-- ===== MODALES ===== -->
-    <div class="modal-overlay" id="modal-terminos">
+    <div class="modal-overlay" id="modal-terminos" role="dialog" aria-modal="true">
       <div class="modal" style="max-width:520px;">
-        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M10 13l2 2l4 -4" /></svg> Términos y Condiciones</h3><button class="modal-close" onclick="cerrarModalTexto('terminos')">&times;</button></div>
+        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M10 13l2 2l4 -4" /></svg> Términos y Condiciones</h3><button class="modal-close" aria-label="Cerrar" onclick="cerrarModalTexto('terminos')">&times;</button></div>
         <div style="max-height:60vh;overflow-y:auto;font-size:.85rem;line-height:1.6;color:var(--text-secondary);">
           <p><strong>1. Aceptación de términos</strong><br>Al usar INCOA aceptás estos términos. Si no estás de acuerdo, no uses la plataforma.</p>
           <p><strong>2. Uso responsable</strong><br>Te comprometés a usar la plataforma solo para fines educativos y a no compartir tu cuenta.</p>
@@ -971,9 +971,9 @@ unicode: "eb2e"
       </div>
     </div>
 
-    <div class="modal-overlay" id="modal-privacidad">
+    <div class="modal-overlay" id="modal-privacidad" role="dialog" aria-modal="true">
       <div class="modal" style="max-width:520px;">
-        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11v-4a5 5 0 0 1 10 0v4" /></svg> Política de Privacidad</h3><button class="modal-close" onclick="cerrarModalTexto('privacidad')">&times;</button></div>
+        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11v-4a5 5 0 0 1 10 0v4" /></svg> Política de Privacidad</h3><button class="modal-close" aria-label="Cerrar" onclick="cerrarModalTexto('privacidad')">&times;</button></div>
         <div style="max-height:60vh;overflow-y:auto;font-size:.85rem;line-height:1.6;color:var(--text-secondary);">
           <p><strong>Información que recopilamos</strong><br>Recopilamos nombre, correo electrónico, rol institucional y datos de uso para mejorar la experiencia educativa.</p>
           <p><strong>Uso de la información</strong><br>Usamos tus datos para autenticación, personalización del contenido y comunicación institucional.</p>
@@ -984,9 +984,9 @@ unicode: "eb2e"
       </div>
     </div>
 
-    <div class="modal-overlay" id="modal-soporte">
+    <div class="modal-overlay" id="modal-soporte" role="dialog" aria-modal="true">
       <div class="modal" style="max-width:520px;">
-        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg> Soporte</h3><button class="modal-close" onclick="cerrarModalTexto('soporte')">&times;</button></div>
+        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg> Soporte</h3><button class="modal-close" aria-label="Cerrar" onclick="cerrarModalTexto('soporte')">&times;</button></div>
         <div style="max-height:60vh;overflow-y:auto;font-size:.85rem;line-height:1.6;color:var(--text-secondary);">
           <p><strong>📧 Correo electrónico</strong><br><a href="mailto:soporte@incoa.edu" style="color:var(--primary);">soporte@incoa.edu</a></p>
           <p><strong>💬 Chat en vivo</strong><br>Disponible de lunes a viernes de 8:00 a 18:00 h.</p>
@@ -1001,22 +1001,22 @@ unicode: "eb2e"
   <main>
     <div class="mlp-cuties mlp-cuties-bg">
       <img src="/base64-images/base64-img-9491587d.png" alt="">
-      <img src="/base64-images/base64-img-10f7429a.png" alt="">
-      <img src="/base64-images/base64-img-479d6654.png" alt="">
-      <img src="/base64-images/base64-img-17310fac.png" alt="">
-      <img src="/base64-images/base64-img-10f7429a.png" alt="">
-      <img src="/base64-images/base64-img-479d6654.png" alt="">
-      <img src="/base64-images/base64-img-17310fac.png" alt="">
-      <img src="/base64-images/base64-img-10f7429a.png" alt="">
-      <img src="/base64-images/base64-img-479d6654.png" alt="">
-      <img src="/base64-images/base64-img-17310fac.png" alt="">
+      <img src="/base64-images/base64-img-10f7429a.webp" alt="">
+      <img src="/base64-images/base64-img-479d6654.webp" alt="">
+      <img src="/base64-images/base64-img-17310fac.webp" alt="">
+      <img src="/base64-images/base64-img-10f7429a.webp" alt="">
+      <img src="/base64-images/base64-img-479d6654.webp" alt="">
+      <img src="/base64-images/base64-img-17310fac.webp" alt="">
+      <img src="/base64-images/base64-img-10f7429a.webp" alt="">
+      <img src="/base64-images/base64-img-479d6654.webp" alt="">
+      <img src="/base64-images/base64-img-17310fac.webp" alt="">
     </div>
     <div class="chicawa-deco chicawa-deco-bg">
-      <img src="/base64-images/base64-img-f15d71e6.png" alt="">
+      <img src="/base64-images/base64-img-f15d71e6.webp" alt="">
     </div>
     <div class="sakura-deco sakura-tree-bg">
       <video class="sakura-video-bg" autoplay muted loop playsinline poster="">
-        <source src="videos/blossom-bliss-at-the-pagoda.1920x1080.mp4" type="video/mp4">
+        <source src="videos/blossom-bliss-at-the-pagoda.720p.mp4" type="video/mp4">
       </video>
       <div class="sakura-petal"></div>
       <div class="sakura-petal"></div>
@@ -1034,15 +1034,15 @@ unicode: "eb2e"
     <section id="app-inicio">
       <div class="hero-section">
         <div class="mlp-cuties mlp-cuties-hero">
-          <img src="/base64-images/base64-img-10f7429a.png" alt="Rarity">
-          <img src="/base64-images/base64-img-479d6654.png" alt="Fluttershy">
-          <img src="/base64-images/base64-img-17310fac.png" alt="Rainbow Dash">
-          <img src="/base64-images/base64-img-10f7429a.png" alt="Rarity">
-          <img src="/base64-images/base64-img-479d6654.png" alt="Fluttershy">
-          <img src="/base64-images/base64-img-17310fac.png" alt="Rainbow Dash">
+          <img src="/base64-images/base64-img-10f7429a.webp" alt="Rarity">
+          <img src="/base64-images/base64-img-479d6654.webp" alt="Fluttershy">
+          <img src="/base64-images/base64-img-17310fac.webp" alt="Rainbow Dash">
+          <img src="/base64-images/base64-img-10f7429a.webp" alt="Rarity">
+          <img src="/base64-images/base64-img-479d6654.webp" alt="Fluttershy">
+          <img src="/base64-images/base64-img-17310fac.webp" alt="Rainbow Dash">
         </div>
                 <div class="chicawa-deco chicawa-deco-hero">
-          <img src="/base64-images/base64-img-d2463d06.png" alt="">
+          <img src="/base64-images/base64-img-d2463d06.webp" alt="">
         </div>
         <div class="sakura-deco sakura-deco-hero">
           <div class="sakura-petal"></div>
