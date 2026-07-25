@@ -29,13 +29,14 @@ function base64ImagesPlugin() {
         fs.writeFileSync(path.join(publicDir, filename), buffer);
         
         // Return img tag with reference to the saved file
-        return `<img src="/base64-images/${filename}"${rest}>`;
+        return `<img src="/proyecto_web/base64-images/${filename}"${rest}>`;
       });
     }
   };
 }
 
 export default defineConfig({
+  base: '/proyecto_web/',
   root: '.',
   publicDir: 'public',
   build: {
@@ -64,16 +65,16 @@ export default defineConfig({
         theme_color: '#4F46E5',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/proyecto_web/',
         icons: [
-          { src: '/icons/icon-72.png', sizes: '72x72', type: 'image/png' },
-          { src: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
-          { src: '/icons/icon-128.png', sizes: '128x128', type: 'image/png' },
-          { src: '/icons/icon-144.png', sizes: '144x144', type: 'image/png' },
-          { src: '/icons/icon-152.png', sizes: '152x152', type: 'image/png' },
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-384.png', sizes: '384x384', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-72.png', sizes: '72x72', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-128.png', sizes: '128x128', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-144.png', sizes: '144x144', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-152.png', sizes: '152x152', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-384.png', sizes: '384x384', type: 'image/png' },
+          { src: '/proyecto_web/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
       workbox: {
