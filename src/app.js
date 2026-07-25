@@ -343,9 +343,37 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           $('login-error').hidden = false; mostrarToast('Ingresa un correo y contraseña válidos (mín. 6 caracteres).', 'error'); return;
         }
         $('login-error').hidden = true;
-        // Derivar clave de cifrado a partir de la contraseña
+
+        /* ---- Supabase Auth ---- */
+        if (window.sb && window.sbReady()) {
+          window.sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
+            if (res.error) {
+              // Si el usuario no existe, lo crea
+              if (res.error.message && res.error.message.includes('Invalid login')) {
+                return window.sb.auth.signUp({ email: email, password: pass }).then(function (res2) {
+                  if (res2.error) { mostrarToast(res2.error.message, 'error'); return Promise.reject(res2); }
+                  // Crear perfil
+                  return window.sb.from('perfiles').insert({ id: res2.data.user.id, email: email, nombre: email.split('@')[0], rol: rol }).then(function () {
+                    loginSuccess(email, rol);
+                  });
+                });
+              }
+              mostrarToast(res.error.message, 'error'); return;
+            }
+            // Login exitoso — obtener rol del perfil
+            window.sb.from('perfiles').select('rol').eq('id', res.data.user.id).single().then(function (prof) {
+              var userRol = (prof.data && prof.data.rol) ? prof.data.rol : rol;
+              loginSuccess(email, userRol);
+            });
+          }).catch(function (err) {
+            console.error('Supabase auth error:', err);
+            mostrarToast('Error de conexión. Usando modo offline.', 'error');
+          });
+          return;
+        }
+
+        /* ---- Fallback localStorage ---- */
         cryptoDeriveKey(pass, email);
-        // Almacenar hash de la contraseña en localStorage (solo primer inicio)
         var storedHash = localStorage.getItem('passHash_' + btoa(email));
         var passHash = hashPassword(pass);
         if (storedHash && storedHash !== passHash) {
@@ -355,6 +383,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (!storedHash) {
           localStorage.setItem('passHash_' + btoa(email), passHash);
         }
+        loginSuccess(email, rol);
+      });
+
+      function loginSuccess(email, rol) {
         logueado = true;
         usuarioActual = { email: email, rol: rol, nombre: email.split('@')[0] };
         localStorage.setItem('incoaSession', JSON.stringify(usuarioActual));
@@ -373,13 +405,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         actualizarPermisosUI();
         renderInicio();
         if ($('aula-tab-tareas') && !$('aula-tab-tareas').classList.contains('hidden')) renderAulaTareas();
-      });
+      }
 
       $('btn-logout').addEventListener('click', function () {
         logueado = false;
         usuarioActual = null;
         cryptoKey = null; cryptoKeyStr = '';
         localStorage.removeItem('incoaSession');
+        if (window.sb && window.sbReady()) {
+          window.sb.auth.signOut().catch(function (e) { console.error('Logout error:', e); });
+        }
         $('btn-login').style.display = '';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = '';
         var ui = $('user-info'); ui.style.display = 'none'; ui.classList.add('hidden');
@@ -1958,7 +1993,22 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          =================================================================== */
       var aulas = JSON.parse(localStorage.getItem('aulas') || '[]');
       var editingAulaId = null;
-      function aulasGuardarStorage() { localStorage.setItem('aulas', JSON.stringify(aulas)); }
+      function aulasGuardarStorage() {
+        localStorage.setItem('aulas', JSON.stringify(aulas));
+        // Sync a Supabase en background (no bloquea UI)
+        if (window.DB && window.sb && window.sbReady && window.sbReady()) {
+          // Para aulas, usamos upsert por owner_id
+          window.sb.from('aulas').upsert(aulas.map(function(a) {
+            return {
+              id: a.id, nombre: a.nombre, capacidad: a.capacidad,
+              ubicacion: a.ubicacion, tipo: a.tipo, equipamiento: a.equipamiento,
+              descripcion: a.desc, especialidad: a.especialidad,
+              anio: a.anio, seccion: a.seccion,
+              owner_id: (window.usuarioActual && window.usuarioActual.id) || null
+            };
+          }), { onConflict: 'id' }).catch(function(e) { console.warn('Sync aulas error:', e); });
+        }
+      }
       function aulaResetForm() {
         $('aula-nombre').value = ''; $('aula-capacidad').value = '30';
         $('aula-ubicacion').value = ''; $('aula-tipo').value = 'salon';
@@ -2068,8 +2118,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             if (!a) return;
             dialogConfirm('\u00BFEliminar el aula "' + a.nombre + '" permanentemente?', 'Eliminar aula').then(function (ok) {
               if (!ok) return;
+              var deletedId = a.id;
               aulas.splice(idx, 1);
               aulasGuardarStorage();
+              if (window.sb && window.sbReady && window.sbReady()) {
+                window.sb.from('aulas').delete().eq('id', deletedId).catch(function(e) { console.warn('Delete aula SB:', e); });
+              }
               aulasRenderGrid();
               mostrarToast('Aula "' + a.nombre + '" eliminada.', 'success');
             });
@@ -2739,7 +2793,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          AULAS — Inscripción de estudiantes
          =================================================================== */
       var aulaInscripciones = JSON.parse(localStorage.getItem('aula_inscripciones') || '[]');
-      function inscripcionesGuardar() { localStorage.setItem('aula_inscripciones', JSON.stringify(aulaInscripciones)); }
+      function inscripcionesGuardar() {
+        localStorage.setItem('aula_inscripciones', JSON.stringify(aulaInscripciones));
+        if (window.sb && window.sbReady && window.sbReady()) {
+          window.sb.from('aula_inscripciones').upsert(aulaInscripciones.map(function(i) {
+            return { aula_id: i.aulaId, estudiante_id: i.estudianteId ? String(i.estudianteId) : null, estado: i.estado || 'aprobado', fecha: i.fecha };
+          }), { onConflict: 'aula_id,estudiante_id' }).catch(function(e) { console.warn('Sync inscripciones:', e); });
+        }
+      }
 
       function renderInscripcion() {
         var aulaSel = $('insc-aula');
@@ -2813,8 +2874,22 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var aulaTareas = JSON.parse(localStorage.getItem(AULA_TAREAS_KEY) || '[]');
       var aulaEntregas = JSON.parse(localStorage.getItem(AULA_ENTREGAS_KEY) || '[]');
 
-      function aulaTareaGuardar() { localStorage.setItem(AULA_TAREAS_KEY, JSON.stringify(aulaTareas)); }
-      function aulaEntregaGuardar() { localStorage.setItem(AULA_ENTREGAS_KEY, JSON.stringify(aulaEntregas)); }
+      function aulaTareaGuardar() {
+        localStorage.setItem(AULA_TAREAS_KEY, JSON.stringify(aulaTareas));
+        if (window.sb && window.sbReady && window.sbReady()) {
+          window.sb.from('aula_tareas').upsert(aulaTareas.map(function(t) {
+            return { id: t.id, aula_id: t.aulaId, titulo: t.titulo, descripcion: t.descripcion, materia: t.materia, grupo: t.grupo, fecha_limite: t.fechaLimite, owner_id: t.ownerId };
+          }), { onConflict: 'id' }).catch(function(e) { console.warn('Sync aula_tareas:', e); });
+        }
+      }
+      function aulaEntregaGuardar() {
+        localStorage.setItem(AULA_ENTREGAS_KEY, JSON.stringify(aulaEntregas));
+        if (window.sb && window.sbReady && window.sbReady()) {
+          window.sb.from('aula_entregas').upsert(aulaEntregas.map(function(e) {
+            return { id: e.id, tarea_id: e.tareaIdx, estudiante_id: e.estudianteId ? String(e.estudianteId) : null, respuesta: e.respuesta, archivo_url: e.archivoUrl, archivo_nombre: e.archivoNombre, fecha: e.fecha };
+          }), { onConflict: 'id' }).catch(function(err) { console.warn('Sync aula_entregas:', err); });
+        }
+      }
 
       function renderAulaTareas() {
         var puedeCrear = tienePermiso('crear');
@@ -3068,7 +3143,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          CALIFICACIONES — Docente califica entregas
          =================================================================== */
       var aulaCalificaciones = JSON.parse(localStorage.getItem('aula_calificaciones') || '[]');
-      function aulaCalifGuardar() { localStorage.setItem('aula_calificaciones', JSON.stringify(aulaCalificaciones)); }
+      function aulaCalifGuardar() {
+        localStorage.setItem('aula_calificaciones', JSON.stringify(aulaCalificaciones));
+        if (window.sb && window.sbReady && window.sbReady()) {
+          window.sb.from('aula_calificaciones').upsert(aulaCalificaciones.map(function(c) {
+            return { id: c.id, entrega_id: c.entregaId, nota: c.nota, retroalimentacion: c.retroalimentacion, calificado_por: c.calificadoPor };
+          }), { onConflict: 'id' }).catch(function(e) { console.warn('Sync calificaciones:', e); });
+        }
+      }
 
       function openEntregasModal(tareaIdx) {
         var entregas = aulaEntregas.filter(function (e) { return e.tareaIdx === tareaIdx; });
@@ -3285,7 +3367,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          PLANIFICACIÓN DOCENTE
          =================================================================== */
       var planificaciones = JSON.parse(localStorage.getItem('planificaciones') || '[]');
-      function planifGuardar() { localStorage.setItem('planificaciones', JSON.stringify(planificaciones)); }
+      function planifGuardar() {
+        localStorage.setItem('planificaciones', JSON.stringify(planificaciones));
+        if (window.sb && window.sbReady && window.sbReady()) {
+          window.sb.from('planificaciones').upsert(planificaciones.map(function(p) {
+            return { id: p.id, semana: p.semana, materia: p.materia, unidad: p.unidad, objetivos: p.objetivos, actividades: p.actividades, recursos: p.recursos, evaluacion: p.evaluacion, owner_id: (window.usuarioActual && window.usuarioActual.id) || null };
+          }), { onConflict: 'id' }).catch(function(e) { console.warn('Sync planificaciones:', e); });
+        }
+      }
 
       function renderPlanificaciones() {
         var filtro = $('planif-filtro-materia').value;
@@ -3361,7 +3450,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          MATRÍCULA EN LÍNEA
          =================================================================== */
       var matSolicitudes = JSON.parse(secureGetItem('matSolicitudes') || '[]');
-      function matGuardar() { secureSetItem('matSolicitudes', JSON.stringify(matSolicitudes)); }
+      function matGuardar() {
+        secureSetItem('matSolicitudes', JSON.stringify(matSolicitudes));
+        if (window.sb && window.sbReady && window.sbReady()) {
+          window.sb.from('mat_solicitudes').upsert(matSolicitudes.map(function(s) {
+            return { id: s.id, nombres: s.nombres, apellidos: s.apellidos, email: s.email, telefono: s.telefono, anio: s.anio, especialidad: s.especialidad, seccion: s.seccion, estado: s.estado };
+          }), { onConflict: 'id' }).catch(function(e) { console.warn('Sync mat_solicitudes:', e); });
+        }
+      }
 
       function renderMatSolicitudes() {
         var el = $('mat-solicitudes');
@@ -3434,7 +3530,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          SESIÓN — actualizar UI si hay sesión guardada
          =================================================================== */
-      if (logueado && usuarioActual) {
+      function restoreUI() {
+        if (!logueado || !usuarioActual) return;
         var btnLogin = $('btn-login');
         if (btnLogin) btnLogin.style.display = 'none';
         var btnIngresar = $('btn-ingresar-hero');
@@ -3451,10 +3548,67 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         actualizarPermisosUI();
       }
 
+      /* Restaurar sesión: intentar Supabase, fallback a localStorage */
+      if (window.sb && window.sbReady()) {
+        window.sb.auth.getSession().then(function (res) {
+          if (res.data && res.data.session && res.data.session.user) {
+            var u = res.data.session.user;
+            var email = u.email;
+            // Obtener rol del perfil
+            window.sb.from('perfiles').select('rol').eq('id', u.id).single().then(function (prof) {
+              var rol = (prof.data && prof.data.rol) ? prof.data.rol : 'estudiante';
+              logueado = true;
+              usuarioActual = { email: email, rol: rol, nombre: email.split('@')[0] };
+              localStorage.setItem('incoaSession', JSON.stringify(usuarioActual));
+              restoreUI();
+            }).catch(function () {
+              logueado = true;
+              usuarioActual = { email: email, rol: 'estudiante', nombre: email.split('@')[0] };
+              localStorage.setItem('incoaSession', JSON.stringify(usuarioActual));
+              restoreUI();
+            });
+          } else if (savedSession) {
+            restoreUI();
+          }
+        }).catch(function () {
+          restoreUI();
+        });
+      } else {
+        restoreUI();
+      }
+
       /* ===================================================================
          INICIO
          =================================================================== */
       mostrarApp('inicio');
+
+      /* Sync datos desde Supabase al cargar (background, no bloquea) */
+      if (window.DB && window.sb && window.sbReady && window.sbReady()) {
+        window.DB.syncAll().then(function () {
+          // Recargar arrays en memoria desde localStorage actualizado
+          var freshAulas = JSON.parse(localStorage.getItem('aulas') || '[]');
+          if (freshAulas.length > aulas.length) {
+            aulas.length = 0;
+            freshAulas.forEach(function (a) { aulas.push(a); });
+            aulasRenderGrid();
+          }
+          var freshInsc = JSON.parse(localStorage.getItem('aula_inscripciones') || '[]');
+          if (freshInsc.length > 0) { aulaInscripciones.length = 0; freshInsc.forEach(function (i) { aulaInscripciones.push(i); }); }
+          var freshTareas = JSON.parse(localStorage.getItem(AULA_TAREAS_KEY) || '[]');
+          if (freshTareas.length > 0) { aulaTareas.length = 0; freshTareas.forEach(function (t) { aulaTareas.push(t); }); }
+          var freshEntregas = JSON.parse(localStorage.getItem(AULA_ENTREGAS_KEY) || '[]');
+          if (freshEntregas.length > 0) { aulaEntregas.length = 0; freshEntregas.forEach(function (e2) { aulaEntregas.push(e2); }); }
+          var freshCalif = JSON.parse(localStorage.getItem('aula_calificaciones') || '[]');
+          if (freshCalif.length > 0) { aulaCalificaciones.length = 0; freshCalif.forEach(function (c) { aulaCalificaciones.push(c); }); }
+          var freshPlanif = JSON.parse(localStorage.getItem('planificaciones') || '[]');
+          if (freshPlanif.length > 0) { planificaciones.length = 0; freshPlanif.forEach(function (p) { planificaciones.push(p); }); }
+          var freshMat = JSON.parse(secureGetItem('matSolicitudes') || '[]');
+          if (freshMat.length > 0) { matSolicitudes.length = 0; freshMat.forEach(function (m) { matSolicitudes.push(m); }); }
+          var freshEst = JSON.parse(localStorage.getItem('estudiantes_db') || '[]');
+          if (freshEst.length > 0) { ESTUDIANTES_DB.length = 0; freshEst.forEach(function (s) { ESTUDIANTES_DB.push(s); }); }
+          console.log('Sync Supabase → localStorage completado');
+        }).catch(function (e) { console.warn('syncAll error:', e); });
+      }
 
     })();
 
