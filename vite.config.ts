@@ -57,6 +57,7 @@ export default defineConfig({
     base64ImagesPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
+      cleanupOutdatedCaches: true,
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
         name: 'INCOA - Plataforma Educativa',

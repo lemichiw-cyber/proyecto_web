@@ -3611,11 +3611,3 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
     })();
-
-if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(function (reg) {
-        console.log('SW registrado, alcance:', reg.scope);
-      }).catch(function (err) {
-        console.log('Error al registrar SW:', err);
-      });
-    }
