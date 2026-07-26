@@ -303,6 +303,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         _mostrarApp(app);
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
+        if (app === 'aulas' && window.INCOANotifications) {
+          window.INCOANotifications.showPermissionBanner();
+        }
         if (app === 'configuracion') {
           var dest = $('theme-options-section');
           if (dest && !dest.children.length) {
@@ -3137,6 +3140,17 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         $('aula-tarea-fecha').value = '';
         renderAulaTareas();
         mostrarToast('Tarea asignada.', 'success');
+        // Notificar a estudiantes inscriptos en el aula
+        if (window.INCOANotifications && window.INCOANotifications.isSupported()) {
+          var aulaObj = aulas.find(function (a) { return a.id === parseInt(aulaId, 10); });
+          var inscritos = aulaInscripciones.filter(function (i) { return i.aulaId === parseInt(aulaId, 10) && i.estado === 'aprobado'; });
+          var est = window.INCOANotifications.getEstudianteActual();
+          var estaInscrito = est && inscritos.some(function (i) { return i.estudianteId === est.id; });
+          if (estaInscrito) {
+            var tarea = aulaTareas[aulaTareas.length - 1];
+            window.INCOANotifications.notifyNewTask(tarea, aulaObj ? aulaObj.nombre : '');
+          }
+        }
       });
 
       /* ===================================================================
@@ -3581,6 +3595,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          INICIO
          =================================================================== */
       mostrarApp('inicio');
+
+      /* Iniciar checker de recordatorios de tareas (cada 30 min) */
+      if (window.INCOANotifications) {
+        window.INCOANotifications.startDeadlineChecker();
+      }
 
       /* Sync datos desde Supabase al cargar (background, no bloquea) */
       if (window.DB && window.sb && window.sbReady && window.sbReady()) {
