@@ -347,34 +347,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         }
         $('login-error').hidden = true;
 
-        /* ---- Supabase Auth ---- */
-        if (window.sb && window.sbReady()) {
-          window.sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
-            if (res.error) {
-              // Si el usuario no existe, lo crea
-              if (res.error.message && res.error.message.includes('Invalid login')) {
-                return window.sb.auth.signUp({ email: email, password: pass }).then(function (res2) {
-                  if (res2.error) { mostrarToast(res2.error.message, 'error'); return Promise.reject(res2); }
-                  // Crear perfil
-                  return window.sb.from('perfiles').insert({ id: res2.data.user.id, email: email, nombre: email.split('@')[0], rol: rol }).then(function () {
-                    loginSuccess(email, rol);
-                  });
-                });
-              }
-              mostrarToast(res.error.message, 'error'); return;
-            }
-            // Login exitoso — obtener rol del perfil
-            window.sb.from('perfiles').select('rol').eq('id', res.data.user.id).single().then(function (prof) {
-              var userRol = (prof.data && prof.data.rol) ? prof.data.rol : rol;
-              loginSuccess(email, userRol);
-            });
-          }).catch(function (err) {
-            console.error('Supabase auth error:', err);
-            mostrarToast('Error de conexión. Usando modo offline.', 'error');
-          });
-          return;
-        }
-
         /* ---- Fallback localStorage ---- */
         cryptoDeriveKey(pass, email);
         var storedHash = localStorage.getItem('passHash_' + btoa(email));
@@ -415,9 +387,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         usuarioActual = null;
         cryptoKey = null; cryptoKeyStr = '';
         localStorage.removeItem('incoaSession');
-        if (window.sb && window.sbReady()) {
-          window.sb.auth.signOut().catch(function (e) { console.error('Logout error:', e); });
-        }
+        /* Logout local — sesión en localStorage */
         $('btn-login').style.display = '';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = '';
         var ui = $('user-info'); ui.style.display = 'none'; ui.classList.add('hidden');

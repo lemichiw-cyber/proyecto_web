@@ -10,9 +10,7 @@
     "test:ui": "vitest --ui",
     "lint": "eslint src --ext ts,tsx"
   },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.110.8"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.8.0",
     "@typescript-eslint/parser": "^7.8.0",
