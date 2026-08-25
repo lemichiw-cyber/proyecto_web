@@ -30,3 +30,7 @@ pnpm-debug.log*
 *.tmp
 *.temp
 .cache/
+
+# Binarios pesados fuera del repo (servir via CDN/LFS si se necesitan)
+*.apk
+public/videos/*.mp4
