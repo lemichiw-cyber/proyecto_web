@@ -136,7 +136,7 @@
     // Si es docente, notificar sobre entregas pendientes en sus aulas
     if (window.usuarioActual && (window.usuarioActual.rol === 'docente' || window.usuarioActual.rol === 'admin' || window.usuarioActual.rol === 'director')) {
       var misAulas = aulas.filter(function (a) {
-        return a.owner_id && window.usuarioActual && a.owner_id === window.usuarioActual.id;
+        return a.owner_id && a.owner_id === window.usuarioActual.email;
       });
       misAulas.forEach(function (aula) {
         var tareasAula = tareas.filter(function (t) { return t.aulaId === aula.id; });

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import fs from 'fs';
 import path from 'path';
+import { createHash } from 'crypto';
 
 // Plugin to handle base64 images in HTML
 function base64ImagesPlugin() {
@@ -14,8 +15,7 @@ function base64ImagesPlugin() {
       
       return html.replace(base64Regex, (match, mimeType, base64Data, rest) => {
         // Generate a unique filename based on the base64 content hash
-        const crypto = require('crypto');
-        const hash = crypto.createHash('md5').update(base64Data).digest('hex').substring(0, 8);
+        const hash = createHash('md5').update(base64Data).digest('hex').substring(0, 8);
         const ext = mimeType.split('/')[1] || 'png';
         const filename = `base64-img-${hash}.${ext}`;
         
@@ -68,14 +68,8 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/proyecto_web/',
         icons: [
-          { src: '/proyecto_web/icons/icon-72.png', sizes: '72x72', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-128.png', sizes: '128x128', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-144.png', sizes: '144x144', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-152.png', sizes: '152x152', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-384.png', sizes: '384x384', type: 'image/png' },
-          { src: '/proyecto_web/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/proyecto_web/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/proyecto_web/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
       workbox: {

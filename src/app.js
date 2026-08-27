@@ -802,203 +802,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         examGuardarStorage();
         examRenderGuardados();
         examCargarSelect();
-      /* ===== ANTI-CHEAT ===== */
-      var examViolaciones = 0;
-      var EXAM_MAX_VIOLACIONES = 3;
-
-      function examInitAntiCheat() {
-        examViolaciones = 0;
-        document.addEventListener('visibilitychange', examOnVisibility);
-        window.addEventListener('blur', examOnBlur);
-        document.addEventListener('contextmenu', examOnContextMenu);
-        document.addEventListener('copy', examOnCopy);
-        document.addEventListener('cut', examOnCopy);
-        document.addEventListener('paste', examOnCopy);
-        document.addEventListener('keydown', examOnKeyDown);
       }
-
-      function examCleanupAntiCheat() {
-        document.removeEventListener('visibilitychange', examOnVisibility);
-        window.removeEventListener('blur', examOnBlur);
-        document.removeEventListener('contextmenu', examOnContextMenu);
-        document.removeEventListener('copy', examOnCopy);
-        document.removeEventListener('cut', examOnCopy);
-        document.removeEventListener('paste', examOnCopy);
-        document.removeEventListener('keydown', examOnKeyDown);
-      }
-
-      function examRegistrarViolacion(tipo) {
-        if (!examEnCurso) return;
-        examViolaciones++;
-        var restantes = EXAM_MAX_VIOLACIONES - examViolaciones;
-        mostrarToast('⚠️ Violación de seguridad: ' + tipo + '. Advertencia ' + examViolaciones + '/' + EXAM_MAX_VIOLACIONES, 'error');
-        if (examViolaciones >= EXAM_MAX_VIOLACIONES) {
-          mostrarToast('🚫 Demasiadas violaciones. Examen enviado automáticamente.', 'error');
-          examEnviar();
-        }
-      }
-
-      function examOnVisibility() {
-        if (document.hidden && examEnCurso) examRegistrarViolacion('Cambio de ventana');
-      }
-      function examOnBlur() {
-        if (examEnCurso) examRegistrarViolacion('Perdió el foco');
-      }
-      function examOnContextMenu(e) {
-        if (examEnCurso) { e.preventDefault(); examRegistrarViolacion('Click derecho'); }
-      }
-      function examOnCopy(e) {
-        if (examEnCurso) { e.preventDefault(); examRegistrarViolacion('Copiar/pegar'); }
-      }
-      function examOnKeyDown(e) {
-        if (!examEnCurso) return;
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x' || e.key === 'a')) {
-          e.preventDefault(); examRegistrarViolacion('Teclas de copiado');
-        }
-        if (e.key === 'Escape' && examEnCurso) {
-          e.preventDefault(); examRegistrarViolacion('Tecla Escape');
-        }
-      }
-
-      /* ===== PLAN DE TRABAJO (Planilla de calificaciones) ===== */
-      var PLAN_KEY = 'bachillerato_plan_trabajo';
-      var planData = JSON.parse(localStorage.getItem(PLAN_KEY) || '[]');
-      var planMaterias = ['Matemáticas', 'Física', 'Química', 'Biología', 'Literatura', 'Historia', 'Inglés'];
-      var planEstudiantesPorGrupo = {
-        '1A': ['Ana García López','Carlos Mendoza Ruiz','Sofía Ramírez Cruz','Jorge Luis Hernández','Diana Rivas Mora'],
-        '1B': ['María Torres Silva','Valentina Ortiz Mora','Pedro Sánchez Vega','Gabriela Flores Ruiz'],
-        '2A': ['Luis Fernández Vega','Diego Castillo Pérez','Regina Campos Torres','Fernando Soto Ríos'],
-        '2B': ['Ximena Herrera Ríos','Andrés Nava Cruz','Paola Jiménez Díaz'],
-        '3A': ['Emiliano Rivas Soto','Alejandra Luna García','Ricardo Paredes Solís'],
-        '3B': ['Mateo Delgado Gil','Camila Estrada Ríos','Héctor Medina López']
-      };
-
-      function planGuardarStorage() { localStorage.setItem(PLAN_KEY, JSON.stringify(planData)); }
-
-      function planAgregarColumna() {
-        dialogPrompt('Nombre de la columna (Ej: "Parcial 1", "Tarea 1"):', 'Nueva columna').then(function (res) {
-          if (!res || !res.trim()) return;
-          planData.forEach(function (fila) { fila[res.trim()] = ''; });
-          planGuardarStorage();
-          planRenderGrid();
-          mostrarToast('Columna "' + res.trim() + '" agregada.', 'success');
-        });
-      }
-
-      function planEliminarColumna(nombre) {
-        dialogConfirm('¿Eliminar la columna "' + nombre + '" y todos sus datos?', 'Eliminar columna').then(function (ok) {
-          if (!ok) return;
-          planData.forEach(function (fila) { delete fila[nombre]; });
-          planGuardarStorage();
-          planRenderGrid();
-          mostrarToast('Columna eliminada.', 'success');
-        });
-      }
-
-      function planRenderGrid() {
-        var grupo = $('plan-grupo') ? $('plan-grupo').value : '1A';
-        var estudiantes = planEstudiantesPorGrupo[grupo] || [];
-        var container = $('plan-grid');
-        if (!container) return;
-
-        // Asegurar que todos los estudiantes tengan fila
-        estudiantes.forEach(function (nom) {
-          if (!planData.some(function (f) { return f.estudiante === nom && f.grupo === grupo; })) {
-            planData.push({ estudiante: nom, grupo: grupo });
-          }
-        });
-
-        // Filtrar solo los del grupo actual
-        var filas = planData.filter(function (f) { return f.grupo === grupo; });
-
-        // Obtener columnas dinámicas (excluyendo fijas)
-        var columnas = [];
-        filas.forEach(function (f) {
-          Object.keys(f).forEach(function (k) {
-            if (k !== 'estudiante' && k !== 'grupo' && columnas.indexOf(k) === -1) columnas.push(k);
-          });
-        });
-
-        if (filas.length === 0) {
-          container.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '📚', title: 'Estudiantes' }); return;
-        }
-
-        var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
-        columnas.forEach(function (col) {
-          html += '<th>' + escapeHtml(col) + ' <button class="btn btn-sm plan-del-col" data-col="' + escapeHtml(col) + '" style="background:var(--red);color:#fff;padding:0 .35rem;font-size:.65rem;">×</button></th>';
-        });
-        html += '<th>Promedio</th></tr></thead><tbody>';
-
-        filas.forEach(function (fila, fi) {
-          html += '<tr><td><strong>' + escapeHtml(fila.estudiante) + '</strong></td>';
-          var suma = 0, count = 0;
-          columnas.forEach(function (col) {
-            var val = fila[col] || '';
-            if (val !== '' && !isNaN(parseFloat(val))) { suma += parseFloat(val); count++; }
-            html += '<td><input type="text" class="plan-input" data-fi="' + fi + '" data-col="' + escapeHtml(col) + '" value="' + escapeHtml(val) + '" style="width:60px;padding:.25rem;border:1px solid var(--gray-300);border-radius:4px;font:inherit;font-size:.8rem;text-align:center;"></td>';
-          });
-          var promedio = count > 0 ? (suma / count).toFixed(1) : '—';
-          html += '<td><strong>' + promedio + '</strong></td></tr>';
-        });
-
-        html += '</tbody></table></div>';
-        html += '<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">';
-        html += '<button class="btn btn-primary btn-sm" id="btn-plan-add-col">+ Agregar columna</button>';
-        html += '<button class="btn btn-outline btn-sm" id="btn-plan-reset"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTIwIDExYTguMSA4LjEgMCAwIDAgLTE1LjUgLTJtLS41IC00djRoNCIgLz4KICA8cGF0aCBkPSJNNCAxM2E4LjEgOC4xIDAgMCAwIDE1LjUgMm0uNSA0di00aC00IiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Reiniciar planilla</button>';
-        html += '</div>';
-
-        container.innerHTML = html;
-
-        // Event listeners
-        container.querySelectorAll('.plan-input').forEach(function (inp) {
-          inp.addEventListener('input', function () {
-            var fi = parseInt(this.dataset.fi);
-            var col = this.dataset.col;
-            planData[fi][col] = this.value;
-            planGuardarStorage();
-            planRenderGrid();
-          });
-        });
-
-        container.querySelectorAll('.plan-del-col').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var col = this.dataset.col;
-            planEliminarColumna(col);
-          });
-        });
-
-        var addColBtn = $('btn-plan-add-col');
-        if (addColBtn) addColBtn.addEventListener('click', planAgregarColumna);
-
-        var resetBtn = $('btn-plan-reset');
-        if (resetBtn) resetBtn.addEventListener('click', function () {
-          dialogConfirm('¿Reiniciar toda la planilla? Se perderán todos los datos.', 'Reiniciar').then(function (ok) {
-            if (!ok) return;
-            planData = [];
-            planGuardarStorage();
-            planRenderGrid();
-            mostrarToast('Planilla reiniciada.', 'success');
-          });
-        });
-      }
-
-      // Plan de Trabajo UI init
-      function initPlanTab() {
-        var tabBtn = document.querySelector('[data-exam-tab="plan"]');
-        if (!tabBtn) return;
-        tabBtn.addEventListener('click', function () {
-          if (examEnCurso && !confirm('Hay un examen en curso. ¿Salir?')) return;
-          examResetSimulador();
-          document.querySelectorAll('[data-exam-tab]').forEach(function (b) { b.classList.remove('active'); });
-          this.classList.add('active');
-          $('exam-tab-profesor').classList.add('hidden');
-          $('exam-tab-estudiante').classList.add('hidden');
-          $('exam-tab-plan').classList.remove('hidden');
-          planRenderGrid();
-        });
-      }
-      }
-
       function examAddPregunta() {
         examQCount++;
         var id = 'q-' + examQCount;
@@ -1084,6 +888,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         examGuardarStorage();
         examRenderGuardados();
         examCargarSelect();
+      }
+
       /* ===== ANTI-CHEAT ===== */
       var examViolaciones = 0;
       var EXAM_MAX_VIOLACIONES = 3;
@@ -1112,7 +918,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function examRegistrarViolacion(tipo) {
         if (!examEnCurso) return;
         examViolaciones++;
-        var restantes = EXAM_MAX_VIOLACIONES - examViolaciones;
         mostrarToast('⚠️ Violación de seguridad: ' + tipo + '. Advertencia ' + examViolaciones + '/' + EXAM_MAX_VIOLACIONES, 'error');
         if (examViolaciones >= EXAM_MAX_VIOLACIONES) {
           mostrarToast('🚫 Demasiadas violaciones. Examen enviado automáticamente.', 'error');
@@ -1183,17 +988,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var container = $('plan-grid');
         if (!container) return;
 
-        // Asegurar que todos los estudiantes tengan fila
         estudiantes.forEach(function (nom) {
           if (!planData.some(function (f) { return f.estudiante === nom && f.grupo === grupo; })) {
             planData.push({ estudiante: nom, grupo: grupo });
           }
         });
 
-        // Filtrar solo los del grupo actual
         var filas = planData.filter(function (f) { return f.grupo === grupo; });
 
-        // Obtener columnas dinámicas (excluyendo fijas)
         var columnas = [];
         filas.forEach(function (f) {
           Object.keys(f).forEach(function (k) {
@@ -1226,12 +1028,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         html += '</tbody></table></div>';
         html += '<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">';
         html += '<button class="btn btn-primary btn-sm" id="btn-plan-add-col">+ Agregar columna</button>';
-        html += '<button class="btn btn-outline btn-sm" id="btn-plan-reset"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTIwIDExYTguMSA4LjEgMCAwIDAgLTE1LjUgLTJtLS41IC00djRoNCIgLz4KICA8cGF0aCBkPSJNNCAxM2E4LjEgOC4xIDAgMCAwIDE1LjUgMm0uNSA0di00aC00IiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Reiniciar planilla</button>';
+        html += '<button class="btn btn-outline btn-sm" id="btn-plan-reset">Reiniciar planilla</button>';
         html += '</div>';
 
         container.innerHTML = html;
 
-        // Event listeners
         container.querySelectorAll('.plan-input').forEach(function (inp) {
           inp.addEventListener('input', function () {
             var fi = parseInt(this.dataset.fi);
@@ -1264,7 +1065,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
 
-      // Plan de Trabajo UI init
       function initPlanTab() {
         var tabBtn = document.querySelector('[data-exam-tab="plan"]');
         if (!tabBtn) return;
@@ -1278,14 +1078,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           $('exam-tab-plan').classList.remove('hidden');
           planRenderGrid();
         });
-      }
-        $('exam-titulo').value = '';
-        $('exam-tiempo').value = '60';
-        $('exam-q-list').innerHTML = '';
-        examQCount = 0;
-        $('exam-guardar-msg').textContent = '✔️ Examen guardado correctamente.';
-        $('exam-guardar-msg').style.color = 'var(--green)';
-        setTimeout(function () { $('exam-guardar-msg').textContent = ''; }, 3000);
       }
 
       function examCargarSelect() {
@@ -1475,202 +1267,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       if (planGrupoSelect) {
         planGrupoSelect.addEventListener('change', planRenderGrid);
       }
-      /* ===== ANTI-CHEAT ===== */
-      var examViolaciones = 0;
-      var EXAM_MAX_VIOLACIONES = 3;
-
-      function examInitAntiCheat() {
-        examViolaciones = 0;
-        document.addEventListener('visibilitychange', examOnVisibility);
-        window.addEventListener('blur', examOnBlur);
-        document.addEventListener('contextmenu', examOnContextMenu);
-        document.addEventListener('copy', examOnCopy);
-        document.addEventListener('cut', examOnCopy);
-        document.addEventListener('paste', examOnCopy);
-        document.addEventListener('keydown', examOnKeyDown);
-      }
-
-      function examCleanupAntiCheat() {
-        document.removeEventListener('visibilitychange', examOnVisibility);
-        window.removeEventListener('blur', examOnBlur);
-        document.removeEventListener('contextmenu', examOnContextMenu);
-        document.removeEventListener('copy', examOnCopy);
-        document.removeEventListener('cut', examOnCopy);
-        document.removeEventListener('paste', examOnCopy);
-        document.removeEventListener('keydown', examOnKeyDown);
-      }
-
-      function examRegistrarViolacion(tipo) {
-        if (!examEnCurso) return;
-        examViolaciones++;
-        var restantes = EXAM_MAX_VIOLACIONES - examViolaciones;
-        mostrarToast('⚠️ Violación de seguridad: ' + tipo + '. Advertencia ' + examViolaciones + '/' + EXAM_MAX_VIOLACIONES, 'error');
-        if (examViolaciones >= EXAM_MAX_VIOLACIONES) {
-          mostrarToast('🚫 Demasiadas violaciones. Examen enviado automáticamente.', 'error');
-          examEnviar();
-        }
-      }
-
-      function examOnVisibility() {
-        if (document.hidden && examEnCurso) examRegistrarViolacion('Cambio de ventana');
-      }
-      function examOnBlur() {
-        if (examEnCurso) examRegistrarViolacion('Perdió el foco');
-      }
-      function examOnContextMenu(e) {
-        if (examEnCurso) { e.preventDefault(); examRegistrarViolacion('Click derecho'); }
-      }
-      function examOnCopy(e) {
-        if (examEnCurso) { e.preventDefault(); examRegistrarViolacion('Copiar/pegar'); }
-      }
-      function examOnKeyDown(e) {
-        if (!examEnCurso) return;
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x' || e.key === 'a')) {
-          e.preventDefault(); examRegistrarViolacion('Teclas de copiado');
-        }
-        if (e.key === 'Escape' && examEnCurso) {
-          e.preventDefault(); examRegistrarViolacion('Tecla Escape');
-        }
-      }
-
-      /* ===== PLAN DE TRABAJO (Planilla de calificaciones) ===== */
-      var PLAN_KEY = 'bachillerato_plan_trabajo';
-      var planData = JSON.parse(localStorage.getItem(PLAN_KEY) || '[]');
-      var planMaterias = ['Matemáticas', 'Física', 'Química', 'Biología', 'Literatura', 'Historia', 'Inglés'];
-      var planEstudiantesPorGrupo = {
-        '1A': ['Ana García López','Carlos Mendoza Ruiz','Sofía Ramírez Cruz','Jorge Luis Hernández','Diana Rivas Mora'],
-        '1B': ['María Torres Silva','Valentina Ortiz Mora','Pedro Sánchez Vega','Gabriela Flores Ruiz'],
-        '2A': ['Luis Fernández Vega','Diego Castillo Pérez','Regina Campos Torres','Fernando Soto Ríos'],
-        '2B': ['Ximena Herrera Ríos','Andrés Nava Cruz','Paola Jiménez Díaz'],
-        '3A': ['Emiliano Rivas Soto','Alejandra Luna García','Ricardo Paredes Solís'],
-        '3B': ['Mateo Delgado Gil','Camila Estrada Ríos','Héctor Medina López']
-      };
-
-      function planGuardarStorage() { localStorage.setItem(PLAN_KEY, JSON.stringify(planData)); }
-
-      function planAgregarColumna() {
-        dialogPrompt('Nombre de la columna (Ej: "Parcial 1", "Tarea 1"):', 'Nueva columna').then(function (res) {
-          if (!res || !res.trim()) return;
-          planData.forEach(function (fila) { fila[res.trim()] = ''; });
-          planGuardarStorage();
-          planRenderGrid();
-          mostrarToast('Columna "' + res.trim() + '" agregada.', 'success');
-        });
-      }
-
-      function planEliminarColumna(nombre) {
-        dialogConfirm('¿Eliminar la columna "' + nombre + '" y todos sus datos?', 'Eliminar columna').then(function (ok) {
-          if (!ok) return;
-          planData.forEach(function (fila) { delete fila[nombre]; });
-          planGuardarStorage();
-          planRenderGrid();
-          mostrarToast('Columna eliminada.', 'success');
-        });
-      }
-
-      function planRenderGrid() {
-        var grupo = $('plan-grupo') ? $('plan-grupo').value : '1A';
-        var estudiantes = planEstudiantesPorGrupo[grupo] || [];
-        var container = $('plan-grid');
-        if (!container) return;
-
-        // Asegurar que todos los estudiantes tengan fila
-        estudiantes.forEach(function (nom) {
-          if (!planData.some(function (f) { return f.estudiante === nom && f.grupo === grupo; })) {
-            planData.push({ estudiante: nom, grupo: grupo });
-          }
-        });
-
-        // Filtrar solo los del grupo actual
-        var filas = planData.filter(function (f) { return f.grupo === grupo; });
-
-        // Obtener columnas dinámicas (excluyendo fijas)
-        var columnas = [];
-        filas.forEach(function (f) {
-          Object.keys(f).forEach(function (k) {
-            if (k !== 'estudiante' && k !== 'grupo' && columnas.indexOf(k) === -1) columnas.push(k);
-          });
-        });
-
-        if (filas.length === 0) {
-          container.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '📚', title: 'Estudiantes' }); return;
-        }
-
-        var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
-        columnas.forEach(function (col) {
-          html += '<th>' + escapeHtml(col) + ' <button class="btn btn-sm plan-del-col" data-col="' + escapeHtml(col) + '" style="background:var(--red);color:#fff;padding:0 .35rem;font-size:.65rem;">×</button></th>';
-        });
-        html += '<th>Promedio</th></tr></thead><tbody>';
-
-        filas.forEach(function (fila, fi) {
-          html += '<tr><td><strong>' + escapeHtml(fila.estudiante) + '</strong></td>';
-          var suma = 0, count = 0;
-          columnas.forEach(function (col) {
-            var val = fila[col] || '';
-            if (val !== '' && !isNaN(parseFloat(val))) { suma += parseFloat(val); count++; }
-            html += '<td><input type="text" class="plan-input" data-fi="' + fi + '" data-col="' + escapeHtml(col) + '" value="' + escapeHtml(val) + '" style="width:60px;padding:.25rem;border:1px solid var(--gray-300);border-radius:4px;font:inherit;font-size:.8rem;text-align:center;"></td>';
-          });
-          var promedio = count > 0 ? (suma / count).toFixed(1) : '—';
-          html += '<td><strong>' + promedio + '</strong></td></tr>';
-        });
-
-        html += '</tbody></table></div>';
-        html += '<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">';
-        html += '<button class="btn btn-primary btn-sm" id="btn-plan-add-col">+ Agregar columna</button>';
-        html += '<button class="btn btn-outline btn-sm" id="btn-plan-reset"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTIwIDExYTguMSA4LjEgMCAwIDAgLTE1LjUgLTJtLS41IC00djRoNCIgLz4KICA8cGF0aCBkPSJNNCAxM2E4LjEgOC4xIDAgMCAwIDE1LjUgMm0uNSA0di00aC00IiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Reiniciar planilla</button>';
-        html += '</div>';
-
-        container.innerHTML = html;
-
-        // Event listeners
-        container.querySelectorAll('.plan-input').forEach(function (inp) {
-          inp.addEventListener('input', function () {
-            var fi = parseInt(this.dataset.fi);
-            var col = this.dataset.col;
-            planData[fi][col] = this.value;
-            planGuardarStorage();
-            planRenderGrid();
-          });
-        });
-
-        container.querySelectorAll('.plan-del-col').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var col = this.dataset.col;
-            planEliminarColumna(col);
-          });
-        });
-
-        var addColBtn = $('btn-plan-add-col');
-        if (addColBtn) addColBtn.addEventListener('click', planAgregarColumna);
-
-        var resetBtn = $('btn-plan-reset');
-        if (resetBtn) resetBtn.addEventListener('click', function () {
-          dialogConfirm('¿Reiniciar toda la planilla? Se perderán todos los datos.', 'Reiniciar').then(function (ok) {
-            if (!ok) return;
-            planData = [];
-            planGuardarStorage();
-            planRenderGrid();
-            mostrarToast('Planilla reiniciada.', 'success');
-          });
-        });
-      }
-
-      // Plan de Trabajo UI init
-      function initPlanTab() {
-        var tabBtn = document.querySelector('[data-exam-tab="plan"]');
-        if (!tabBtn) return;
-        tabBtn.addEventListener('click', function () {
-          if (examEnCurso && !confirm('Hay un examen en curso. ¿Salir?')) return;
-          examResetSimulador();
-          document.querySelectorAll('[data-exam-tab]').forEach(function (b) { b.classList.remove('active'); });
-          this.classList.add('active');
-          $('exam-tab-profesor').classList.add('hidden');
-          $('exam-tab-estudiante').classList.add('hidden');
-          $('exam-tab-plan').classList.remove('hidden');
-          planRenderGrid();
-        });
-      }
-
       /* ===================================================================
          ASISTENCIAS
          =================================================================== */
@@ -1977,7 +1573,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               ubicacion: a.ubicacion, tipo: a.tipo, equipamiento: a.equipamiento,
               descripcion: a.desc, especialidad: a.especialidad,
               anio: a.anio, seccion: a.seccion,
-              owner_id: (window.usuarioActual && window.usuarioActual.id) || null
+              owner_id: (window.usuarioActual && window.usuarioActual.email) || null
             };
           }), { onConflict: 'id' }).catch(function(e) { console.warn('Sync aulas error:', e); });
         }
