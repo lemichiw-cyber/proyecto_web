@@ -796,7 +796,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           }).join('') + '</div>';
       }
 
-      function examEliminar(idx) {
+      window.examEliminar = function(idx) {
         if (!confirm('¿Eliminar este examen?')) return;
         examenes.splice(idx, 1);
         examGuardarStorage();
