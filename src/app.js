@@ -160,6 +160,18 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('incoaTheme', theme);
+
+        var sakuraAudio = document.getElementById('sakura-audio');
+        if (sakuraAudio) {
+          if (theme === 'sakura') {
+            sakuraAudio.volume = 0.5;
+            sakuraAudio.play().catch(function () {});
+          } else {
+            sakuraAudio.pause();
+            sakuraAudio.currentTime = 0;
+          }
+        }
+
         var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower', paraiso:'sun' };
         var iconFile = themeIcons[theme] || 'moon';
         var btns = document.querySelectorAll('.btn-theme-toggle');
