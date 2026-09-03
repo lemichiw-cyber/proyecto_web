@@ -65,6 +65,23 @@ unicode: "eaf8"
   <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" />
 </svg>
 </button>
+      <div class="vol-control hidden" id="vol-control">
+        <button class="btn-vol-toggle" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
+tags: [speaker, volume, loud, speaker-high]
+category: Media
+version: "1.0"
+unicode: "ea05"
+-->
+<svg width="20" height="20" style="width:18px;height:18px;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M11 5 6 9H2v6h4l5 4V5z" />
+  <path id="vol-wave1" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+  <path id="vol-wave2" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+</svg>
+</button>
+        <div class="vol-pop" id="vol-pop">
+          <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volumen">
+        </div>
+      </div>
       <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
         <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
       </div>

@@ -163,13 +163,19 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         var sakuraAudio = document.getElementById('sakura-audio');
         if (sakuraAudio) {
-          if (theme === 'sakura') {
-            sakuraAudio.volume = 0.5;
+          var vol = parseFloat(localStorage.getItem('incoaVol') || '0.5');
+          sakuraAudio.volume = vol;
+          if (theme === 'sakura' && vol > 0) {
             sakuraAudio.play().catch(function () {});
           } else {
             sakuraAudio.pause();
             sakuraAudio.currentTime = 0;
           }
+        }
+        var volCtrl = $('vol-control');
+        if (volCtrl) {
+          if (theme === 'sakura') volCtrl.classList.remove('hidden');
+          else volCtrl.classList.add('hidden');
         }
 
         var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower', paraiso:'sun' };
@@ -186,6 +192,54 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         }
       }
       window.aplicarTheme = aplicarTheme;
+
+      /* ================================================================
+         VOLUMEN — Control de música (discreto, junto al botón de tema)
+         ================================================================ */
+      var volSlider = $('vol-slider');
+      var volControl = $('vol-control');
+      var btnVol = $('btn-vol');
+      var sakuraAudio = document.getElementById('sakura-audio');
+
+      function volSet(vol, save) {
+        var v = Math.max(0, Math.min(1, parseFloat(vol) || 0));
+        if (sakuraAudio) sakuraAudio.volume = v;
+        if (volSlider) volSlider.value = Math.round(v * 100);
+        if (v === 0) {
+          if (btnVol) btnVol.classList.add('muted');
+        } else {
+          if (btnVol) btnVol.classList.remove('muted');
+        }
+        if (save) localStorage.setItem('incoaVol', String(v));
+      }
+
+      if (btnVol) {
+        btnVol.addEventListener('click', function (e) {
+          e.stopPropagation();
+          volControl.classList.toggle('open');
+        });
+      }
+      if (volSlider) {
+        volSlider.addEventListener('input', function () {
+          var v = parseFloat(this.value) / 100;
+          if (sakuraAudio) sakuraAudio.volume = v;
+          volSet(v, true);
+          if (v === 0) {
+            sakuraAudio && sakuraAudio.pause();
+          } else if (currentTheme === 'sakura') {
+            sakuraAudio && sakuraAudio.play().catch(function () {});
+          }
+        });
+      }
+      document.addEventListener('click', function (e) {
+        if (volControl && !volControl.contains(e.target)) volControl.classList.remove('open');
+      });
+      var savedVol = localStorage.getItem('incoaVol');
+      volSet(savedVol === null ? 0.5 : savedVol, false);
+      if (volControl) {
+        if (currentTheme === 'sakura') volControl.classList.remove('hidden');
+        else volControl.classList.add('hidden');
+      }
 
       var scrollPos = 0;
       function lockBody() { scrollPos = window.scrollY; document.body.classList.add('no-scroll'); }
