@@ -8,8 +8,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('incoaSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','configuracion'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','configuracion'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio'];
       function $(id) { return document.getElementById(id); }
 
       var toastEl = $('toast');
@@ -308,6 +308,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:'aulas', icon:'building-community', label:'Aulas Virtuales', desc:'Espacios de clase', color:'var(--purple)' },
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
+        { id:'estudio', icon:'timer', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
       ];
 
@@ -3260,5 +3261,118 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           console.log('Sync Supabase → localStorage completado');
         }).catch(function (e) { console.warn('syncAll error:', e); });
       }
+
+      /* ===================================================================
+         POMODORO — Técnica de estudio
+         =================================================================== */
+      (function () {
+        var POMO_KEY = 'incoaPomodoro';
+        var POMO_STUDY = 25 * 60;
+        var POMO_SHORT = 5 * 60;
+        var POMO_LONG = 15 * 60;
+        var fase = 'preparacion';
+        var tiempo = POMO_STUDY;
+        var tiempoInicio = null;
+        var intervalo = null;
+        var ciclos = 0;
+        var pausado = false;
+
+        function $(id){return document.getElementById(id);}
+        function guardarEstado(){
+          try{localStorage.setItem(POMO_KEY, JSON.stringify({fase: fase, ciclos: ciclos, pausado: pausado}));}catch(e){}
+        }
+        function cargarEstado(){
+          try{
+            var s = JSON.parse(localStorage.getItem(POMO_KEY) || 'null');
+            if(s){ if(s.fase) fase = s.fase; if(typeof s.ciclos === 'number') ciclos = s.ciclos; if(typeof s.pausado === 'boolean') pausado = s.pausado; }
+          }catch(e){}
+        }
+
+        var TIMER_MAP = { estudio: POMO_STUDY, descansoCorto: POMO_SHORT, descansoLargo: POMO_LONG, preparacion: 0 };
+        var faseActual = fase;
+
+        function aplicarFase(nuevaFase){
+          fase = nuevaFase;
+          faseActual = nuevaFase;
+          var t = TIMER_MAP[fase] || 0;
+          tiempo = t;
+          tiempoInicio = Date.now();
+          if(intervalo) clearInterval(intervalo);
+          pausado = false;
+          var disp = $('pomodoro-timer-display');
+          var ph = $('pomodoro-phase');
+          var prog = $('pomodoro-progress');
+          var cyc = $('pomodoro-cycles');
+          if(disp) disp.textContent = formatear(t);
+          if(ph){
+            var nombres = { preparacion:'Fase preparatoria', estudio:'⏳ Bloque de estudio', descansoCorto:'☕ Descanso corto (5 min)', descansoLargo:'🌿 Descanso largo (15 min)' };
+            ph.textContent = nombres[fase] || fase;
+            ph.style.color = fase==='estudio' ? 'var(--primary)' : fase==='descansoCorto' ? 'var(--amber)' : fase==='descansoLargo' ? 'var(--purple)' : 'var(--gray-500)';
+          }
+          if(cyc) cyc.textContent = ciclos;
+          if(prog) prog.style.width = '0%';
+          if(fase !== 'preparacion' && !(fase==='estudio' && t<=0)){
+            intervalo = setInterval(actualizarTimer, 250);
+          }
+          guardarEstado();
+        }
+
+        function actualizarTimer(){
+          if(pausado) return;
+          var t = TIMER_MAP[faseActual] || 0;
+          var transcurrido = Math.floor((Date.now() - tiempoInicio) / 1000);
+          var restante = Math.max(0, t - transcurrido);
+          tiempo = restante;
+          var disp = $('pomodoro-timer-display');
+          var prog = $('pomodoro-progress');
+          if(disp) disp.textContent = formatear(restante);
+          if(prog && t > 0){
+            var pct = ((t - restante) / t) * 100;
+            prog.style.width = pct + '%';
+          }
+          if(restante <= 0){
+            clearInterval(intervalo);
+            intervalo = null;
+            onFaseFinalizada();
+          }
+        }
+
+        function onFaseFinalizada(){
+          if(faseActual === 'estudio'){
+            ciclos++;
+            var esCicloPar = (ciclos % 2) === 0;
+            aplicarFase(esCicloPar ? 'descansoLargo' : 'descansoCorto');
+            mostrarToast('¡Bloque completado! ' + (esCicloPar ? 'Tiempo de descanso largo.' : 'Tiempo de descanso corto.'), 'success');
+            return;
+          }
+          aplicarFase('estudio');
+          mostrarToast('¡Bienvenido de vuelta! Nuevo bloque de estudio.', 'success');
+        }
+
+        function formatear(seg){
+          var m = Math.floor(seg / 60);
+          var s = seg % 60;
+          return (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+        }
+
+        cargarEstado();
+        if(faseActual === 'preparacion'){
+          aplicarFase('estudio');
+        } else if(faseActual === 'estudio' || faseActual === 'descansoCorto' || faseActual === 'descansoLargo'){
+          if(TIMER_MAP[faseActual] <= 0){ aplicarFase('estudio'); }
+        }
+
+        $('btn-pomodoro-start').addEventListener('click', function () {
+          if(faseActual === 'preparacion'){ aplicarFase('estudio'); return; }
+          if(pausado){ pausado = false; tiempoInicio = Date.now() - (TIMER_MAP[faseActual] - tiempo) * 1000; intervalo = setInterval(actualizarTimer, 250); }
+        });
+        $('btn-pomodoro-pause').addEventListener('click', function () {
+          pausado = true;
+          if(intervalo){ clearInterval(intervalo); intervalo = null; }
+        });
+        $('btn-pomodoro-reset').addEventListener('click', function () { aplicarFase('estudio'); });
+
+        window.addEventListener('beforeunload', guardarEstado);
+      })();
 
     })();
