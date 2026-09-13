@@ -3277,7 +3277,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var ciclos = 0;
         var pausado = false;
 
-        function $(id){return document.getElementById(id);}
         function guardarEstado(){
           try{localStorage.setItem(POMO_KEY, JSON.stringify({fase: fase, ciclos: ciclos, pausado: pausado}));}catch(e){}
         }
