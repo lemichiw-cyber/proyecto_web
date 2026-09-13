@@ -36,7 +36,7 @@ function base64ImagesPlugin() {
 }
 
 export default defineConfig({
-  base: '/proyecto_web/',
+  base: '/',
   root: '.',
   publicDir: 'public',
   build: {
