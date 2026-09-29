@@ -35,22 +35,26 @@
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:#05050f;overflow:hidden}
+html,body{background:#05050f;overflow:hidden;height:100%}
 
 body{
-  display:flex;align-items:flex-start;justify-content:center;
-  min-height:100vh;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;
   font-family:var(--font-ui);
   color:var(--text);
   -webkit-font-smoothing:antialiased;
 }
 
-/* Escenario fijo 1920x1080; ?scale=N lo magnifica (2 => 4K exacto) */
+/* Escenario fijo de 1920x1080 que se auto-escala al viewport.
+   `position:absolute` + `left/top:50%` + `transform-origin:center` centran
+   en un solo elemento, sin wrapper: transform no afecta el layout, así que
+   un flex normal lo centraría sobre su caja de 1920x1080 y no sobre la
+   versión escalada. */
 .app{
-  position:relative;
+  position:absolute;left:50%;top:50%;
   width:1920px;height:1080px;
-  flex:none;
-  transform-origin:top left;
+  transform-origin:center center;
   display:flex;flex-direction:column;
   overflow:hidden;
   background:
@@ -472,7 +476,12 @@ input[type=range].v{
   -webkit-appearance:none;appearance:none;
   writing-mode:vertical-lr;direction:rtl;
   width:5px;height:106px;border-radius:3px;outline:none;cursor:pointer;
-  background:linear-gradient(0deg,var(--cyan) 0%,var(--purple) var(--p,50%),rgba(255,255,255,.09) var(--p,50%));
+  /* Bipolar: el relleno crece DESDE 0 dB (el centro, 50%), no desde abajo.
+     Antes pintaba desde 0% y en 0 dB se veía media barra "encendida". */
+  background:linear-gradient(0deg,
+    rgba(255,255,255,.09) 0%, rgba(255,255,255,.09) var(--p1,50%),
+    var(--cyan) var(--p1,50%), var(--purple) var(--p2,50%),
+    rgba(255,255,255,.09) var(--p2,50%), rgba(255,255,255,.09) 100%);
 }
 input[type=range].v::-webkit-slider-thumb{
   -webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;
@@ -963,20 +972,26 @@ input[type=range].v::-moz-range-thumb{width:13px;height:13px;border-radius:50%;b
 
 <script>
 'use strict';
-/* ===================== ESCALA PARA RENDER 4K ===================== */
-const q = new URLSearchParams(location.search);
-const s = parseFloat(q.get('scale') || '1');
-if (s !== 1) {
-  const app = document.getElementById('app');
-  app.style.transform = `scale(${s})`;
-  document.body.style.width = (1920 * s) + 'px';
-  document.body.style.height = (1080 * s) + 'px';
-  document.body.style.overflow = 'hidden';
-  /* Crítico: el body centra con flex. Sin esto el app queda corrido (1920-s)
-     píxeles y el escalado deja una franja vacía de 25% en el render 4K. */
-  document.body.style.justifyContent = 'flex-start';
-  document.body.style.alignItems = 'flex-start';
+/* ===================== AUTO-AJUSTE AL VIEWPORT =====================
+   La etapa mide 1920x1080 fijos (es un mockup de app de escritorio, no un
+   layout fluido), así que se escala entera con un único transform. Sin esto
+   en una notebook de 1366x768 sólo se ve la esquina superior izquierda.
+
+   ?scale=N fuerza un factor (2 = render 4K exacto) y desactiva el ajuste. */
+const STAGE_W = 1920, STAGE_H = 1080;
+const forced  = parseFloat(new URLSearchParams(location.search).get('scale'));
+const appEl   = document.getElementById('app');
+
+function fitToViewport(){
+  const s = (Number.isFinite(forced) && forced > 0)
+    ? forced
+    : Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+  appEl.style.transform = `translate(-50%,-50%) scale(${s})`;
+  return s;
 }
+fitToViewport();
+addEventListener('resize', fitToViewport);
+addEventListener('orientationchange', fitToViewport);
 
 /* ===================== DATOS ===================== */
 const TRACKS = [
@@ -1152,19 +1167,29 @@ setVol(70);
 const HZ = ['60','150','400','1K','3K','6K','12K','16K','18K','20K'];
 const eqGrid = document.getElementById('eqGrid');
 const EQV = [4,-3,2,0,3,-2,5,1,-1,0];
+
+/* Rango del relleno para un EQ bipolar: 0 dB ocupa el 50% de la altura y el
+   relleno se abre hacia arriba con valores positivos, hacia abajo con
+   negativos. */
+function paintBand(inp, v){
+  const half = (v/24)*50;
+  inp.style.setProperty('--p1', Math.min(50, 50+half) + '%');
+  inp.style.setProperty('--p2', Math.max(50, 50+half) + '%');
+}
+
 eqGrid.innerHTML = HZ.map((h,i)=>{
   const v = EQV[i];
-  const p = ((v+12)/24*100);
   return `<div class="eqb">
     <div class="db">${v>0?'+':''}${v}</div>
-    <input type="range" class="v" min="-12" max="12" step="1" value="${v}" style="--p:${p}%">
+    <input type="range" class="v" min="-12" max="12" step="1" value="${v}">
     <div class="hz">${h}</div>
   </div>`;
 }).join('');
 document.querySelectorAll('.eqb input').forEach(inp=>{
+  paintBand(inp, +inp.value);
   inp.oninput = ()=>{
     const v = +inp.value;
-    inp.style.setProperty('--p', ((v+12)/24*100)+'%');
+    paintBand(inp, v);
     inp.parentElement.querySelector('.db').textContent = (v>0?'+':'')+v;
   };
 });
