@@ -187,8 +187,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (meta) meta.content = metaColor;
         // Marcar tarjeta activa en el modal y en la sección
         var cards = document.querySelectorAll('#theme-options .theme-card, #theme-options-section .theme-card');
-        for (var i = 0; i < cards.length; i++) {
-          cards[i].classList.toggle('active', cards[i].getAttribute('data-theme') === theme);
+        for (var j = 0; j < cards.length; j++) {
+          cards[j].classList.toggle('active', cards[j].getAttribute('data-theme') === theme);
         }
       }
       window.aplicarTheme = aplicarTheme;
@@ -934,8 +934,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             q.opciones = [optA || '—', optB || '—', optC || '—'];
             q.correcta = correcta ? parseInt(correcta.value, 10) : 0;
           } else if (tipo === 'vf') {
-            var correcta = item.querySelector('input[name="correcta-' + idx + '"]:checked');
-            q.correcta = correcta ? parseInt(correcta.value, 10) : 1;
+            var correctaVf = item.querySelector('input[name="correcta-' + idx + '"]:checked');
+            q.correcta = correctaVf ? parseInt(correctaVf.value, 10) : 1;
           } else if (tipo === 'completar') {
             var respInput = item.querySelector('input[data-resp]');
             q.respuesta = respInput ? respInput.value.trim() : '';
@@ -3278,13 +3278,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var pausado = false;
 
         function guardarEstado(){
-          try{localStorage.setItem(POMO_KEY, JSON.stringify({fase: fase, ciclos: ciclos, pausado: pausado}));}catch(e){}
+          try{localStorage.setItem(POMO_KEY, JSON.stringify({fase: fase, ciclos: ciclos, pausado: pausado}));}catch(e){ /* ignore */ }
         }
         function cargarEstado(){
           try{
             var s = JSON.parse(localStorage.getItem(POMO_KEY) || 'null');
             if(s){ if(s.fase) fase = s.fase; if(typeof s.ciclos === 'number') ciclos = s.ciclos; if(typeof s.pausado === 'boolean') pausado = s.pausado; }
-          }catch(e){}
+          }catch(e){ /* ignore */ }
         }
 
         var TIMER_MAP = { estudio: POMO_STUDY, descansoCorto: POMO_SHORT, descansoLargo: POMO_LONG, preparacion: 0 };
