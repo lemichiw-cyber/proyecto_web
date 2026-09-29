@@ -6,10 +6,18 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "serve dist -l $PORT -s",
+    "start": "node scripts/start.mjs",
+    "serve": "node scripts/start.mjs",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "lint": "eslint src --ext ts,tsx,js"
+    "lint": "eslint src --ext ts,tsx,js",
+    "verify:build": "node scripts/verify-build.mjs",
+    "image:build": "podman build -t cherry-bomb:local -f Containerfile .",
+    "image:run": "podman run --rm -p 8080:8080 -e PORT=8080 cherry-bomb:local",
+    "image:shell": "podman run --rm -it -p 8080:8080 -e PORT=8080 cherry-bomb:local sh"
+  },
+  "engines": {
+    "node": "^18.0.0 || >=20.0.0"
   },
   "dependencies": {
     "serve": "^14.2.1"

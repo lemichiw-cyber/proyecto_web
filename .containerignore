@@ -1,0 +1,39 @@
+# Contexto de build para Podman (y Docker, que lee el mismo archivo).
+# Lo que está acá NO entra en la imagen: se ahorra contexto de build y evita
+# que un node_modules del host se cuele en la imagen.
+#
+# Importante: NO ignorar package-lock.json. El build usa `npm ci`, que lo
+# necesita para instalar versiones exactas; sin él el build falla.
+
+.git
+.gitignore
+.github
+
+node_modules
+dist
+build
+
+npm-debug.log*
+yarn-error.log*
+*.log
+
+.env
+.env.local
+.env.*.local
+
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+README.md
+Makefile
+compose.yml
+
+# NO se ignoran public/videos ni public/audio: son ~25 MB pero la app los
+# necesita en runtime. Ignorarlos produce una imagen que arranca y después
+# sirve 404 en los fondos de los temas.
+#
+# Tampoco se ignora public/base64-images/: lo genera base64ImagesPlugin
+# durante el build, a partir de los data: URLs del index.html.

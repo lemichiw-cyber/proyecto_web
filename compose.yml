@@ -1,0 +1,31 @@
+# compose.yml — para `podman compose up` (o `podman-play kube`).
+#
+# Compose v2 habla con el socket de Podman, así que este archivo funciona
+# igual en Docker y en Podman, sin necesidad de cambiar una línea.
+
+services:
+  cherry-bomb:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: cherry-bomb:local
+    container_name: cherry-bomb
+    # El puerto de adentro es 8080 (lo fija el Containerfile); el de afuera
+    # se puede override con CHERRY_BOMB_PORT=9000 podman compose up
+    ports:
+      - "${CHERRY_BOMB_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      NODE_ENV: "production"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # La app es estática y no escribe nada: rootfs de solo lectura es seguro
+    # y evita que un proceso compromise ensucie la imagen.
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    logging:
+      driver: journald
+      options:
+        max-size: "10m"
