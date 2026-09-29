@@ -29,14 +29,14 @@ function base64ImagesPlugin() {
         fs.writeFileSync(path.join(publicDir, filename), buffer);
         
         // Return img tag with reference to the saved file
-        return `<img src="/base64-images/${filename}"${rest}>`;
+        return `<img src="base64-images/${filename}"${rest}>`;
       });
     }
   };
 }
 
 export default defineConfig({
-  base: '/',
+  base: './',
   root: '.',
   publicDir: 'public',
   build: {
@@ -66,10 +66,11 @@ export default defineConfig({
         theme_color: '#4F46E5',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: './',
+        scope: './',
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
       workbox: {
