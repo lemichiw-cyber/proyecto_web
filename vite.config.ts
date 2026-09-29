@@ -60,8 +60,8 @@ export default defineConfig({
       cleanupOutdatedCaches: true,
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: 'INCOA - Plataforma Educativa',
-        short_name: 'INCOA',
+        name: 'Cherry-Bomb - Plataforma Educativa',
+        short_name: 'Cherry-Bomb',
         description: 'Plataforma educativa institucional',
         theme_color: '#4F46E5',
         background_color: '#ffffff',

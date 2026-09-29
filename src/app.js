@@ -5,7 +5,7 @@ var ICON_DATA={'alert-circle':'data:image/svg+xml;base64,PCEtLQp0YWdzOiBbd2Fybml
 
 function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
-      var savedSession = (function(){try{var s=localStorage.getItem('incoaSession');return s?JSON.parse(s):null}catch(e){return null}})();
+      var savedSession = (function(){try{var s=localStorage.getItem('cherrybombSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
       var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','configuracion'];
@@ -29,7 +29,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function cryptoDeriveKey(password, salt) {
         // Deriva una clave AES de 256 bits a partir de la contraseña
-        var s = (password || '') + ':' + (salt || 'INCOA_SALT_2026');
+        var s = (password || '') + ':' + (salt || 'CHERRYBOMB_SALT_2026');
         // SHA-256 simulado mediante iteración de FNV-1a para key stretching
         function fnv1a(str) {
           var h = 2166136261 >>> 0;
@@ -104,7 +104,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function hashPassword(password) {
         if (password.length < 6) return '';
         // Fallback síncrono multiplataforma
-        var s = password + ':INCOA_HASH';
+        var s = password + ':CHERRYBOMB_HASH';
         for (var i = 0; i < 500; i++) {
           var h = 0;
           for (var j = 0; j < s.length; j++) {
@@ -151,7 +151,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          THEME — Cambio de tema claro/oscuro/pastel
          =================================================================== */
       var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso'];
-      var currentTheme = localStorage.getItem('incoaTheme') || 'light';
+      var currentTheme = localStorage.getItem('cherrybombTheme') || 'light';
 
       /* Asegurar que el valor guardado sea válido */
       if (themeOrder.indexOf(currentTheme) === -1) currentTheme = 'light';
@@ -159,11 +159,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function aplicarTheme(theme) {
         currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('incoaTheme', theme);
+        localStorage.setItem('cherrybombTheme', theme);
 
         var sakuraAudio = document.getElementById('sakura-audio');
         if (sakuraAudio) {
-          var vol = parseFloat(localStorage.getItem('incoaVol') || '0.5');
+          var vol = parseFloat(localStorage.getItem('cherrybombVol') || '0.5');
           sakuraAudio.volume = vol;
           if (theme === 'sakura' && vol > 0) {
             sakuraAudio.play().catch(function () {});
@@ -210,7 +210,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         } else {
           if (btnVol) btnVol.classList.remove('muted');
         }
-        if (save) localStorage.setItem('incoaVol', String(v));
+        if (save) localStorage.setItem('cherrybombVol', String(v));
       }
 
       if (btnVol) {
@@ -234,7 +234,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       document.addEventListener('click', function (e) {
         if (volControl && !volControl.contains(e.target)) volControl.classList.remove('open');
       });
-      var savedVol = localStorage.getItem('incoaVol');
+      var savedVol = localStorage.getItem('cherrybombVol');
       volSet(savedVol === null ? 0.5 : savedVol, false);
       if (volControl) {
         if (currentTheme === 'sakura') volControl.classList.remove('hidden');
@@ -319,8 +319,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           $('hero-title').textContent = '¡Bienvenido, ' + usuarioActual.nombre + '!';
           $('hero-desc').textContent = 'Gestiona tus actividades, revisa tu horario y mantente al día.';
         } else {
-          $('hero-sub').textContent = 'INCOA';
-          $('hero-title').textContent = 'INCOA';
+          $('hero-sub').textContent = 'Cherry-Bomb';
+          $('hero-title').textContent = 'Cherry-Bomb';
           $('hero-desc').textContent = 'Plataforma educativa para estudiantes, docentes, directores y padres de familia.';
         }
         // Stats
@@ -370,8 +370,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         _mostrarApp(app);
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
-        if (app === 'aulas' && window.INCOANotifications) {
-          window.INCOANotifications.showPermissionBanner();
+        if (app === 'aulas' && window.CherryBombNotifications) {
+          window.CherryBombNotifications.showPermissionBanner();
         }
         if (app === 'configuracion') {
           var dest = $('theme-options-section');
@@ -431,7 +431,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function loginSuccess(email, rol) {
         logueado = true;
         usuarioActual = { email: email, rol: rol, nombre: email.split('@')[0] };
-        localStorage.setItem('incoaSession', JSON.stringify(usuarioActual));
+        localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
         modalLogin.classList.remove('open');
         $('btn-login').style.display = 'none';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = 'none';
@@ -453,7 +453,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         logueado = false;
         usuarioActual = null;
         cryptoKey = null; cryptoKeyStr = '';
-        localStorage.removeItem('incoaSession');
+        localStorage.removeItem('cherrybombSession');
         /* Logout local — sesión en localStorage */
         $('btn-login').style.display = '';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = '';
@@ -2774,14 +2774,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         renderAulaTareas();
         mostrarToast('Tarea asignada.', 'success');
         // Notificar a estudiantes inscriptos en el aula
-        if (window.INCOANotifications && window.INCOANotifications.isSupported()) {
+        if (window.CherryBombNotifications && window.CherryBombNotifications.isSupported()) {
           var aulaObj = aulas.find(function (a) { return a.id === parseInt(aulaId, 10); });
           var inscritos = aulaInscripciones.filter(function (i) { return i.aulaId === parseInt(aulaId, 10) && i.estado === 'aprobado'; });
-          var est = window.INCOANotifications.getEstudianteActual();
+          var est = window.CherryBombNotifications.getEstudianteActual();
           var estaInscrito = est && inscritos.some(function (i) { return i.estudianteId === est.id; });
           if (estaInscrito) {
             var tarea = aulaTareas[aulaTareas.length - 1];
-            window.INCOANotifications.notifyNewTask(tarea, aulaObj ? aulaObj.nombre : '');
+            window.CherryBombNotifications.notifyNewTask(tarea, aulaObj ? aulaObj.nombre : '');
           }
         }
       });
@@ -3003,7 +3003,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var sel = $('sala-aula-select');
           var aulaId = sel ? sel.value : '';
           if (!aulaId) { mostrarToast('Selecciona un aula primero.', 'error'); return; }
-          var roomName = 'INCOA-Aula-' + aulaId;
+          var roomName = 'CHERRYBOMB-Aula-' + aulaId;
           var url = 'https://meet.jit.si/' + encodeURIComponent(roomName);
           window.open(url, '_blank');
           mostrarToast('Abriendo videollamada en nueva pesta\u00F1a...', 'info');
@@ -3206,12 +3206,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               var rol = (prof.data && prof.data.rol) ? prof.data.rol : 'estudiante';
               logueado = true;
               usuarioActual = { email: email, rol: rol, nombre: email.split('@')[0] };
-              localStorage.setItem('incoaSession', JSON.stringify(usuarioActual));
+              localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
               restoreUI();
             }).catch(function () {
               logueado = true;
               usuarioActual = { email: email, rol: 'estudiante', nombre: email.split('@')[0] };
-              localStorage.setItem('incoaSession', JSON.stringify(usuarioActual));
+              localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
               restoreUI();
             });
           } else if (savedSession) {
@@ -3230,8 +3230,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       mostrarApp('inicio');
 
       /* Iniciar checker de recordatorios de tareas (cada 30 min) */
-      if (window.INCOANotifications) {
-        window.INCOANotifications.startDeadlineChecker();
+      if (window.CherryBombNotifications) {
+        window.CherryBombNotifications.startDeadlineChecker();
       }
 
       /* Sync datos desde Supabase al cargar (background, no bloquea) */
@@ -3266,7 +3266,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          POMODORO — Técnica de estudio
          =================================================================== */
       (function () {
-        var POMO_KEY = 'incoaPomodoro';
+        var POMO_KEY = 'cherrybombPomodoro';
         var POMO_STUDY = 25 * 60;
         var POMO_SHORT = 5 * 60;
         var POMO_LONG = 15 * 60;

@@ -8,13 +8,13 @@
   var localStorageKey = {
     aulas: 'aulas',
     aula_inscripciones: 'aula_inscripciones',
-    aula_tareas: 'incoaAulaTareas',
-    aula_entregas: 'incoaAulaEntregas',
+    aula_tareas: 'cherrybombAulaTareas',
+    aula_entregas: 'cherrybombAulaEntregas',
     aula_calificaciones: 'aula_calificaciones',
     estudiantes: 'estudiantes_db',
     planificaciones: 'planificaciones',
     actividades: 'actividades',
-    mat_solicitudes: 'incoaMatSolicitudes'
+    mat_solicitudes: 'cherrybombMatSolicitudes'
   };
 
   var DB = {};

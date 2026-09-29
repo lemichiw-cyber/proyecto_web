@@ -1,5 +1,5 @@
 -- =====================================================
--- INCOA — Schema de base de datos para Supabase
+-- Cherry-Bomb — Schema de base de datos para Supabase
 -- Ejecutá esto en el SQL Editor de tu proyecto Supabase
 -- =====================================================
 

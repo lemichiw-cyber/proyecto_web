@@ -5,8 +5,8 @@
 (function () {
   'use strict';
 
-  var PERMISSION_KEY = 'incoaNotifPermission';
-  var REMINDER_KEY = 'incoaNotifReminders'; // trackea qué tareas ya se recordaron
+  var PERMISSION_KEY = 'cherrybombNotifPermission';
+  var REMINDER_KEY = 'cherrybombNotifReminders'; // trackea qué tareas ya se recordaron
   var CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutos
   var timerId = null;
 
@@ -44,7 +44,7 @@
       icon: '/proyecto_web/icons/icon-192.png',
       badge: '/proyecto_web/icons/icon-72.png',
       silent: false,
-      tag: tag || 'incoa-' + Date.now()
+      tag: tag || 'cherrybomb-' + Date.now()
     };
     try {
       // Intentar vía service worker (más confiable en PWAs)
@@ -204,7 +204,7 @@
   }
 
   /* ---- API pública ---- */
-  window.INCOANotifications = {
+  window.CherryBombNotifications = {
     requestPermission: requestPermission,
     send: send,
     notifyNewTask: notifyNewTask,
