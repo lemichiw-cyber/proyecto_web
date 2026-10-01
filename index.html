@@ -3640,6 +3640,1235 @@ unicode: "eb1c"
 
   <script type="module" src="/src/main.ts"></script>
 
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sakura Player</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --bg:#0a0a1a;
+  --bg-2:#0d0b22;
+  --pink:#ff2d95;
+  --pink-soft:#ff6fc0;
+  --purple:#b026ff;
+  --cyan:#00f0ff;
+  --blue:#2563ff;
+  --text:#eef2ff;
+  --text-dim:#9aa3c7;
+  --text-mute:#6b739a;
+
+  --glass:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --stroke:rgba(255,255,255,.10);
+  --stroke-neon:rgba(255,45,149,.35);
+
+  --r-lg:22px;
+  --r-md:16px;
+  --r-sm:10px;
+
+  --font-ui:"Rajdhani","Orbitron","DIN Alternate","Arial Narrow",Inter,system-ui,sans-serif;
+  --font-jp:"Noto Sans CJK JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#05050f;overflow:hidden;height:100%}
+
+body{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;
+  font-family:var(--font-ui);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Escenario fijo de 1920x1080 que se auto-escala al viewport.
+   `position:absolute` + `left/top:50%` + `transform-origin:center` centran
+   en un solo elemento, sin wrapper: transform no afecta el layout, así que
+   un flex normal lo centraría sobre su caja de 1920x1080 y no sobre la
+   versión escalada. */
+.app{
+  position:absolute;left:50%;top:50%;
+  width:1920px;height:1080px;
+  transform-origin:center center;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(176,38,255,.20), transparent 60%),
+    radial-gradient(1000px 600px at 88% 0%,  rgba(0,240,255,.12),  transparent 60%),
+    linear-gradient(180deg,#0a0a1a 0%,#08081a 55%,#05050f 100%);
+}
+
+/* Rejilla técnica de fondo */
+.app::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,240,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.045) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,transparent 100%);
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.header{
+  position:relative;z-index:2;
+  height:196px;flex:none;
+  display:flex;align-items:center;gap:26px;
+  padding:0 34px;
+  overflow:hidden;
+  border-bottom:1px solid var(--stroke);
+}
+.header-bg{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.header-bg svg{width:100%;height:100%;display:block}
+.header::after{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(10,10,26,.97) 0%,rgba(10,10,26,.82) 34%,rgba(10,10,26,.30) 62%,rgba(10,10,26,.72) 100%),
+    linear-gradient(0deg,rgba(10,10,26,.95) 0%,transparent 42%);
+}
+
+.logo{
+  position:relative;z-index:3;
+  width:96px;height:96px;flex:none;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:radial-gradient(circle at 40% 32%,rgba(255,45,149,.30),transparent 66%);
+  filter:drop-shadow(0 0 22px rgba(255,45,149,.75));
+  animation:logoPulse 4.5s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 18px rgba(255,45,149,.6))}50%{filter:drop-shadow(0 0 34px rgba(255,45,149,.95))}}
+.logo svg{width:100%;height:100%}
+
+.title-block{position:relative;z-index:3;margin-left:6px}
+.brand{
+  font-size:62px;font-weight:700;letter-spacing:.20em;line-height:1;
+  background:linear-gradient(96deg,#fff 6%,var(--pink-soft) 34%,var(--purple) 64%,var(--cyan) 96%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 16px rgba(255,45,149,.55));
+  white-space:nowrap;
+}
+.brand-sub{
+  font-family:var(--font-jp);
+  font-size:19px;letter-spacing:.42em;
+  color:var(--pink-soft);opacity:.9;
+  margin-top:12px;
+  text-shadow:0 0 14px rgba(255,45,149,.65);
+}
+.brand-rule{
+  width:400px;height:2px;margin-top:14px;
+  background:linear-gradient(90deg,var(--pink),var(--purple),var(--cyan),transparent);
+  box-shadow:0 0 12px rgba(176,38,255,.8);
+}
+.header-spacer{flex:1}
+.header-badge{
+  position:relative;z-index:3;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 18px;border-radius:999px;
+  background:var(--glass);border:1px solid var(--stroke-neon);
+  backdrop-filter:blur(14px);
+  font-size:15px;letter-spacing:.16em;color:var(--pink-soft);
+  box-shadow:0 0 22px rgba(255,45,149,.22) inset;
+}
+.dot-live{width:8px;height:8px;border-radius:50%;background:var(--pink);box-shadow:0 0 10px var(--pink);animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* Pétalos flotantes */
+.petals{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.petal{
+  position:absolute;top:-40px;
+  width:11px;height:11px;
+  background:linear-gradient(140deg,var(--pink-soft),var(--purple));
+  border-radius:52% 48% 60% 40%/48% 60% 40% 52%;
+  opacity:.0;
+  filter:drop-shadow(0 0 6px rgba(255,45,149,.85));
+  animation:fall linear infinite;
+}
+@keyframes fall{
+  0%{opacity:0;transform:translate3d(0,0,0) rotate(0deg)}
+  10%{opacity:.85}
+  90%{opacity:.7}
+  100%{opacity:0;transform:translate3d(var(--dx,60px),760px,0) rotate(680deg)}
+}
+
+/* ============================================================
+   BODY GRID
+   ============================================================ */
+.main{flex:1;display:grid;grid-template-columns:268px 1fr 404px;min-height:0}
+.bottom{
+  height:334px;flex:none;
+  display:grid;grid-template-columns:268px 1fr 404px;
+  /* minmax(0,1fr) y no `auto`: con `auto` la fila toma el alto del contenido
+     más alto y el grid crece más allá de los 334px, empujando statusbar. */
+  grid-template-rows:minmax(0,1fr);
+  border-top:1px solid var(--stroke);
+  overflow:hidden;
+}
+.col-mid{display:flex;flex-direction:column;min-width:0;min-height:0}
+.main>*,.bottom>*{min-height:0}
+.col-left{border-right:1px solid var(--stroke)}
+.col-right{border-left:1px solid var(--stroke)}
+
+/* Panel glass base */
+.panel{
+  position:relative;
+  background:var(--glass);
+  border:1px solid var(--stroke);
+  backdrop-filter:blur(20px) saturate(140%);
+}
+.panel-title{
+  display:flex;align-items:center;gap:10px;
+  font-size:15px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--text-dim);padding:18px 20px 0;
+}
+.panel-title .ti{width:17px;height:17px;flex:none;color:var(--cyan);filter:drop-shadow(0 0 6px rgba(0,240,255,.8))}
+.panel-title .sp{flex:1}
+.panel-title .mini{
+  width:28px;height:28px;display:grid;place-items:center;
+  border-radius:8px;color:var(--text-mute);
+  border:1px solid transparent;cursor:pointer;transition:.18s;
+}
+.panel-title .mini:hover{color:var(--pink);border-color:var(--stroke-neon);background:rgba(255,45,149,.10)}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar{display:flex;flex-direction:column;height:100%}
+.nav{padding:14px 14px 0;display:flex;flex-direction:column;gap:4px}
+.nav-item{
+  display:flex;align-items:center;gap:13px;
+  padding:10px 15px;border-radius:var(--r-sm);
+  color:var(--text-dim);cursor:pointer;
+  font-size:18px;letter-spacing:.05em;
+  border:1px solid transparent;transition:.2s;position:relative;
+}
+.nav-item .ni{width:21px;height:21px;flex:none;transition:.2s}
+.nav-item:hover{color:var(--text);background:var(--glass-2);border-color:var(--stroke)}
+.nav-item.active{
+  color:#fff;background:linear-gradient(90deg,rgba(255,45,149,.20),rgba(176,38,255,.06));
+  border-color:var(--stroke-neon);
+  box-shadow:0 0 22px rgba(255,45,149,.18);
+}
+.nav-item.active .ni{color:var(--pink);filter:drop-shadow(0 0 8px rgba(255,45,149,.9))}
+.nav-item.active::before{
+  content:"";position:absolute;left:-14px;top:50%;transform:translateY(-50%);
+  width:4px;height:26px;border-radius:0 4px 4px 0;
+  background:linear-gradient(180deg,var(--pink),var(--purple));
+  box-shadow:0 0 14px var(--pink);
+}
+.nav-sep{height:1px;margin:8px 8px;background:var(--stroke)}
+
+.side-foot{
+  margin-top:auto;padding:14px 16px 16px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+}
+.side-foot svg{width:56px;height:56px;filter:drop-shadow(0 0 16px rgba(255,45,149,.7))}
+.side-foot p{font-size:13px;letter-spacing:.10em;color:var(--text-mute);font-style:italic}
+.side-foot .jp{font-family:var(--font-jp);font-size:12px;letter-spacing:.2em;color:rgba(255,45,149,.55)}
+
+/* ============================================================
+   REPRODUCTOR
+   ============================================================ */
+.player{flex:1;padding:22px 34px 14px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.player-top{display:flex;gap:30px;align-items:flex-start;flex:none}
+
+.cover{
+  position:relative;width:212px;height:212px;flex:none;
+  border-radius:18px;overflow:hidden;
+  border:1px solid rgba(255,45,149,.42);
+  box-shadow:0 0 44px rgba(255,45,149,.34),0 0 90px rgba(176,38,255,.20);
+}
+.cover svg{width:100%;height:100%;display:block}
+.cover::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(150deg,rgba(255,255,255,.16),transparent 46%);
+  pointer-events:none;
+}
+.cover-badge{
+  position:absolute;left:12px;top:12px;z-index:2;
+  font-size:10px;letter-spacing:.20em;padding:4px 9px;border-radius:6px;
+  background:rgba(10,10,26,.72);border:1px solid var(--stroke-neon);
+  color:var(--pink-soft);backdrop-filter:blur(8px);
+}
+
+.now{flex:1;min-width:0;padding-top:6px}
+.now .eyebrow{font-size:12px;letter-spacing:.34em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px}
+.now h1{
+  font-size:42px;font-weight:700;letter-spacing:.01em;line-height:1.06;
+  background:linear-gradient(100deg,#fff 20%,var(--pink-soft) 62%,var(--purple) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(255,45,149,.40));
+}
+.now .artist{font-size:22px;color:var(--text);letter-spacing:.05em;margin-top:8px}
+.now .album{
+  display:inline-flex;align-items:center;gap:8px;margin-top:12px;
+  font-size:14px;letter-spacing:.14em;color:var(--text-dim);
+  padding:6px 14px;border-radius:999px;
+  background:var(--glass);border:1px solid var(--stroke);
+}
+.now .album svg{width:13px;height:13px;color:var(--purple)}
+
+.now-actions{display:flex;gap:10px;margin-top:16px}
+.icon-btn{
+  width:38px;height:38px;display:grid;place-items:center;
+  border-radius:12px;cursor:pointer;transition:.18s;
+  background:var(--glass);border:1px solid var(--stroke);color:var(--text-dim);
+}
+.icon-btn svg{width:19px;height:19px}
+.icon-btn:hover{color:var(--pink);border-color:var(--stroke-neon);background:rgba(255,45,149,.12);box-shadow:0 0 18px rgba(255,45,149,.28)}
+.icon-btn.liked{color:var(--pink);border-color:var(--stroke-neon);background:rgba(255,45,149,.16);box-shadow:0 0 20px rgba(255,45,149,.34)}
+.icon-btn.liked svg{fill:currentColor;filter:drop-shadow(0 0 7px var(--pink))}
+
+/* Visualizador + progreso */
+.viz{height:58px;flex:none;margin:18px 0 2px;display:flex;align-items:flex-end;gap:3px;overflow:hidden}
+.viz .bar{
+  flex:1;border-radius:2px 2px 0 0;min-width:2px;
+  background:linear-gradient(180deg,var(--cyan) 0%,var(--purple) 52%,var(--pink) 100%);
+  box-shadow:0 0 8px rgba(176,38,255,.45);
+  animation:wave 1.15s ease-in-out infinite alternate;
+  transform-origin:bottom;
+}
+@keyframes wave{0%{height:14%}100%{height:var(--h,60%)}}
+
+.progress-wrap{margin-top:12px;flex:none}
+.progress{
+  position:relative;height:7px;border-radius:4px;cursor:pointer;
+  background:rgba(255,255,255,.08);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.progress .fill{
+  position:absolute;left:0;top:0;bottom:0;width:58.7%;border-radius:4px;
+  background:linear-gradient(90deg,var(--pink),var(--purple) 55%,var(--cyan));
+  box-shadow:0 0 16px rgba(176,38,255,.85);
+}
+.progress .knob{
+  position:absolute;top:50%;left:58.7%;width:15px;height:15px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:#fff;box-shadow:0 0 14px var(--pink),0 0 26px rgba(255,45,149,.6);
+}
+.time-row{display:flex;justify-content:space-between;margin-top:11px;font-family:var(--font-mono);font-size:13px;color:var(--text-mute)}
+.time-row .cur{color:var(--pink-soft)}
+
+/* Controles */
+.controls{display:flex;align-items:center;justify-content:center;gap:26px;margin-top:auto;padding-top:16px;flex:none}
+.ctrl{
+  width:46px;height:46px;display:grid;place-items:center;
+  border-radius:50%;cursor:pointer;transition:.2s;color:var(--text-dim);
+}
+.ctrl svg{width:22px;height:22px}
+.ctrl:hover{color:var(--cyan);filter:drop-shadow(0 0 9px rgba(0,240,255,.9))}
+.ctrl.on{color:var(--pink);filter:drop-shadow(0 0 9px rgba(255,45,149,.95))}
+.ctrl.on svg{fill:currentColor}
+.play{
+  width:70px;height:70px;border-radius:50%;
+  display:grid;place-items:center;cursor:pointer;
+  background:radial-gradient(circle at 42% 34%,rgba(255,45,149,.94),rgba(176,38,255,.90));
+  border:2px solid rgba(255,255,255,.42);
+  box-shadow:0 0 34px rgba(255,45,149,.62),0 0 68px rgba(176,38,255,.40),inset 0 0 22px rgba(255,255,255,.24);
+  transition:.2s;
+}
+.play svg{width:28px;height:28px;color:#fff;filter:drop-shadow(0 0 7px rgba(0,0,0,.5))}
+.play:hover{transform:scale(1.06);box-shadow:0 0 46px rgba(255,45,149,.85),0 0 88px rgba(176,38,255,.55)}
+
+/* ============================================================
+   PLAYLIST
+   ============================================================ */
+.playlist{display:flex;flex-direction:column;height:100%}
+.pl-list{flex:1;overflow:hidden;padding:12px 12px 0;display:flex;flex-direction:column;gap:4px}
+.track{
+  display:flex;align-items:center;gap:13px;
+  padding:10px 12px;border-radius:12px;cursor:pointer;
+  border:1px solid transparent;transition:.16s;
+}
+.track:hover{background:var(--glass-2);border-color:var(--stroke)}
+.track.active{
+  background:linear-gradient(90deg,rgba(255,45,149,.20),rgba(176,38,255,.10));
+  border-color:rgba(255,45,149,.42);
+  box-shadow:0 0 24px rgba(255,45,149,.20);
+}
+.track .idx{width:18px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-mute)}
+.track.active .idx{color:var(--pink)}
+.track .thumb{
+  width:44px;height:44px;flex:none;border-radius:9px;overflow:hidden;
+  border:1px solid var(--stroke);position:relative;
+}
+.track .thumb svg{width:100%;height:100%;display:block}
+.track .meta{flex:1;min-width:0}
+.track .t{font-size:16px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track.active .t{color:#fff;font-weight:600}
+.track .a{font-size:12.5px;color:var(--text-mute);margin-top:2px}
+.track .dur{font-family:var(--font-mono);font-size:12.5px;color:var(--text-mute)}
+.track.active .dur{color:var(--pink-soft)}
+.eq{display:flex;align-items:flex-end;gap:2px;height:13px;width:14px;flex:none}
+.eq i{width:2.5px;background:var(--pink);border-radius:1px;box-shadow:0 0 6px var(--pink);animation:eqB .85s ease-in-out infinite alternate}
+.eq i:nth-child(1){height:44%;animation-delay:-.1s}
+.eq i:nth-child(2){height:92%;animation-delay:-.35s}
+.eq i:nth-child(3){height:64%;animation-delay:-.6s}
+@keyframes eqB{0%{transform:scaleY(.35)}100%{transform:scaleY(1)}}
+.playlist-foot{
+  padding:14px 20px 18px;border-top:1px solid var(--stroke);
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;letter-spacing:.14em;color:var(--text-mute);
+}
+
+/* ============================================================
+   MEZCLADOR
+   ============================================================ */
+.mixer{padding-bottom:12px;height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.channels{
+  flex:1;min-height:0;overflow:hidden;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:4px;padding:14px 8px 0;
+}
+.ch{display:flex;flex-direction:column;align-items:center;gap:7px;min-height:0}
+.ch-name{font-size:11.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--text-dim);text-align:center}
+.ch-master .ch-name{color:var(--pink-soft)}
+
+/* fader y medidor en paralelo, no apilados: apilados necesitan 348px y sólo
+   hay ~279px, así que el canal se desbordaba. */
+.ch-strip{display:flex;align-items:flex-end;gap:7px;height:150px}
+
+.fader{
+  position:relative;width:34px;height:150px;flex:none;
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  border:1px solid var(--stroke);
+  overflow:hidden;
+}
+.fader .fill{
+  position:absolute;left:0;right:0;bottom:0;height:70%;
+  background:linear-gradient(180deg,var(--cyan),var(--blue) 70%,rgba(37,99,255,.35));
+  box-shadow:0 0 18px rgba(0,240,255,.55);
+  transition:height .2s;
+}
+.fader .cap{
+  position:absolute;left:3px;right:3px;height:8px;border-radius:3px;
+  background:linear-gradient(180deg,#fff,rgba(255,255,255,.62));
+  box-shadow:0 0 12px rgba(0,240,255,.9),0 0 24px rgba(37,99,255,.5);
+  transition:bottom .2s;
+  z-index:2;
+}
+.fader .ticks{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(180deg,transparent 0 14px,rgba(255,255,255,.07) 14px 15px)}
+
+/* medidor LED */
+.meter{width:11px;height:150px;border-radius:4px;overflow:hidden;position:relative;
+  background:rgba(255,255,255,.05);border:1px solid var(--stroke);display:flex;flex-direction:column-reverse}
+.meter i{height:8px;flex:none;border-top:1px solid rgba(0,0,0,.35)}
+.meter i.on{background:var(--cyan);box-shadow:0 0 7px var(--cyan)}
+.meter i.on.warn{background:var(--pink);box-shadow:0 0 7px var(--pink)}
+
+.ch-pct{font-family:var(--font-mono);font-size:12px;color:var(--cyan)}
+.ch.muted .ch-name,.ch.muted .ch-pct{color:var(--text-mute)}
+.ch.muted .fader{opacity:.35}
+.mute{
+  width:26px;height:22px;border-radius:6px;cursor:pointer;
+  display:grid;place-items:center;font-size:10px;letter-spacing:.08em;
+  background:var(--glass);border:1px solid var(--stroke);color:var(--text-mute);transition:.16s;
+}
+.mute:hover{color:var(--pink);border-color:var(--stroke-neon)}
+.ch.muted .mute{color:var(--pink);border-color:var(--stroke-neon);background:rgba(255,45,149,.16)}
+
+/* ============================================================
+   SECCIONES CENTRALES (velocidad / volumen / ecualizador)
+   ============================================================ */
+.stack{flex:1;display:grid;grid-template-rows:auto auto 1fr;gap:0;min-height:0}
+.sec{padding:12px 30px;border-bottom:1px solid var(--stroke)}
+.sec:last-child{border-bottom:none}
+.sec-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.sec-head svg{width:15px;height:15px;color:var(--cyan);filter:drop-shadow(0 0 6px rgba(0,240,255,.75))}
+.sec-head h3{font-size:13px;letter-spacing:.20em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+.sec-head .val{margin-left:auto;font-family:var(--font-mono);font-size:14px;color:var(--pink-soft);text-shadow:0 0 10px rgba(255,45,149,.6)}
+.presets{display:flex;gap:6px;margin-left:16px}
+.preset{
+  padding:4px 10px;border-radius:7px;cursor:pointer;font-family:var(--font-mono);font-size:11.5px;
+  background:var(--glass);border:1px solid var(--stroke);color:var(--text-mute);transition:.16s;
+}
+.preset:hover{color:var(--cyan);border-color:rgba(0,240,255,.4)}
+.preset.on{color:#04121a;background:linear-gradient(90deg,var(--cyan),var(--blue));border-color:transparent;box-shadow:0 0 14px rgba(0,240,255,.55)}
+
+/* range horizontal */
+input[type=range].h{
+  -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,var(--pink) 0%,var(--purple) var(--p,70%),rgba(255,255,255,.09) var(--p,70%));
+}
+input[type=range].h::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;
+  box-shadow:0 0 12px var(--pink),0 0 24px rgba(255,45,149,.55);border:none;
+}
+input[type=range].h::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:none;box-shadow:0 0 12px var(--pink)}
+
+/* range vertical (ecualizador) */
+.eq-grid{
+  display:grid;grid-template-columns:repeat(10,1fr);gap:12px;
+  align-items:end;
+  /* altura DEFINITIVA: con height:100% en una cadena de padres sin altura
+     fijada el input vertical se resolvía a 993px y reventaba la fila. */
+  height:140px;flex:none;
+}
+.eqb{display:flex;flex-direction:column;align-items:center;gap:5px;height:140px;justify-content:flex-end}
+input[type=range].v{
+  -webkit-appearance:none;appearance:none;
+  writing-mode:vertical-lr;direction:rtl;
+  width:5px;height:106px;border-radius:3px;outline:none;cursor:pointer;
+  /* Bipolar: el relleno crece DESDE 0 dB (el centro, 50%), no desde abajo.
+     Antes pintaba desde 0% y en 0 dB se veía media barra "encendida". */
+  background:linear-gradient(0deg,
+    rgba(255,255,255,.09) 0%, rgba(255,255,255,.09) var(--p1,50%),
+    var(--cyan) var(--p1,50%), var(--purple) var(--p2,50%),
+    rgba(255,255,255,.09) var(--p2,50%), rgba(255,255,255,.09) 100%);
+}
+input[type=range].v::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;
+  box-shadow:0 0 11px var(--purple),0 0 22px rgba(176,38,255,.5);
+}
+input[type=range].v::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 0 11px var(--purple)}
+.eqb .hz{font-family:var(--font-mono);font-size:9.5px;color:var(--text-mute);letter-spacing:.02em}
+.eqb .db{font-family:var(--font-mono);font-size:10.5px;color:var(--cyan)}
+.eq-center{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.12)}
+
+/* ============================================================
+   UPLOAD
+   ============================================================ */
+.upload-col{display:flex;flex-direction:column;height:100%}
+.dropzone{
+  margin:12px 18px 0;padding:14px 16px;flex:1 1 auto;min-height:0;overflow:hidden;
+  border:1.5px dashed rgba(255,45,149,.42);border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(255,45,149,.07),rgba(176,38,255,.03));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+  text-align:center;cursor:pointer;transition:.22s;
+}
+.dropzone:hover,.dropzone.hot{
+  border-color:var(--pink);background:linear-gradient(180deg,rgba(255,45,149,.16),rgba(176,38,255,.07));
+  box-shadow:0 0 30px rgba(255,45,149,.26) inset;
+}
+.dropzone .cloud{
+  width:42px;height:42px;color:var(--cyan);
+  filter:drop-shadow(0 0 14px rgba(0,240,255,.85));
+  animation:bob 2.6s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.dropzone p{font-size:13px;color:var(--text);line-height:1.35;max-width:280px}
+.dropzone .fmt{font-size:10.5px;letter-spacing:.13em;color:var(--text-mute);font-family:var(--font-mono)}
+.btn-primary{
+  margin-top:5px;padding:9px 22px;border-radius:999px;cursor:pointer;
+  font-family:var(--font-ui);font-size:14px;letter-spacing:.11em;color:#fff;
+  background:linear-gradient(96deg,var(--pink),var(--purple));
+  border:none;box-shadow:0 0 22px rgba(255,45,149,.55);
+  transition:.18s;
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 32px rgba(255,45,149,.8)}
+
+.deco-card{
+  margin:10px 18px 14px;padding:10px;flex:none;border-radius:var(--r-md);
+  background:linear-gradient(140deg,rgba(176,38,255,.13),rgba(255,45,149,.07));
+  border:1px solid var(--stroke-neon);position:relative;overflow:hidden;flex:none;
+}
+.deco-card .mini-scene{height:42px;border-radius:9px;overflow:hidden;margin-bottom:9px}
+.deco-card .mini-scene svg{width:100%;height:100%;display:block}
+.deco-card .row{display:flex;align-items:center;gap:8px}
+.deco-card svg.flower{width:21px;height:21px;flex:none;filter:drop-shadow(0 0 7px rgba(255,45,149,.9))}
+.deco-card .t1{font-size:13px;letter-spacing:.05em;color:var(--text)}
+.deco-card .t2{font-family:var(--font-jp);font-size:11.5px;color:rgba(255,45,149,.78);margin-top:2px;letter-spacing:.1em}
+
+/* ============================================================
+   STATUS BAR
+   ============================================================ */
+.statusbar{
+  height:52px;flex:none;display:flex;align-items:center;gap:18px;
+  padding:0 28px;border-top:1px solid var(--stroke);
+  background:linear-gradient(90deg,rgba(255,45,149,.09),rgba(10,10,26,.5) 34%,rgba(0,240,255,.06));
+  font-size:13.5px;letter-spacing:.05em;
+}
+.statusbar svg.flower{width:19px;height:19px;filter:drop-shadow(0 0 8px rgba(255,45,149,.9))}
+.statusbar .np{color:var(--text-dim)}
+.statusbar .np b{color:var(--pink-soft);font-weight:600}
+.statusbar .sp{flex:1}
+.statusbar .meta{color:var(--text-mute);font-family:var(--font-mono);font-size:11.5px;letter-spacing:.1em}
+.statusbar .vol{display:flex;align-items:center;gap:9px}
+.statusbar .vol svg{width:17px;height:17px;color:var(--cyan);filter:drop-shadow(0 0 7px rgba(0,240,255,.8))}
+.sig{display:flex;align-items:flex-end;gap:2.5px;height:17px}
+.sig i{width:3px;background:linear-gradient(180deg,var(--cyan),var(--pink));border-radius:1px;box-shadow:0 0 6px rgba(0,240,255,.6)}
+.sig i:nth-child(1){height:38%}
+.sig i:nth-child(2){height:70%}
+.sig i:nth-child(3){height:100%}
+.sig i:nth-child(4){height:55%}
+.sig i:nth-child(5){height:82%}
+
+/* canal de繁殖 oculto (decorativo) */
+.hidden-audio{position:absolute;width:0;height:0;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- ============================================================
+     SVG REUTILIZABLES
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="sakG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff3f9"/><stop offset="55%" stop-color="#ff6fc0"/><stop offset="100%" stop-color="#b026ff"/>
+    </linearGradient>
+    <g id="petalShape">
+      <path d="M12 2c3.2 0 5.6 2.3 5.9 5.3.2 2.1-.7 3.6-1.8 4.6 1.6.4 2.7 1.6 2.7 3.1 0 2-1.8 3.4-4 3.4-1 0-1.9-.2-2.7-.7-.8.5-1.7.7-2.7.7-2.2 0-4-1.4-4-3.4 0-1.5 1.1-2.7 2.7-3.1-1.1-1-2-2.5-1.8-4.6C6.4 4.3 8.8 2 12 2Z" fill="url(#sakG)"/>
+    </g>
+  </defs>
+</svg>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="header">
+  <div class="header-bg">
+    <svg viewBox="0 0 1920 200" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2b0a3d"/><stop offset="42%" stop-color="#6a1263"/>
+          <stop offset="72%" stop-color="#b8267a"/><stop offset="100%" stop-color="#ff4f9a"/>
+        </linearGradient>
+        <radialGradient id="sunG" cx="50%" cy="50%">
+          <stop offset="0%" stop-color="#fff0f7"/><stop offset="42%" stop-color="#ff8fc8"/>
+          <stop offset="100%" stop-color="#ff2d95" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="mtn" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3a1050"/><stop offset="100%" stop-color="#16062b"/>
+        </linearGradient>
+        <linearGradient id="mtnSnow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffc7e6"/><stop offset="100%" stop-color="#e05aa8"/>
+        </linearGradient>
+        <linearGradient id="toriiG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff5fae"/><stop offset="100%" stop-color="#7a0f8c"/>
+        </linearGradient>
+        <linearGradient id="bldG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a0b3d"/><stop offset="100%" stop-color="#0d0420"/>
+        </linearGradient>
+      </defs>
+
+      <rect width="1920" height="200" fill="url(#sky)"/>
+      <!-- sol/luna rosa -->
+      <circle cx="1350" cy="132" r="150" fill="url(#sunG)" opacity=".55"/>
+      <circle cx="1350" cy="132" r="44" fill="#ffd9ec" opacity=".95"/>
+      <circle cx="1350" cy="132" r="44" fill="none" stroke="#ff2d95" stroke-width="3" opacity=".8"/>
+
+      <!---lines de horizonte neón -->
+      <g opacity=".5" stroke="#00f0ff" stroke-width="1">
+        <line x1="0" y1="150" x2="1920" y2="150"/>
+        <line x1="0" y1="168" x2="1920" y2="168"/>
+      </g>
+
+      <!-- Monte Fuji -->
+      <path d="M980 200 L1180 62 L1250 62 L1450 200 Z" fill="url(#mtn)"/>
+      <path d="M1152 84 L1180 62 L1250 62 L1288 92 L1244 84 L1210 96 L1178 82 Z" fill="url(#mtnSnow)" opacity=".95"/>
+      <path d="M1230 62 L1250 62 L1330 128 L1290 120 Z" fill="url(#mtnSnow)" opacity=".6"/>
+
+      <!-- edificios futuristas -->
+      <g fill="url(#bldG)">
+        <rect x="60"  y="104" width="42" height="96"/>
+        <rect x="112" y="76"  width="30" height="124"/>
+        <rect x="152" y="122" width="48" height="78"/>
+        <rect x="210" y="92"  width="26" height="108"/>
+        <rect x="246" y="132" width="54" height="68"/>
+        <rect x="310" y="108" width="34" height="92"/>
+        <rect x="1460" y="88"  width="36" height="112"/>
+        <rect x="1506" y="116" width="52" height="84"/>
+        <rect x="1568" y="72"  width="28" height="128"/>
+        <rect x="1606" y="128" width="46" height="72"/>
+        <rect x="1662" y="100" width="32" height="100"/>
+        <rect x="1704" y="134" width="58" height="66"/>
+        <rect x="1772" y="110" width="34" height="90"/>
+        <rect x="1816" y="140" width="50" height="60"/>
+      </g>
+      <!-- ventanas encendidas -->
+      <g fill="#00f0ff" opacity=".72">
+        <rect x="70"  y="116" width="5" height="5"/><rect x="82"  y="116" width="5" height="5"/><rect x="70" y="132" width="5" height="5"/>
+        <rect x="120" y="90"  width="5" height="5"/><rect x="132" y="104" width="5" height="5"/><rect x="120" y="120" width="5" height="5"/>
+        <rect x="258" y="146" width="5" height="5"/><rect x="270" y="146" width="5" height="5"/><rect x="320" y="122" width="5" height="5"/>
+        <rect x="1470" y="102" width="5" height="5"/><rect x="1520" y="130" width="5" height="5"/><rect x="1532" y="146" width="5" height="5"/>
+        <rect x="1576" y="86"  width="5" height="5"/><rect x="1576" y="102" width="5" height="5"/><rect x="1616" y="142" width="5" height="5"/>
+        <rect x="1672" y="116" width="5" height="5"/><rect x="1716" y="148" width="5" height="5"/><rect x="1782" y="124" width="5" height="5"/>
+        <rect x="1826" y="154" width="5" height="5"/>
+      </g>
+      <g fill="#ff2d95" opacity=".7">
+        <rect x="164" y="136" width="5" height="5"/><rect x="216" y="106" width="5" height="5"/><rect x="352" y="140" width="5" height="5"/>
+        <rect x="1494" y="150" width="5" height="5"/><rect x="1612" y="96" width="5" height="5"/><rect x="1752" y="160" width="5" height="5"/>
+      </g>
+
+      <!-- torii -->
+      <g transform="translate(1332 0)">
+        <rect x="-52" y="96" width="104" height="11" rx="4" fill="url(#toriiG)"/>
+        <rect x="-46" y="60" width="92" height="9" rx="4" fill="url(#toriiG)"/>
+        <rect x="-58" y="50" width="116" height="12" rx="5" fill="url(#toriiG)"/>
+        <rect x="-34" y="60" width="12" height="137" fill="url(#toriiG)"/>
+        <rect x="22"  y="60" width="12" height="137" fill="url(#toriiG)"/>
+        <rect x="-30" y="86" width="60" height="7" fill="url(#toriiG)" opacity=".85"/>
+        <g opacity=".5" filter="url(#glowT)"><rect x="-58" y="50" width="116" height="12" fill="#ff2d95"/></g>
+      </g>
+      <defs>
+        <filter id="glowT" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- agua / reflejo -->
+      <rect x="0" y="196" width="1920" height="4" fill="#00f0ff" opacity=".3"/>
+    </svg>
+  </div>
+
+  <div class="petals" id="petals"></div>
+
+  <div class="logo">
+    <svg viewBox="0 0 100 100">
+      <g transform="translate(50 52)">
+        <g fill="url(#sakG)">
+          <ellipse cx="0" cy="-19" rx="10.5" ry="17"/>
+          <ellipse cx="0" cy="-19" rx="10.5" ry="17" transform="rotate(72)"/>
+          <ellipse cx="0" cy="-19" rx="10.5" ry="17" transform="rotate(144)"/>
+          <ellipse cx="0" cy="-19" rx="10.5" ry="17" transform="rotate(216)"/>
+          <ellipse cx="0" cy="-19" rx="10.5" ry="17" transform="rotate(288)"/>
+        </g>
+        <circle r="7" fill="#fff0f7"/>
+        <g stroke="#ff2d95" stroke-width="1.6" fill="none" opacity=".9">
+          <line x1="0" y1="0" x2="0" y2="-26"/><line x1="0" y1="0" x2="24" y2="-8"/>
+          <line x1="0" y1="0" x2="15" y2="21"/><line x1="0" y1="0" x2="-15" y2="21"/><line x1="0" y1="0" x2="-24" y2="-8"/>
+        </g>
+        <circle r="26" fill="none" stroke="#ff2d95" stroke-width="1.4" opacity=".55"/>
+        <circle r="33" fill="none" stroke="#b026ff" stroke-width="1" opacity=".35"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="title-block">
+    <div class="brand">SAKURA PLAYER</div>
+    <div class="brand-sub">音楽は、いつもそばに</div>
+    <div class="brand-rule"></div>
+  </div>
+
+  <div class="header-spacer"></div>
+  <div class="header-badge"><span class="dot-live"></span>NEON AUDIO ENGINE v2.4</div>
+</header>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<div class="main">
+
+  <!-- ---------- SIDEBAR ---------- -->
+  <aside class="col-left panel">
+    <div class="sidebar">
+      <div class="panel-title">Navegación</div>
+      <nav class="nav">
+        <div class="nav-item active"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" stroke-linejoin="round"/></svg>Inicio</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l11-2v13" stroke-linecap="round"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="17.5" cy="16" r="2.6"/></svg>Biblioteca</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h13M3 12h13M3 17h9" stroke-linecap="round"/><path d="M18 9v10M18 19l3-2M18 19l-3-2" stroke-linecap="round" stroke-linejoin="round"/></svg>Listas de reproducción</div>
+        <div class="nav-sep"></div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 20V9M12 20V4M18 20v-7" stroke-linecap="round" stroke-width="2.2"/></svg>Mezclador</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.72 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.72 1.6 1.6 0 0 0 10 3.25V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9v.09a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" stroke-linecap="round"/></svg>Ajustes</div>
+      </nav>
+
+      <div class="side-foot">
+        <svg viewBox="0 0 100 100">
+          <g transform="translate(50 50)">
+            <g fill="url(#sakG)" opacity=".95">
+              <ellipse cx="0" cy="-18" rx="9.5" ry="16"/><ellipse cx="0" cy="-18" rx="9.5" ry="16" transform="rotate(72)"/>
+              <ellipse cx="0" cy="-18" rx="9.5" ry="16" transform="rotate(144)"/><ellipse cx="0" cy="-18" rx="9.5" ry="16" transform="rotate(216)"/>
+              <ellipse cx="0" cy="-18" rx="9.5" ry="16" transform="rotate(288)"/>
+            </g>
+            <circle r="6" fill="#fff0f7"/>
+          </g>
+        </svg>
+        <p>Good music, better days.</p>
+        <div class="jp">音楽でつながる</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ---------- REPRODUCTOR ---------- -->
+  <section class="col-mid">
+    <div class="player">
+      <div class="player-top">
+        <div class="cover">
+          <div class="cover-badge">LOSSY · 320</div>
+          <svg viewBox="0 0 240 240">
+            <defs>
+              <linearGradient id="covSky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#12042a"/><stop offset="55%" stop-color="#4a0d5c"/><stop offset="100%" stop-color="#a01a6b"/>
+              </linearGradient>
+              <radialGradient id="covMoon"><stop offset="0%" stop-color="#fff0f7"/><stop offset="60%" stop-color="#ff8fc8"/><stop offset="100%" stop-color="#ff2d95" stop-opacity="0"/></radialGradient>
+              <linearGradient id="covTorii" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff6fc0"/><stop offset="100%" stop-color="#8a0fa0"/></linearGradient>
+            </defs>
+            <rect width="240" height="240" fill="url(#covSky)"/>
+            <circle cx="176" cy="66" r="52" fill="url(#covMoon)" opacity=".85"/>
+            <circle cx="176" cy="66" r="26" fill="#ffdcec" opacity=".95"/>
+            <!-- rejilla suelo -->
+            <g stroke="#00f0ff" stroke-width=".7" opacity=".38">
+              <path d="M0 200h240M0 214h240M0 230h240"/>
+              <path d="M40 196 20 240M84 196 76 240M128 196v44M172 196l12 44M208 196l26 44"/>
+            </g>
+            <!-- skyline -->
+            <g fill="#1b0530">
+              <rect x="8" y="120" width="20" height="80"/><rect x="32" y="142" width="14" height="58"/><rect x="50" y="108" width="18" height="92"/>
+              <rect x="196" y="128" width="16" height="72"/><rect x="216" y="150" width="20" height="50"/><rect x="72" y="150" width="16" height="50"/>
+            </g>
+            <g fill="#00f0ff" opacity=".8">
+              <rect x="13" y="130" width="4" height="4"/><rect x="22" y="142" width="4" height="4"/><rect x="56" y="120" width="4" height="4"/>
+              <rect x="201" y="140" width="4" height="4"/><rect x="222" y="160" width="4" height="4"/><rect x="78" y="162" width="4" height="4"/>
+            </g>
+            <!-- torii -->
+            <g transform="translate(120 0) scale(1.05)">
+              <rect x="-42" y="96" width="84" height="8" rx="3" fill="url(#covTorii)"/>
+              <rect x="-36" y="70" width="72" height="7" rx="3" fill="url(#covTorii)"/>
+              <rect x="-46" y="62" width="92" height="9" rx="4" fill="url(#covTorii)"/>
+              <rect x="-27" y="70" width="9" height="130" fill="url(#covTorii)"/>
+              <rect x="18"  y="70" width="9" height="130" fill="url(#covTorii)"/>
+            </g>
+            <text x="120" y="228" text-anchor="middle" font-family="Rajdhani, sans-serif" font-size="13" letter-spacing="5" fill="#ff6fc0" opacity=".95">LOST IN TOKYO</text>
+          </svg>
+        </div>
+
+        <div class="now">
+          <div class="eyebrow">Reproduciendo ahora</div>
+          <h1 id="npTitle">Midnight Sakura</h1>
+          <div class="artist" id="npArtist">Neon Dreams</div>
+          <div class="album">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/></svg>
+            <span id="npAlbum">Lost in Tokyo</span>
+          </div>
+          <div class="now-actions">
+            <div class="icon-btn liked" id="likeBtn" title="Favorito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20.5s-7.5-4.6-7.5-9.7A4.3 4.3 0 0 1 12 8.2a4.3 4.3 0 0 1 7.5 2.6c0 5.1-7.5 9.7-7.5 9.7z" stroke-linejoin="round"/></svg></div>
+            <div class="icon-btn" title="Más opciones"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz" id="viz"></div>
+
+      <div class="progress-wrap">
+        <div class="progress" id="progress">
+          <div class="fill" id="progFill"></div>
+          <div class="knob" id="progKnob"></div>
+        </div>
+        <div class="time-row">
+          <span class="cur" id="tCur">02:34</span>
+          <span id="tTot">04:21</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl on" id="btnShuffle" title="Aleatorio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="ctrl" id="btnPrev" title="Anterior"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 5v14L8 12zM6 5h2.4v14H6z"/></svg></div>
+        <div class="play" id="btnPlay" title="Reproducir / Pausa"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></div>
+        <div class="ctrl" id="btnNext" title="Siguiente"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5v14l10-7zM15.6 5H18v14h-2.4z"/></svg></div>
+        <div class="ctrl" id="btnRepeat" title="Repetir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 2l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11V9a4 4 0 0 1 4-4h14" stroke-linecap="round"/><path d="M7 22l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 13v2a4 4 0 0 1-4 4H3" stroke-linecap="round"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- PLAYLIST ---------- -->
+  <aside class="col-right panel playlist">
+    <div class="panel-title">
+      <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13M3 12h13M3 17h9" stroke-linecap="round"/><path d="M18 9v10M18 19l3-2M18 19l-3-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Lista de reproducción</span>
+      <span class="sp"></span>
+      <div class="mini" title="Añadir"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></div>
+      <div class="mini" title="Nueva carpeta"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-linejoin="round"/></svg></div>
+      <div class="mini" title="Opciones"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></div>
+    </div>
+
+    <div class="pl-list" id="plList"></div>
+
+    <div class="playlist-foot"><span>6 canciones</span><span id="plTotal">27:14 total</span></div>
+  </aside>
+</div>
+
+<!-- ============================================================
+     BOTTOM
+     ============================================================ -->
+<div class="bottom">
+
+  <!-- ---------- MEZCLADOR ---------- -->
+  <div class="col-left panel mixer">
+    <div class="panel-title">
+      <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 20V9M12 20V4M18 20v-7" stroke-linecap="round"/></svg>
+      <span>Mezclador</span>
+    </div>
+    <div class="channels" id="channels"></div>
+  </div>
+
+  <!-- ---------- VELOCIDAD / VOLUMEN / ECUALIZADOR ---------- -->
+  <div class="col-mid panel">
+    <div class="stack">
+
+      <div class="sec">
+        <div class="sec-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20a8 8 0 1 1 8-8" stroke-linecap="round"/><path d="M12 12l5-3" stroke-linecap="round"/></svg>
+          <h3>Velocidad de reproducción</h3>
+          <span class="val" id="spdVal">1.00x</span>
+          <div class="presets" id="presets">
+            <div class="preset" data-v="0.5">0.5x</div>
+            <div class="preset" data-v="0.75">0.75x</div>
+            <div class="preset on" data-v="1">1.0x</div>
+            <div class="preset" data-v="1.25">1.25x</div>
+            <div class="preset" data-v="1.5">1.5x</div>
+            <div class="preset" data-v="2">2.0x</div>
+          </div>
+        </div>
+        <input type="range" class="h" id="speed" min="0.5" max="2" step="0.05" value="1" style="--p:33.3%">
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 9v6h4l5 4V5L8 9z" stroke-linejoin="round"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke-linecap="round"/></svg>
+          <h3>Volumen</h3>
+          <span class="val" id="volVal">70%</span>
+          <span style="font-size:11px;letter-spacing:.16em;color:var(--text-mute);margin-left:14px">SALIDA PRINCIPAL</span>
+        </div>
+        <input type="range" class="h" id="vol" min="0" max="100" step="1" value="70" style="--p:70%">
+      </div>
+
+      <div class="sec" style="position:relative;display:flex;flex-direction:column;min-height:0">
+        <div class="sec-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 20V9M12 20V4M18 20v-7" stroke-linecap="round"/></svg>
+          <h3>Ecualizador</h3>
+          <span class="val" style="color:var(--cyan);text-shadow:0 0 10px rgba(0,240,255,.6)">Personalizado</span>
+          <span style="font-size:11px;letter-spacing:.16em;color:var(--text-mute);margin-left:14px">10 BANDAS · −12 … +12 dB</span>
+        </div>
+        <div class="eq-grid" id="eqGrid"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ---------- SUBIR CANCIONES ---------- -->
+  <div class="col-right panel upload-col">
+    <div class="panel-title">
+      <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 16V4M12 4 7.5 8.5M12 4l4.5 4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke-linecap="round"/></svg>
+      <span>Subir canciones</span>
+    </div>
+
+    <div class="dropzone" id="drop">
+      <svg class="cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 18.5A4.5 4.5 0 0 1 6.6 9.6 5.6 5.6 0 0 1 17.6 10 4.25 4.25 0 0 1 17 18.5z" stroke-linejoin="round"/><path d="M12 21v-8M12 13l-3 3M12 13l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p>Arrastra y suelta tus archivos aquí o haz clic para seleccionar</p>
+      <div class="fmt">MP3 · WAV · FLAC · OGG · M4A</div>
+      <button class="btn-primary">Seleccionar archivos</button>
+      <input type="file" id="fileInput" multiple accept="audio/*" class="hidden-audio">
+    </div>
+
+    <div class="deco-card">
+      <div class="mini-scene">
+        <svg viewBox="0 0 380 56" preserveAspectRatio="xMidYMax slice">
+          <defs>
+            <linearGradient id="msSky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2a0b45"/><stop offset="60%" stop-color="#7d1460"/><stop offset="100%" stop-color="#ff4f9a"/>
+            </linearGradient>
+          </defs>
+          <rect width="380" height="56" fill="url(#msSky)"/>
+          <circle cx="310" cy="34" r="22" fill="#ffd9ec" opacity=".9"/>
+          <path d="M60 56 L110 12 L150 12 L200 56 Z" fill="#25083a"/>
+          <path d="M104 20 L110 12 L150 12 L156 20 L132 16 Z" fill="#ffc7e6" opacity=".9"/>
+          <g fill="url(#toriiG)">
+            <rect x="248" y="30" width="46" height="5" rx="2"/><rect x="252" y="22" width="38" height="4" rx="2"/>
+            <rect x="243" y="18" width="56" height="5" rx="2"/>
+            <rect x="256" y="22" width="5" height="34"/><rect x="281" y="22" width="5" height="34"/>
+          </g>
+          <g fill="#0d0420" opacity=".9">
+            <rect x="12" y="34" width="10" height="22"/><rect x="26" y="42" width="8" height="14"/><rect x="38" y="30" width="9" height="26"/>
+            <rect x="330" y="40" width="12" height="16"/><rect x="346" y="34" width="9" height="22"/><rect x="358" y="44" width="12" height="12"/>
+          </g>
+          <rect x="0" y="54" width="380" height="2" fill="#00f0ff" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="row">
+        <svg class="flower" viewBox="0 0 24 24"><g transform="translate(12 12)" fill="url(#sakG)"><ellipse cx="0" cy="-6" rx="3.2" ry="5.2"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(72)"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(144)"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(216)"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(288)"/></g><circle cx="12" cy="12" r="2" fill="#fff0f7"/></svg>
+        <div>
+          <div class="t1">Sakura Player</div>
+          <div class="t2">音楽でつながる</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     STATUS BAR
+     ============================================================ -->
+<footer class="statusbar">
+  <svg class="flower" viewBox="0 0 24 24"><g transform="translate(12 12)" fill="url(#sakG)"><ellipse cx="0" cy="-6" rx="3.2" ry="5.2"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(72)"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(144)"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(216)"/><ellipse cx="0" cy="-6" rx="3.2" ry="5.2" transform="rotate(288)"/></g><circle cx="12" cy="12" r="2" fill="#fff0f7"/></svg>
+  <span class="np">Now Playing&nbsp;/&nbsp;<b id="sbTrack">Neon Dreams — Midnight Sakura</b></span>
+  <span class="sp"></span>
+  <span class="meta">48 kHz · 24 bit · 立体音</span>
+  <span class="vol">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 9v6h4l5 4V5L8 9z" stroke-linejoin="round"/><path d="M16.5 8.5a5 5 0 0 1 0 7" stroke-linecap="round"/></svg>
+    <span class="sig"><i></i><i></i><i></i><i></i><i></i></span>
+  </span>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+/* ===================== AUTO-AJUSTE AL VIEWPORT =====================
+   La etapa mide 1920x1080 fijos (es un mockup de app de escritorio, no un
+   layout fluido), así que se escala entera con un único transform. Sin esto
+   en una notebook de 1366x768 sólo se ve la esquina superior izquierda.
+
+   ?scale=N fuerza un factor (2 = render 4K exacto) y desactiva el ajuste. */
+const STAGE_W = 1920, STAGE_H = 1080;
+const forced  = parseFloat(new URLSearchParams(location.search).get('scale'));
+const appEl   = document.getElementById('app');
+
+function fitToViewport(){
+  const s = (Number.isFinite(forced) && forced > 0)
+    ? forced
+    : Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+  appEl.style.transform = `translate(-50%,-50%) scale(${s})`;
+  return s;
+}
+fitToViewport();
+addEventListener('resize', fitToViewport);
+addEventListener('orientationchange', fitToViewport);
+
+/* ===================== DATOS ===================== */
+const TRACKS = [
+  { t:'Midnight Sakura',     a:'Neon Dreams',    d:261, hue:'#ff2d95' },
+  { t:'Starlight',           a:'Aoi Circuit',    d:312, hue:'#b026ff' },
+  { t:'Lost Frequencies',    a:'Neon Dreams',    d:228, hue:'#00f0ff' },
+  { t:'Dreams of You',       a:'Sakura Circuit', d:277, hue:'#ff6fc0' },
+  { t:'After Dark',          a:'Kitsune Neon',   d:252, hue:'#7b2ff7' },
+  { t:'Digital Sunset',      a:'Holo Tokyo',     d:306, hue:'#2563ff' },
+];
+const mmss = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+
+/* miniaturas SVG generadas */
+function thumb(hue, i){
+  return `<svg viewBox="0 0 44 44">
+    <defs><linearGradient id="tg${i}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b0530"/><stop offset="100%" stop-color="${hue}"/>
+    </linearGradient></defs>
+    <rect width="44" height="44" fill="url(#tg${i})"/>
+    <circle cx="32" cy="12" r="8" fill="#ffdcec" opacity=".55"/>
+    <path d="M0 34 L10 22 L18 30 L26 20 L44 40 L44 44 L0 44 Z" fill="#0a0418" opacity=".8"/>
+    <rect x="0" y="40" width="44" height="4" fill="${hue}" opacity=".7"/>
+  </svg>`;
+}
+
+/* ===================== PLAYLIST ===================== */
+let current = 0;
+const plList = document.getElementById('plList');
+plList.innerHTML = TRACKS.map((t,i)=>`
+  <div class="track${i===0?' active':''}" data-i="${i}">
+    <div class="idx">${i===0?'<div class="eq"><i></i><i></i><i></i></div>':String(i+1).padStart(2,'0')}</div>
+    <div class="thumb">${thumb(t.hue,i)}</div>
+    <div class="meta"><div class="t">${t.t}</div><div class="a">${t.a}</div></div>
+    <div class="dur">${mmss(t.d)}</div>
+  </div>`).join('');
+
+document.getElementById('plTotal').textContent =
+  mmss(TRACKS.reduce((a,b)=>a+b.d,0)) + ' total';
+
+function select(i){
+  current = (i + TRACKS.length) % TRACKS.length;
+  const t = TRACKS[current];
+  document.getElementById('npTitle').textContent = t.t;
+  document.getElementById('npArtist').textContent = t.a;
+  document.getElementById('sbTrack').textContent = `${t.a} — ${t.t}`;
+  document.getElementById('tTot').textContent = mmss(t.d);
+  progress = Math.min(progress, t.d - 1);
+  paint();
+  [...plList.children].forEach((el,k)=>{
+    el.classList.toggle('active', k===current);
+    el.querySelector('.idx').innerHTML = k===current
+      ? '<div class="eq"><i></i><i></i><i></i></div>' : String(k+1).padStart(2,'0');
+  });
+}
+plList.addEventListener('click', e=>{
+  const el = e.target.closest('.track');
+  if(el) select(+el.dataset.i);
+});
+document.getElementById('btnNext').onclick = ()=>select(current+1);
+document.getElementById('btnPrev').onclick = ()=>select(current-1);
+document.getElementById('btnShuffle').onclick = e=>e.currentTarget.classList.toggle('on');
+document.getElementById('btnRepeat').onclick = e=>e.currentTarget.classList.toggle('on');
+document.getElementById('likeBtn').onclick = e=>e.currentTarget.classList.toggle('liked');
+
+/* ===================== PLAY / PAUSA ===================== */
+let playing = true;
+const playIcon = document.getElementById('playIcon');
+const PLAY = '<path d="M7 4.5v15l13-7.5z"/>';
+const PAUSE = '<path d="M7 4.5h4.2v15H7zM12.8 4.5H17v15h-4.2z"/>';
+document.getElementById('btnPlay').onclick = ()=>{
+  playing = !playing;
+  playIcon.innerHTML = playing ? PAUSE : PLAY;
+  document.querySelectorAll('.viz .bar').forEach(b=>b.style.animationPlayState = playing?'running':'paused');
+  document.querySelectorAll('.eq i').forEach(b=>b.style.animationPlayState = playing?'running':'paused');
+};
+
+/* ===================== PROGRESO ===================== */
+let progress = 154; // 02:34
+const fill = document.getElementById('progFill');
+const knob = document.getElementById('progKnob');
+const tCur  = document.getElementById('tCur');
+function paint(){
+  const tot = TRACKS[current].d;
+  const p = Math.min(100, progress/tot*100);
+  fill.style.width = p+'%';
+  knob.style.left  = p+'%';
+  tCur.textContent = mmss(progress);
+}
+document.getElementById('progress').addEventListener('click', e=>{
+  const r = e.currentTarget.getBoundingClientRect();
+  progress = (e.clientX - r.left) / r.width * TRACKS[current].d;
+  paint();
+});
+setInterval(()=>{ if(playing){ progress = (progress+1) % TRACKS[current].d; paint(); } }, 1000);
+paint();
+
+/* ===================== VISUALIZADOR ===================== */
+const viz = document.getElementById('viz');
+viz.innerHTML = Array.from({length:78}, (_,i)=>{
+  const h = 12 + Math.abs(Math.sin(i*0.37))*52 + Math.abs(Math.cos(i*0.13))*30;
+  return `<div class="bar" style="--h:${h.toFixed(0)}%;animation-delay:${(-(i%13)*0.085).toFixed(2)}s"></div>`;
+}).join('');
+
+/* ===================== MEZCLADOR ===================== */
+const CH = [
+  {n:'Master',v:70},{n:'Música',v:60},{n:'Voz',v:55},{n:'Bajos',v:80},{n:'Agudos',v:65}
+];
+const chWrap = document.getElementById('channels');
+function buildChannels(){
+  chWrap.innerHTML = CH.map((c,i)=>{
+    const lit = Math.round(c.v/100*15);
+    return `<div class="ch${i===0?' ch-master':''}" data-i="${i}">
+      <div class="ch-name">${c.n}</div>
+      <div class="ch-strip">
+        <div class="fader">
+          <div class="fill" style="height:${c.v}%"></div>
+          <div class="ticks"></div>
+          <div class="cap" style="bottom:calc(${c.v}% - 4px)"></div>
+        </div>
+        <div class="meter">${Array.from({length:15},(_,k)=>
+          `<i class="${k<lit?(k>11?'on warn':'on'):''}"></i>`).join('')}</div>
+      </div>
+      <div class="ch-pct">${c.v}%</div>
+      <div class="mute">M</div>
+    </div>`;
+  }).join('');
+  chWrap.querySelectorAll('.ch').forEach(el=>{
+    const i = +el.dataset.i;
+    el.querySelector('.mute').onclick = ()=>el.classList.toggle('muted');
+    /* arrastrar el fader */
+    const fd = el.querySelector('.fader');
+    const set = ev=>{
+      const r = fd.getBoundingClientRect();
+      const v = Math.max(0, Math.min(100, Math.round((r.bottom - ev.clientY)/r.height*100)));
+      CH[i].v = v; buildChannels();
+    };
+    let down=false;
+    fd.addEventListener('pointerdown', e=>{down=true;fd.setPointerCapture(e.pointerId);set(e)});
+    fd.addEventListener('pointermove', e=>{if(down)set(e)});
+    fd.addEventListener('pointerup',   e=>{down=false});
+  });
+}
+buildChannels();
+
+/* ===================== VELOCIDAD ==================== */
+const speed = document.getElementById('speed');
+const spdVal = document.getElementById('spdVal');
+function setSpeed(v, fromPreset){
+  speed.value = v;
+  spdVal.textContent = (+v).toFixed(2)+'x';
+  speed.style.setProperty('--p', ((v-0.5)/1.5*100)+'%');
+  document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('on', !fromPreset && +p.dataset.v === +v));
+}
+speed.oninput = ()=>setSpeed(speed.value);
+document.getElementById('presets').onclick = e=>{
+  const p = e.target.closest('.preset'); if(p) setSpeed(p.dataset.v, true);
+};
+setSpeed(1);
+
+/* ===================== VOLUMEN ===================== */
+const vol = document.getElementById('vol');
+const volVal = document.getElementById('volVal');
+function setVol(v){
+  vol.value = v;
+  volVal.textContent = v+'%';
+  vol.style.setProperty('--p', v+'%');
+  document.querySelectorAll('.sig i').forEach((b,i)=>b.style.opacity = (i+1)*100 <= v*5/10 ? 1 : .25);
+}
+vol.oninput = ()=>setVol(vol.value);
+setVol(70);
+
+/* ===================== ECUALIZADOR ===================== */
+const HZ = ['60','150','400','1K','3K','6K','12K','16K','18K','20K'];
+const eqGrid = document.getElementById('eqGrid');
+const EQV = [4,-3,2,0,3,-2,5,1,-1,0];
+
+/* Rango del relleno para un EQ bipolar: 0 dB ocupa el 50% de la altura y el
+   relleno se abre hacia arriba con valores positivos, hacia abajo con
+   negativos. */
+function paintBand(inp, v){
+  const half = (v/24)*50;
+  inp.style.setProperty('--p1', Math.min(50, 50+half) + '%');
+  inp.style.setProperty('--p2', Math.max(50, 50+half) + '%');
+}
+
+eqGrid.innerHTML = HZ.map((h,i)=>{
+  const v = EQV[i];
+  return `<div class="eqb">
+    <div class="db">${v>0?'+':''}${v}</div>
+    <input type="range" class="v" min="-12" max="12" step="1" value="${v}">
+    <div class="hz">${h}</div>
+  </div>`;
+}).join('');
+document.querySelectorAll('.eqb input').forEach(inp=>{
+  paintBand(inp, +inp.value);
+  inp.oninput = ()=>{
+    const v = +inp.value;
+    paintBand(inp, v);
+    inp.parentElement.querySelector('.db').textContent = (v>0?'+':'')+v;
+  };
+});
+
+/* ===================== SUBIR ===================== */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+drop.onclick = ()=>fileInput.click();
+fileInput.onchange = ()=>{
+  if(fileInput.files.length)
+    drop.querySelector('p').textContent = `${fileInput.files.length} archivo(s) listos para cargar`;
+};
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{
+  e.preventDefault(); drop.classList.add('hot');
+}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{
+  e.preventDefault(); drop.classList.remove('hot');
+}));
+drop.addEventListener('drop', e=>{
+  const n = e.dataTransfer.files.length;
+  if(n) drop.querySelector('p').textContent = `${n} archivo(s) detectados`;
+});
+
+/* ===================== PÉTALOS ===================== */
+const petals = document.getElementById('petals');
+for(let i=0;i<22;i++){
+  const p = document.createElement('div');
+  p.className = 'petal';
+  p.style.left = Math.random()*100 + '%';
+  p.style.setProperty('--dx', (Math.random()*160-80) + 'px');
+  const dur = (9 + Math.random()*9).toFixed(1);
+  const del = (-Math.random()*14).toFixed(1);
+  const sc  = (.5 + Math.random()*.9).toFixed(2);
+  p.style.animationDuration = dur + 's';
+  p.style.animationDelay = del + 's';
+  p.style.transform = `scale(${sc})`;
+  petals.appendChild(p);
+}
+
+/* estado inicial coherente */
+playIcon.innerHTML = PAUSE;
+</script>
 </body>
 </html>
