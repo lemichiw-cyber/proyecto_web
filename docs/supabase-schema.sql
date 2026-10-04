@@ -1,9 +1,3 @@
--- =====================================================
--- Cherry-Bomb — Schema de base de datos para Supabase
--- Ejecutá esto en el SQL Editor de tu proyecto Supabase
--- =====================================================
-
--- 1. PERFILES (vinculado a auth.users)
 CREATE TABLE IF NOT EXISTS perfiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
@@ -14,7 +8,6 @@ CREATE TABLE IF NOT EXISTS perfiles (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- RLS: cada usuario solo ve su propio perfil (y los admin ven todos)
 ALTER TABLE perfiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Usuarios ven su propio perfil" ON perfiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Usuarios actualizan su propio perfil" ON perfiles FOR UPDATE USING (auth.uid() = id);
@@ -22,7 +15,6 @@ CREATE POLICY "Admin ve todos los perfiles" ON perfiles FOR SELECT USING (
   EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
 );
 
--- 2. AULAS
 CREATE TABLE IF NOT EXISTS aulas (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
@@ -46,7 +38,6 @@ CREATE POLICY "Docentes crean aulas" ON aulas FOR INSERT WITH CHECK (
 CREATE POLICY "Owner edita aula" ON aulas FOR UPDATE USING (auth.uid() = owner_id);
 CREATE POLICY "Owner elimina aula" ON aulas FOR DELETE USING (auth.uid() = owner_id);
 
--- 3. INSCRIPCIONES (estudiante ↔ aula)
 CREATE TABLE IF NOT EXISTS aula_inscripciones (
   id SERIAL PRIMARY KEY,
   aula_id INTEGER REFERENCES aulas(id) ON DELETE CASCADE,
@@ -67,7 +58,6 @@ CREATE POLICY "Docente aprueba/rechaza" ON aula_inscripciones FOR UPDATE USING (
   EXISTS (SELECT 1 FROM aulas WHERE id = aula_id AND owner_id = auth.uid())
 );
 
--- 4. TAREAS (de aulas)
 CREATE TABLE IF NOT EXISTS aula_tareas (
   id SERIAL PRIMARY KEY,
   aula_id INTEGER REFERENCES aulas(id) ON DELETE CASCADE,
@@ -89,7 +79,6 @@ CREATE POLICY "Docente crea tareas" ON aula_tareas FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM aulas WHERE id = aula_id AND owner_id = auth.uid())
 );
 
--- 5. ENTREGAS
 CREATE TABLE IF NOT EXISTS aula_entregas (
   id SERIAL PRIMARY KEY,
   tarea_id INTEGER REFERENCES aula_tareas(id) ON DELETE CASCADE,
@@ -142,7 +131,6 @@ CREATE POLICY "Docente califica" ON aula_calificaciones FOR INSERT WITH CHECK (
   )
 );
 
--- 7. ESTUDIANTES (base de datos de estudiantes del colegio)
 CREATE TABLE IF NOT EXISTS estudiantes (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
@@ -162,7 +150,6 @@ CREATE POLICY "Admin gestiona estudiantes" ON estudiantes FOR ALL USING (
   EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
 );
 
--- 8. PLANIFICACIONES
 CREATE TABLE IF NOT EXISTS planificaciones (
   id SERIAL PRIMARY KEY,
   semana TEXT,
@@ -183,7 +170,6 @@ CREATE POLICY "Docentes ven sus planificaciones" ON planificaciones FOR SELECT U
 );
 CREATE POLICY "Docente crea planificaciones" ON planificaciones FOR INSERT WITH CHECK (auth.uid() = owner_id);
 
--- 9. ACTIVIDADES
 CREATE TABLE IF NOT EXISTS actividades (
   id SERIAL PRIMARY KEY,
   titulo TEXT NOT NULL,
@@ -198,7 +184,6 @@ CREATE POLICY "Docente crea actividades" ON actividades FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('docente','admin','director'))
 );
 
--- 10. SOLICITUDES DE MATRÍCULA
 CREATE TABLE IF NOT EXISTS mat_solicitudes (
   id SERIAL PRIMARY KEY,
   nombres TEXT NOT NULL,
