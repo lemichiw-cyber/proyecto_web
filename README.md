@@ -3,11 +3,85 @@
 Plataforma educativa institucional. App web estática (SPA) con Pomodoro,
 notificaciones, persistencia en `localStorage` y soporte offline vía PWA.
 
-12 temas: `sakura`, `chicawa`, `mlp`, `pastel`, `dark`, `dawn`, `light`,
-`ocean`, `paraiso`, `sunset`, `frutiger`, `dreamcore`.
+13 temas: `sakura`, `chicawa`, `mlp`, `pastel`, `dark`, `dawn`, `light`,
+`ocean`, `paraiso`, `sunset`, `frutiger`, `dreamcore`, `sakura-player`.
 
-`sakura`, `frutiger` y `dreamcore` además reproducen música de fondo en
-segundo plano (pista en `public/audio/`, control de volumen en el header).
+`sakura`, `frutiger`, `dreamcore`, `paraiso` y `mlp` además reproducen música
+de fondo en segundo plano (pistas en `public/audio/`, control de volumen en el
+header).
+
+## 🌸 Sakura Player
+
+Reproductor de música integrado: **YouTube Music** (vía backend Python) +
+**archivos locales**, con ecualizador de 10 bandas, mezclador, visualizador,
+cola, favoritos, playlists y mini reproductor.
+
+```
+src/sakura-player/
+  sakura-player.js         controlador principal
+  api/client.js            cliente HTTP (debounce, AbortController, caché)
+  player/player.js         motor de audio (cola, shuffle, repeat, seek, favoritos)
+  player/visualizer.js     visualizador de audio adaptativo al tema
+  audio/equalizer.js       10 bandas + presets
+  audio/mixer.js           MASTER / MÚSICA / BAJOS / AGUDOS / BALANCE
+  library/library.js       biblioteca (canciones, artistas, álbumes, favoritos…)
+  library/local-files.js   MP3/WAV/FLAC/OGG/M4A + metadatos + portada
+  components/              búsqueda, biblioteca, playlists, cola, mezclador,
+                           mini reproductor, upload, utilidades de UI
+  theme/                   tokens de tema + gestor (auto/manual)
+backend/
+  main.py                  FastAPI + CORS + health
+  api/                     search, songs, artists, albums, playlists, library
+  services/ytmusic_service.py   capa de abstracción sobre ytmusicapi
+```
+
+### Arranque del backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload        # → http://127.0.0.1:8000
+```
+
+Documentación interactiva: `http://127.0.0.1:8000/docs`.
+
+### Autenticación de YouTube Music
+
+Sin credenciales, el backend funciona en **modo invitado** (búsqueda, artistas,
+álbumes, playlists públicas y streaming). Para biblioteca, historial y gestión
+de playlists propias, generá un archivo de sesión **fuera del repo**:
+
+```bash
+python -c "from ytmusicapi import YTMusic; YTMusic().setup()"
+# → crea auth.json (está en backend/.gitignore)
+```
+
+Copiá `backend/.env.example` a `backend/.env` y ajustá:
+
+| Variable | Para qué |
+|---|---|
+| `SAKURA_HOST` / `SAKURA_PORT` | Escucha del backend |
+| `SAKURA_CORS_ORIGINS` | Orígenes permitidos (default: `http://localhost:5173`) |
+| `YTMUSIC_AUTH_FILE` | Ruta del archivo de sesión (default: `auth.json`) |
+| `YTMUSIC_ALLOW_ANONYMOUS` | Permitir modo invitado si no hay auth |
+
+**Nunca** commitees `auth.json`, `oauth.json` ni `.env`.
+
+### Temas del reproductor
+
+El reproductor usa tokens CSS (`--player-*`) y **se adapta solo** al tema de la
+app (modo automático). En `Ajustes` del reproductor se puede elegir un tema manual
+entre 12 configuraciones: Sakura, Cyberpunk, Neon, Ocean, Forest, Sunset,
+Midnight, Lavender, Crimson, Arctic, Retro y Sakura Dark. Cada una cambia
+colores, glow, bordes, animaciones (intensidad) y estilo del visualizador.
+
+### Offline
+
+El service worker sigue cacheando el app shell. Sin conexión, el reproductor
+muestra un aviso y deshabilita las funciones de YouTube Music; la biblioteca
+local (archivos cargados) sigue disponible.
 
 ---
 
@@ -170,7 +244,12 @@ src/
   notifications.js       notificaciones
   styles.css             temas + tipografía
   assets/                fuente KanjiStyle
-index.html               markup (23 secciones app-*)
+  sakura-player/         reproductor de música (ver arriba)
+backend/
+  main.py                API FastAPI (YouTube Music vía ytmusicapi)
+  api/                   endpoints REST
+  services/              capa de abstracción ytmusicapi
+index.html               markup (24 secciones app-*)
 ```
 
 ## Seguridad

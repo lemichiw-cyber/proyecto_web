@@ -242,6 +242,31 @@
       --text: #26224a; --text-secondary: var(--gray-500);
       --border: #dedbf5; --border-light: #ebe9fa;
     }
+    /* ===== SAKURA PLAYER — retro-futurista, neón, negro profundo ===== */
+    [data-theme="sakura-player"] {
+      --primary: #FF4FD8; --primary-dark: #d836b4; --primary-light: #2a0a24;
+      --primary-gradient: linear-gradient(135deg,#FF4FD8,#9B5CFF 55%,#36D9FF);
+      --gray-50: #160a1e; --gray-100: #20102c; --gray-200: #2e1640;
+      --gray-300: #4a2460; --gray-400: #7a4a94; --gray-500: #b07cc0; --gray-600: #d8a8dc; --gray-700: #ecc8ea; --gray-900: #fdeef9;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+      --shadow: 0 4px 14px rgba(255,79,216,.18);
+      --shadow-lg: 0 12px 34px rgba(255,79,216,.3);
+      --green: #4ade80; --green-light: #0d2418;
+      --red: #fb7185; --red-light: #2a0d14;
+      --amber: #fbbf24; --amber-light: #2a1c08;
+      --purple: #a78bfa; --purple-light: #1c1030;
+      --teal: #36D9FF; --teal-light: #08222c;
+      --pink: #FF8AD8; --pink-light: #2a0e22;
+      --orange: #fb923c; --orange-light: #2a160a;
+      --bg: #050509; --bg-card: rgba(255,255,255,.045); --bg-sidebar: #0a0a14; --bg-header: rgba(10,5,20,.82);
+      --text: #ffe9f6; --text-secondary: var(--gray-500);
+      --border: rgba(255,79,216,.28); --border-light: rgba(255,79,216,.14);
+      --footer-bg: #0a0512; --footer-text: #b07cc0;
+      --footer-link: #d8a8dc; --footer-link-hover: #ffe9f6;
+      --footer-brand: #ffe9f6;
+    }
+    [data-theme="sakura-player"] .section-title { text-shadow: 0 0 18px rgba(255,79,216,.5); }
+    [data-theme="sakura-player"] .section-sub { color: var(--gray-500); }
     [data-theme="dark"] img[src*=".svg"],[data-theme="dark"] img[src^="data:image/svg+xml"],
     [data-theme="sunset"] img[src*=".svg"],[data-theme="sunset"] img[src^="data:image/svg+xml"],
     [data-theme="sakura"] img[src*=".svg"],[data-theme="sakura"] img[src^="data:image/svg+xml"] {

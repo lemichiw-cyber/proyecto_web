@@ -8,7 +8,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('cherrybombSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','configuracion'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion'];
       var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio'];
       function $(id) { return document.getElementById(id); }
 
@@ -150,7 +150,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          THEME — Cambio de tema claro/oscuro/pastel
          =================================================================== */
-      var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore'];
+      var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore', 'sakura-player'];
 
       /* Música de fondo por tema: id del <audio> que suena en segundo plano */
       var THEME_MUSIC = { sakura: 'sakura-audio', frutiger: 'frutiger-audio', dreamcore: 'dreamcore-audio', paraiso: 'paraiso-audio', mlp: 'mlp-audio' };
@@ -205,7 +205,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var btns = document.querySelectorAll('.btn-theme-toggle');
         for (var i = 0; i < btns.length; i++) btns[i].innerHTML = '<img src="' + iconSrc(iconFile) + '" style="width:18px;height:18px;display:block" alt="Tema">';
         var meta = document.querySelector('meta[name="theme-color"]');
-        var metaColor = theme === 'dark' ? '#0f172a' : theme === 'pastel' ? '#f0d9e8' : theme === 'sunset' ? '#2a1810' : theme === 'dawn' ? '#faf0d0' : theme === 'ocean' ? '#d0e8f0' : theme === 'mlp' ? '#e8d0f0' : theme === 'sakura' ? '#160C1E' : theme === 'paraiso' ? '#0d0b14' : theme === 'frutiger' ? '#eaf7ff' : theme === 'dreamcore' ? '#eeecfb' : '#2563eb';
+        var metaColor = theme === 'dark' ? '#0f172a' : theme === 'pastel' ? '#f0d9e8' : theme === 'sunset' ? '#2a1810' : theme === 'dawn' ? '#faf0d0' : theme === 'ocean' ? '#d0e8f0' : theme === 'mlp' ? '#e8d0f0' : theme === 'sakura' ? '#160C1E' : theme === 'paraiso' ? '#0d0b14' : theme === 'frutiger' ? '#eaf7ff' : theme === 'dreamcore' ? '#eeecfb' : theme === 'sakura-player' ? '#10051A' : '#2563eb';
         if (meta) meta.content = metaColor;
         // Marcar tarjeta activa en el modal y en la sección
         var cards = document.querySelectorAll('#theme-options .theme-card, #theme-options-section .theme-card');
@@ -298,7 +298,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function seleccionarTema(theme) {
         aplicarTheme(theme);
         cerrarTemas();
-        var nombres = { light:'claro', dark:'oscuro', pastel:'pastel', sunset:'atardecer', dawn:'amanecer', ocean:'océano', mlp:'My Little Pony', chicawa:'Chicawa', sakura:'Sakura', paraiso:'Paraíso', frutiger:'Frutiger Aero', dreamcore:'Dreamcore' };
+        var nombres = { light:'claro', dark:'oscuro', pastel:'pastel', sunset:'atardecer', dawn:'amanecer', ocean:'océano', mlp:'My Little Pony', chicawa:'Chicawa', sakura:'Sakura', paraiso:'Paraíso', frutiger:'Frutiger Aero', dreamcore:'Dreamcore', 'sakura-player':'Sakura Player' };
         mostrarToast('Tema cambiado a ' + (nombres[theme] || theme) + ' 🌸', 'success');
       }
       window.seleccionarTema = seleccionarTema;
@@ -334,6 +334,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
         { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
+        { id:'sakura-player', icon:'headphones', label:'Sakura Player', desc:'Música con YouTube Music', color:'#FF4FD8' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
       ];
 
@@ -404,6 +405,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var src = $('theme-options');
             if (src) dest.innerHTML = src.innerHTML;
           }
+        }
+        if (app === 'sakura-player' && window.mountSakuraPlayer) {
+          window.mountSakuraPlayer();
         }
       };
 

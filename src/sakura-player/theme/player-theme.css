@@ -1,0 +1,720 @@
+/* ===================================================================
+   Sakura Player — Temas (tokens de diseño)
+   1 interfaz + 13 configuraciones visuales (12 temas de proyecto_web
+   + el tema "sakura-player"). Los componentes NUNCA usan colores
+   fijos: siempre var(--player-*).
+   =================================================================== */
+
+.sakura-player {
+  /* Valores por defecto (los sobrescribe cada tema) */
+  --player-bg: #09040c;
+  --player-bg-secondary: #140a1e;
+  --player-bg-card: rgba(255, 255, 255, .06);
+  --player-text: #ffe4f4;
+  --player-text-secondary: #c9a0c8;
+  --player-primary: #ff4fd8;
+  --player-secondary: #9b5cff;
+  --player-accent: #36d9ff;
+  --player-accent-hover: #ff8ad8;
+  --player-border: rgba(255, 79, 216, .28);
+  --player-border-glow: rgba(255, 79, 216, .55);
+  --player-shadow: 0 8px 30px rgba(255, 79, 216, .25);
+  --player-progress: #ff4fd8;
+  --player-progress-bg: rgba(255, 255, 255, .12);
+  --player-slider: #ff4fd8;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #ff4fd8;
+  --player-visualizer: #ff4fd8;
+  --player-success: #4ade80;
+  --player-warning: #fbbf24;
+  --player-error: #fb7185;
+
+  background: var(--player-bg);
+  color: var(--player-text);
+  transition: background .3s ease, color .3s ease;
+}
+
+.sakura-player button,
+.sakura-player input,
+.sakura-player select {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Transición suave de tokens al cambiar de tema (200–400 ms) */
+.sakura-player,
+.sakura-player [style*="--player"] {
+  transition: background-color .3s ease, border-color .3s ease, color .3s ease, box-shadow .3s ease;
+}
+
+/* ===================================================================
+   01 — SAKURA (rosa sakura, magenta, violeta, negro suave)
+   =================================================================== */
+[data-theme="chicawa"] .sakura-player,
+[data-theme="sakura-player"] .sakura-player {
+  --player-bg: #0b0512;
+  --player-bg-secondary: #160a20;
+  --player-bg-card: rgba(255, 183, 222, .07);
+  --player-text: #ffe9f6;
+  --player-text-secondary: #d8a8cc;
+  --player-primary: #ff4fd8;
+  --player-secondary: #9b5cff;
+  --player-accent: #ff8ad8;
+  --player-accent-hover: #ffb7e6;
+  --player-border: rgba(255, 79, 216, .3);
+  --player-border-glow: rgba(255, 79, 216, .6);
+  --player-shadow: 0 8px 30px rgba(255, 79, 216, .28);
+  --player-progress: linear-gradient(90deg, #ff4fd8, #9b5cff);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #ff4fd8;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #ff4fd8;
+  --player-visualizer: #ff4fd8;
+}
+
+/* ===================================================================
+   02 — CYBERPUNK (cyan, magenta, azul eléctrico, HUD, glitch)
+   =================================================================== */
+[data-theme="dark"] .sakura-player {
+  --player-bg: #04070d;
+  --player-bg-secondary: #081020;
+  --player-bg-card: rgba(0, 234, 255, .06);
+  --player-text: #d8f6ff;
+  --player-text-secondary: #7fa8c8;
+  --player-primary: #00eaff;
+  --player-secondary: #ff00d4;
+  --player-accent: #8a7cff;
+  --player-accent-hover: #00ffd0;
+  --player-border: rgba(0, 234, 255, .35);
+  --player-border-glow: rgba(0, 234, 255, .7);
+  --player-shadow: 0 0 24px rgba(0, 234, 255, .3);
+  --player-progress: linear-gradient(90deg, #00eaff, #ff00d4);
+  --player-progress-bg: rgba(0, 234, 255, .12);
+  --player-slider: #00eaff;
+  --player-slider-bg: rgba(0, 234, 255, .16);
+  --player-equalizer: #00eaff;
+  --player-visualizer: #00eaff;
+}
+
+/* ===================================================================
+   03 — NEON (neones intensos, alto contraste)
+   =================================================================== */
+[data-theme="frutiger"] .sakura-player {
+  --player-bg: #050509;
+  --player-bg-secondary: #0d0d18;
+  --player-bg-card: rgba(54, 217, 255, .07);
+  --player-text: #eafcff;
+  --player-text-secondary: #9fc8d8;
+  --player-primary: #36d9ff;
+  --player-secondary: #ff4fd8;
+  --player-accent: #b6ff00;
+  --player-accent-hover: #7dffce;
+  --player-border: rgba(54, 217, 255, .4);
+  --player-border-glow: rgba(54, 217, 255, .8);
+  --player-shadow: 0 0 28px rgba(54, 217, 255, .35);
+  --player-progress: linear-gradient(90deg, #36d9ff, #ff4fd8, #b6ff00);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #36d9ff;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #36d9ff;
+  --player-visualizer: #36d9ff;
+}
+
+/* ===================================================================
+   04 — OCEAN (azul, cyan, azul profundo, turquesa)
+   =================================================================== */
+[data-theme="ocean"] .sakura-player {
+  --player-bg: #04121c;
+  --player-bg-secondary: #07202f;
+  --player-bg-card: rgba(56, 189, 248, .07);
+  --player-text: #e0f4ff;
+  --player-text-secondary: #8fc0d8;
+  --player-primary: #38bdf8;
+  --player-secondary: #2dd4bf;
+  --player-accent: #7dd3fc;
+  --player-accent-hover: #5eead4;
+  --player-border: rgba(56, 189, 248, .3);
+  --player-border-glow: rgba(56, 189, 248, .55);
+  --player-shadow: 0 8px 28px rgba(56, 189, 248, .22);
+  --player-progress: linear-gradient(90deg, #0ea5e9, #2dd4bf);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #38bdf8;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #38bdf8;
+  --player-visualizer: #38bdf8;
+}
+
+/* ===================================================================
+   05 — FOREST (verde, verde oscuro, turquesa, orgánico)
+   =================================================================== */
+[data-theme="dawn"] .sakura-player {
+  --player-bg: #04120c;
+  --player-bg-secondary: #072015;
+  --player-bg-card: rgba(74, 222, 128, .07);
+  --player-text: #e6ffef;
+  --player-text-secondary: #93c8a8;
+  --player-primary: #4ade80;
+  --player-secondary: #2dd4bf;
+  --player-accent: #a3e635;
+  --player-accent-hover: #6ee7b7;
+  --player-border: rgba(74, 222, 128, .28);
+  --player-border-glow: rgba(74, 222, 128, .5);
+  --player-shadow: 0 8px 26px rgba(74, 222, 128, .2);
+  --player-progress: linear-gradient(90deg, #4ade80, #2dd4bf);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #4ade80;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #4ade80;
+  --player-visualizer: #4ade80;
+}
+
+/* ===================================================================
+   06 — SUNSET (naranja, rojo, rosa, amarillo, púrpura)
+   =================================================================== */
+[data-theme="sunset"] .sakura-player {
+  --player-bg: #160608;
+  --player-bg-secondary: #220a0e;
+  --player-bg-card: rgba(251, 146, 60, .08);
+  --player-text: #ffeede;
+  --player-text-secondary: #d8a88f;
+  --player-primary: #fb923c;
+  --player-secondary: #f43f5e;
+  --player-accent: #fbbf24;
+  --player-accent-hover: #fda4af;
+  --player-border: rgba(251, 146, 60, .32);
+  --player-border-glow: rgba(251, 146, 60, .6);
+  --player-shadow: 0 8px 28px rgba(244, 63, 94, .25);
+  --player-progress: linear-gradient(90deg, #fbbf24, #fb923c, #f43f5e);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #fb923c;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #fb923c;
+  --player-visualizer: #fb923c;
+}
+
+/* ===================================================================
+   07 — MIDNIGHT (azul oscuro, violeta, negro, azul eléctrico)
+   =================================================================== */
+[data-theme="paraiso"] .sakura-player {
+  --player-bg: #07060f;
+  --player-bg-secondary: #0d0b1e;
+  --player-bg-card: rgba(139, 92, 246, .08);
+  --player-text: #e6e4ff;
+  --player-text-secondary: #a8a0d0;
+  --player-primary: #8b5cf6;
+  --player-secondary: #3b82f6;
+  --player-accent: #60a5fa;
+  --player-accent-hover: #a78bfa;
+  --player-border: rgba(139, 92, 246, .32);
+  --player-border-glow: rgba(139, 92, 246, .6);
+  --player-shadow: 0 8px 28px rgba(139, 92, 246, .25);
+  --player-progress: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #8b5cf6;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #8b5cf6;
+  --player-visualizer: #8b5cf6;
+}
+
+/* ===================================================================
+   08 — LAVENDER (lavanda, púrpura claro, rosa suave)
+   =================================================================== */
+[data-theme="pastel"] .sakura-player,
+[data-theme="mlp"] .sakura-player,
+[data-theme="dreamcore"] .sakura-player {
+  --player-bg: #120a1c;
+  --player-bg-secondary: #1b1029;
+  --player-bg-card: rgba(196, 181, 253, .08);
+  --player-text: #f3edff;
+  --player-text-secondary: #c0b4e0;
+  --player-primary: #c4b5fd;
+  --player-secondary: #f0abfc;
+  --player-accent: #f9a8d4;
+  --player-accent-hover: #ddd6fe;
+  --player-border: rgba(196, 181, 253, .3);
+  --player-border-glow: rgba(196, 181, 253, .55);
+  --player-shadow: 0 8px 26px rgba(196, 181, 253, .22);
+  --player-progress: linear-gradient(90deg, #c4b5fd, #f0abfc);
+  --player-progress-bg: rgba(255, 255, 255, .12);
+  --player-slider: #c4b5fd;
+  --player-slider-bg: rgba(255, 255, 255, .16);
+  --player-equalizer: #c4b5fd;
+  --player-visualizer: #c4b5fd;
+}
+
+/* ===================================================================
+   09 — CRIMSON (rojo oscuro, rojo brillante, negro, bordó)
+   =================================================================== */
+[data-theme="light"] .sakura-player {
+  --player-bg: #0e0508;
+  --player-bg-secondary: #180a0e;
+  --player-bg-card: rgba(248, 113, 113, .07);
+  --player-text: #ffe9ea;
+  --player-text-secondary: #d8a0a4;
+  --player-primary: #ef4444;
+  --player-secondary: #b91c1c;
+  --player-accent: #f87171;
+  --player-accent-hover: #fca5a5;
+  --player-border: rgba(239, 68, 68, .32);
+  --player-border-glow: rgba(239, 68, 68, .6);
+  --player-shadow: 0 8px 28px rgba(239, 68, 68, .25);
+  --player-progress: linear-gradient(90deg, #b91c1c, #ef4444);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #ef4444;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #ef4444;
+  --player-visualizer: #ef4444;
+}
+
+/* ===================================================================
+   10 — ARCTIC (blanco, azul hielo, cyan, gris claro)
+   =================================================================== */
+[data-theme="light"] .sakura-player.sp-theme-arctic {
+  --player-bg: #f4f8fb;
+  --player-bg-secondary: #e6eef5;
+  --player-bg-card: #ffffff;
+  --player-text: #0f2233;
+  --player-text-secondary: #5b7a90;
+  --player-primary: #0ea5e9;
+  --player-secondary: #22d3ee;
+  --player-accent: #38bdf8;
+  --player-accent-hover: #0284c7;
+  --player-border: rgba(14, 165, 233, .25);
+  --player-border-glow: rgba(14, 165, 233, .45);
+  --player-shadow: 0 8px 24px rgba(14, 165, 233, .18);
+  --player-progress: linear-gradient(90deg, #38bdf8, #22d3ee);
+  --player-progress-bg: rgba(15, 34, 51, .1);
+  --player-slider: #0ea5e9;
+  --player-slider-bg: rgba(15, 34, 51, .12);
+  --player-equalizer: #0ea5e9;
+  --player-visualizer: #0ea5e9;
+}
+
+/* ===================================================================
+   11 — RETRO (verde terminal, ámbar, negro, CRT)
+   =================================================================== */
+[data-theme="sakura"] .sakura-player {
+  --player-bg: #050807;
+  --player-bg-secondary: #0a120d;
+  --player-bg-card: rgba(51, 255, 102, .06);
+  --player-text: #d8ffe0;
+  --player-text-secondary: #8fc8a0;
+  --player-primary: #33ff66;
+  --player-secondary: #ffb000;
+  --player-accent: #7dff9a;
+  --player-accent-hover: #ffd24d;
+  --player-border: rgba(51, 255, 102, .3);
+  --player-border-glow: rgba(51, 255, 102, .55);
+  --player-shadow: 0 0 22px rgba(51, 255, 102, .22);
+  --player-progress: linear-gradient(90deg, #33ff66, #ffb000);
+  --player-progress-bg: rgba(255, 255, 255, .08);
+  --player-slider: #33ff66;
+  --player-slider-bg: rgba(255, 255, 255, .12);
+  --player-equalizer: #33ff66;
+  --player-visualizer: #33ff66;
+}
+
+/* ===================================================================
+   12 — SAKURA DARK / ANIME (rosa fuerte, púrpura, azul nocturno)
+   =================================================================== */
+[data-theme="sakura"] .sakura-player.sp-theme-sakura-dark {
+  --player-bg: #0a0410;
+  --player-bg-secondary: #140a20;
+  --player-bg-card: rgba(255, 79, 216, .07);
+  --player-text: #ffe4f4;
+  --player-text-secondary: #c8a0c8;
+  --player-primary: #ff2fb3;
+  --player-secondary: #7c3aed;
+  --player-accent: #36d9ff;
+  --player-accent-hover: #ff8ad8;
+  --player-border: rgba(255, 47, 179, .35);
+  --player-border-glow: rgba(255, 47, 179, .65);
+  --player-shadow: 0 0 26px rgba(255, 47, 179, .3);
+  --player-progress: linear-gradient(90deg, #ff2fb3, #7c3aed);
+  --player-progress-bg: rgba(255, 255, 255, .1);
+  --player-slider: #ff2fb3;
+  --player-slider-bg: rgba(255, 255, 255, .14);
+  --player-equalizer: #ff2fb3;
+  --player-visualizer: #ff2fb3;
+}
+
+/* ===================================================================
+   Efectos por tema (se activan con clases en .sakura-player)
+   =================================================================== */
+
+/* Scanlines CRT */
+.sakura-player.sp-fx-scanlines .sp-visualizer-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.sakura-player.sp-fx-scanlines .sp-visualizer-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+/* HUD cyberpunk */
+.sakura-player.sp-fx-hud .sp-panel {
+  border-style: solid;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.sakura-player.sp-fx-hud .sp-panel-title {
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-size: .68rem;
+  color: var(--player-accent);
+  text-shadow: 0 0 8px var(--player-border-glow);
+}
+
+/* Glitch en títulos */
+.sakura-player.sp-fx-glitch .sp-track-title {
+  text-shadow: 2px 0 var(--player-secondary), -2px 0 var(--player-accent);
+}
+
+/* Pétalos sakura */
+.sakura-player.sp-fx-petals .sp-visualizer-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.sakura-player.sp-fx-petals .sp-petal {
+  position: absolute;
+  top: -12px;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 30% 30%, #fff, var(--player-primary) 60%, transparent);
+  clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+  opacity: .7;
+  animation: spPetalFall linear infinite;
+  pointer-events: none;
+}
+@keyframes spPetalFall {
+  0% { transform: translateY(-10%) translateX(0) rotate(0deg); opacity: 0; }
+  10% { opacity: .8; }
+  100% { transform: translateY(110%) translateX(24px) rotate(320deg); opacity: 0; }
+}
+
+/* ===================================================================
+   Componentes (siempre con tokens)
+   =================================================================== */
+
+.sp-panel {
+  background: var(--player-bg-card);
+  border: 1px solid var(--player-border);
+  border-radius: 14px;
+  box-shadow: var(--player-shadow);
+}
+
+.sp-panel-title {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--player-text-secondary);
+}
+
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  background: var(--player-bg-card);
+  border: 1px solid var(--player-border);
+  color: var(--player-text);
+  border-radius: 10px;
+  padding: .5rem .9rem;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.sp-btn:hover {
+  border-color: var(--player-border-glow);
+  box-shadow: 0 0 14px var(--player-border-glow);
+  color: var(--player-primary);
+}
+.sp-btn-primary {
+  background: var(--player-primary);
+  border-color: var(--player-primary);
+  color: #08040c;
+}
+.sp-btn-primary:hover {
+  background: var(--player-accent-hover);
+  border-color: var(--player-accent-hover);
+  color: #08040c;
+  box-shadow: 0 0 18px var(--player-border-glow);
+}
+.sp-btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+}
+.sp-btn-active {
+  background: var(--player-primary);
+  color: #08040c;
+  border-color: var(--player-primary);
+}
+
+.sp-input, .sp-select {
+  background: var(--player-bg-secondary);
+  border: 1px solid var(--player-border);
+  color: var(--player-text);
+  border-radius: 10px;
+  padding: .55rem .8rem;
+  font-size: .85rem;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.sp-input:focus, .sp-select:focus {
+  border-color: var(--player-border-glow);
+  box-shadow: 0 0 12px var(--player-border-glow);
+}
+.sp-input::placeholder { color: var(--player-text-secondary); }
+
+.sp-card {
+  background: var(--player-bg-card);
+  border: 1px solid var(--player-border);
+  border-radius: 12px;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.sp-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--player-border-glow);
+  box-shadow: 0 0 18px var(--player-border-glow);
+}
+
+.sp-cover {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--player-border);
+  box-shadow: 0 0 16px var(--player-border-glow);
+  background: var(--player-bg-secondary);
+  position: relative;
+}
+.sp-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.sp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: .15rem .5rem;
+  border-radius: 99px;
+  border: 1px solid var(--player-border);
+  color: var(--player-accent);
+}
+
+.sp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--player-slider-bg);
+  outline: none;
+  cursor: pointer;
+}
+.sp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--player-slider);
+  box-shadow: 0 0 10px var(--player-border-glow);
+  cursor: pointer;
+}
+.sp-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--player-slider);
+  box-shadow: 0 0 10px var(--player-border-glow);
+  cursor: pointer;
+}
+
+.sp-progress {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--player-progress-bg);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.sp-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--player-progress);
+  box-shadow: 0 0 10px var(--player-border-glow);
+  transition: width .15s linear;
+}
+
+.sp-eq-bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--player-equalizer), var(--player-secondary));
+  box-shadow: 0 0 8px var(--player-border-glow);
+  transition: height .12s ease;
+}
+
+.sp-level {
+  height: 8px;
+  border-radius: 99px;
+  background: var(--player-progress-bg);
+  overflow: hidden;
+}
+.sp-level-fill {
+  height: 100%;
+  background: var(--player-progress);
+  box-shadow: 0 0 8px var(--player-border-glow);
+  transition: width .1s linear;
+}
+
+.sp-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+}
+.sp-dialog {
+  background: var(--player-bg-secondary);
+  border: 1px solid var(--player-border);
+  border-radius: 16px;
+  box-shadow: var(--player-shadow), 0 0 40px var(--player-border-glow);
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  padding: 1.25rem;
+}
+
+.sp-toast {
+  position: fixed;
+  bottom: 6.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(1rem);
+  background: var(--player-bg-secondary);
+  border: 1px solid var(--player-border);
+  color: var(--player-text);
+  border-radius: 12px;
+  padding: .6rem 1.1rem;
+  font-size: .82rem;
+  font-weight: 600;
+  box-shadow: var(--player-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: all .3s ease;
+  z-index: 600;
+  max-width: 90vw;
+}
+.sp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.sp-toast-error { border-color: var(--player-error); color: var(--player-error); }
+.sp-toast-success { border-color: var(--player-success); color: var(--player-success); }
+
+.sp-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--player-text-secondary);
+}
+.sp-empty-icon { font-size: 2.2rem; margin-bottom: .6rem; }
+
+.sp-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--player-border);
+  border-top-color: var(--player-primary);
+  animation: spSpin .8s linear infinite;
+}
+@keyframes spSpin { to { transform: rotate(360deg); } }
+
+.sp-offline-banner {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: var(--player-bg-card);
+  border: 1px solid var(--player-warning);
+  color: var(--player-warning);
+  border-radius: 12px;
+  padding: .7rem 1rem;
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.sp-visualizer-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+}
+.sp-visualizer-wrap canvas { display: block; width: 100%; height: 100%; }
+
+.sp-dropzone {
+  border: 2px dashed var(--player-border);
+  border-radius: 14px;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--player-text-secondary);
+  transition: all .2s ease;
+  cursor: pointer;
+}
+.sp-dropzone:hover, .sp-dropzone.drag {
+  border-color: var(--player-border-glow);
+  color: var(--player-primary);
+  background: var(--player-bg-card);
+}
+
+.sp-queue-item {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .45rem .6rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.sp-queue-item:hover { background: var(--player-bg-card); }
+.sp-queue-item.current { background: var(--player-bg-card); border-left: 3px solid var(--player-primary); }
+
+.sp-tab {
+  padding: .45rem .9rem;
+  border-radius: 99px;
+  font-size: .78rem;
+  font-weight: 700;
+  border: 1px solid var(--player-border);
+  background: transparent;
+  color: var(--player-text-secondary);
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.sp-tab:hover { color: var(--player-text); }
+.sp-tab.active {
+  background: var(--player-primary);
+  border-color: var(--player-primary);
+  color: #08040c;
+}
+
+.sp-kbd {
+  font-family: inherit;
+  font-size: .66rem;
+  border: 1px solid var(--player-border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: .05rem .35rem;
+  color: var(--player-text-secondary);
+  background: var(--player-bg-secondary);
+}
