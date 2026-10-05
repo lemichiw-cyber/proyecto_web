@@ -23,7 +23,8 @@ from api.deps import get_service
 load_dotenv()
 
 _HOST = os.getenv("SAKURA_HOST", "127.0.0.1")
-_PORT = int(os.getenv("SAKURA_PORT", "8000"))
+# PORT es la convención de Render/Heroku; SAKURA_PORT manda si existe.
+_PORT = int(os.getenv("SAKURA_PORT") or os.getenv("PORT") or "8000")
 
 # Orígenes permitidos. El frontend puede servirse de muchas formas
 # (`vite` 5173, `vite preview` 4173, `serve`/`start` en el puerto que

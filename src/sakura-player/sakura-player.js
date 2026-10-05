@@ -5,7 +5,7 @@
    =================================================================== */
 
 import './theme/player-theme.css';
-import { api, friendlyError, setApiBase } from './api/client.js';
+import { api, friendlyError, getApiBase, setApiBase } from './api/client.js';
 import { player } from './player/player.js';
 import { Visualizer } from './player/visualizer.js';
 import { library } from './library/library.js';
@@ -336,7 +336,7 @@ class SakuraPlayer {
       '<div class="sp-panel" style="padding:1rem;">' +
         '<div class="sp-panel-title" style="margin-bottom:.7rem;">Backend</div>' +
         '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' +
-          '<input class="sp-input" id="sp-api-base" style="flex:1;min-width:200px;" value="' + escapeHtml((() => { try { return localStorage.getItem('sakuraPlayerApiBase') || 'http://127.0.0.1:8000'; } catch (e) { return 'http://127.0.0.1:8000'; } })()) + '" placeholder="http://127.0.0.1:8000">' +
+          '<input class="sp-input" id="sp-api-base" style="flex:1;min-width:200px;" value="' + escapeHtml(getApiBase()) + '" placeholder="http://127.0.0.1:8000">' +
           '<button class="sp-btn" id="sp-api-save">Guardar</button>' +
           '<button class="sp-btn" id="sp-api-test">Probar</button>' +
         '</div>' +

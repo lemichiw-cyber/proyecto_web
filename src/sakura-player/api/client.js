@@ -4,7 +4,12 @@
    - Normalización de errores (nunca se muestra técnica al usuario)
    =================================================================== */
 
-const DEFAULT_BASE = 'http://127.0.0.1:8000';
+// URL base del backend. Puede fijarse en el build con la variable de
+// entorno VITE_API_URL (p. ej. el backend desplegado en Render) para que
+// el sitio funcione desde cualquier dispositivo; sin ella se usa el
+// backend de la propia máquina. Ajustes → Backend (localStorage) tiene
+// prioridad sobre ambas.
+const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 const LS_BASE_KEY = 'sakuraPlayerApiBase';
