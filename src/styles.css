@@ -590,7 +590,7 @@
     }
     [data-theme="frutiger"] .app-header,
     [data-theme="frutiger"] .sidebar {
-      background: rgba(255,255,255,.62);
+      background: rgba(255,255,255,.76);
       backdrop-filter: blur(20px) saturate(160%);
       -webkit-backdrop-filter: blur(20px) saturate(160%);
       border-bottom: 1px solid rgba(255,255,255,.9);
@@ -615,8 +615,10 @@
       background: linear-gradient(180deg,#5ccaff,#0a94d6);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 3px 12px rgba(10,130,190,.35);
     }
-    [data-theme="frutiger"] .hero-section { background: linear-gradient(135deg,#08628c 0%, #066a96 52%, #0d6f4c 118%); color: #fff; }
+    [data-theme="frutiger"] .hero-section { background: linear-gradient(135deg,rgba(3,44,68,.70) 0%, rgba(4,58,88,.64) 52%, rgba(6,74,48,.68) 118%); color: #fff; }
     [data-theme="frutiger"] .hero-section p { color: #ffffff; }
+    /* Velos: dejan ver el fondo (wallpaper) pero mantienen el texto legible */
+    [data-theme="frutiger"] .section:not(.hero-section) { background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(244,252,255,.45) 100%); }
     [data-theme="frutiger"] .hero-section .btn {
       background: linear-gradient(180deg,#ffffff,#e6f7ff); color: #0777ac;
       border: 1px solid rgba(255,255,255,.95);
@@ -625,6 +627,7 @@
     .frutiger-deco { display:none; pointer-events:none; }
     [data-theme="frutiger"] .frutiger-deco { display:block; }
     .frutiger-bg { position:fixed; inset:0; z-index:0; overflow:hidden; }
+    .frutiger-wallpaper { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; opacity:.78; pointer-events:none; }
     .frutiger-sheen {
       position:absolute; inset:-20%;
       background: linear-gradient(112deg, transparent 32%, rgba(255,255,255,.55) 46%, rgba(255,255,255,.12) 53%, transparent 66%);
@@ -691,7 +694,7 @@
     }
     [data-theme="dreamcore"] .app-header,
     [data-theme="dreamcore"] .sidebar {
-      background: rgba(255,255,255,.6);
+      background: rgba(255,255,255,.76);
       backdrop-filter: blur(20px) saturate(140%);
       -webkit-backdrop-filter: blur(20px) saturate(140%);
       border-bottom: 1px solid rgba(255,255,255,.85);
@@ -701,7 +704,7 @@
     [data-theme="dreamcore"] .stat-card,
     [data-theme="dreamcore"] .modal,
     [data-theme="dreamcore"] .vol-pop {
-      background: rgba(255,255,255,.68);
+      background: rgba(255,255,255,.84);
       border: 1px solid rgba(255,255,255,.9);
       backdrop-filter: blur(16px) saturate(130%);
       -webkit-backdrop-filter: blur(16px) saturate(130%);
@@ -715,12 +718,15 @@
       background: linear-gradient(180deg,#a89ff0,#7f74d8);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 3px 12px rgba(120,110,210,.35);
     }
-    [data-theme="dreamcore"] .hero-section { background: linear-gradient(135deg,#d9d4ff 0%, #f5dbf0 48%, #cfe4ff 100%); color: #332e63; }
+    [data-theme="dreamcore"] .hero-section { background: linear-gradient(135deg,rgba(244,241,255,.72) 0%, rgba(253,228,246,.66) 48%, rgba(214,231,255,.72) 100%); color: #332e63; }
     [data-theme="dreamcore"] .hero-section p { color: #4a4384; }
+    /* Velos: dejan ver el fondo (wallpaper) pero mantienen el texto legible */
+    [data-theme="dreamcore"] .section:not(.hero-section) { background: linear-gradient(180deg, rgba(255,255,255,.58) 0%, rgba(252,250,255,.48) 100%); }
     [data-theme="dreamcore"] .hero-section .btn { background:#fff; color:#6a5fc4; box-shadow: 0 8px 22px rgba(120,110,200,.3); }
     .dreamcore-deco { display:none; pointer-events:none; }
     [data-theme="dreamcore"] .dreamcore-deco { display:block; }
     .dreamcore-bg { position:fixed; inset:0; z-index:0; overflow:hidden; }
+    .dreamcore-wallpaper { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; opacity:.7; pointer-events:none; }
     .dream-cloud {
       position:absolute; height:110px; width:320px; border-radius:100px;
       background: radial-gradient(closest-side, rgba(255,255,255,.92) 0%, rgba(255,255,255,.55) 55%, rgba(255,255,255,0) 100%);

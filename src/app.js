@@ -153,7 +153,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore'];
 
       /* Música de fondo por tema: id del <audio> que suena en segundo plano */
-      var THEME_MUSIC = { sakura: 'sakura-audio', frutiger: 'frutiger-audio', dreamcore: 'dreamcore-audio' };
+      var THEME_MUSIC = { sakura: 'sakura-audio', frutiger: 'frutiger-audio', dreamcore: 'dreamcore-audio', paraiso: 'paraiso-audio', mlp: 'mlp-audio' };
 
       function themeAudio(theme) {
         var id = THEME_MUSIC[theme];
