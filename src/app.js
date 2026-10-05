@@ -200,7 +200,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           else volCtrl.classList.add('hidden');
         }
 
-        var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower', paraiso:'sun', frutiger:'droplet', dreamcore:'star' };
+        var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'help-circle', sakura:'flower', paraiso:'sun', frutiger:'droplet', dreamcore:'star' };
         var iconFile = themeIcons[theme] || 'moon';
         var btns = document.querySelectorAll('.btn-theme-toggle');
         for (var i = 0; i < btns.length; i++) btns[i].innerHTML = '<img src="' + iconSrc(iconFile) + '" style="width:18px;height:18px;display:block" alt="Tema">';
@@ -333,7 +333,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:'aulas', icon:'building-community', label:'Aulas Virtuales', desc:'Espacios de clase', color:'var(--purple)' },
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
-        { id:'estudio', icon:'timer', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
+        { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
       ];
 
