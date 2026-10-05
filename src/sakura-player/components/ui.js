@@ -8,6 +8,24 @@ import { formatTime } from '../library/local-files.js';
 let toastEl = null;
 let toastTimer = null;
 
+/* Portadas: si una imagen no carga se reemplaza por un placeholder
+   musical (los eventos de error no burbujean, se capturan en fase de
+   captura). Así nunca queda el ícono roto del navegador. */
+if (typeof document !== 'undefined' && !window.__spCoverGuard) {
+  window.__spCoverGuard = true;
+  document.addEventListener('error', (e) => {
+    const el = e.target;
+    if (el && el.tagName === 'IMG' && el.closest && el.closest('.sp-cover')) {
+      const ph = document.createElement('div');
+      ph.setAttribute('aria-hidden', 'true');
+      ph.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' +
+        'color:var(--player-text-secondary);font-size:1.25rem;background:var(--player-bg-secondary);';
+      ph.textContent = '♪';
+      el.replaceWith(ph);
+    }
+  }, true);
+}
+
 export function toast(message, type = 'info') {
   // Reutiliza el toast de proyecto_web si existe
   const existing = document.getElementById('toast');

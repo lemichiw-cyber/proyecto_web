@@ -154,13 +154,15 @@ const CONFIGS = {
     tokens: {
       '--player-bg': '#f4f8fb', '--player-bg-secondary': '#e6eef5',
       '--player-bg-card': '#ffffff', '--player-text': '#0f2233',
-      '--player-text-secondary': '#5b7a90', '--player-primary': '#0ea5e9',
-      '--player-secondary': '#22d3ee', '--player-accent': '#38bdf8',
+      '--player-text-secondary': '#4d6a84', '--player-primary': '#0ea5e9',
+      '--player-secondary': '#22d3ee', '--player-accent': '#0369a1',
       '--player-accent-hover': '#0284c7', '--player-border': 'rgba(14,165,233,.25)',
       '--player-border-glow': 'rgba(14,165,233,.45)', '--player-shadow': '0 8px 24px rgba(14,165,233,.18)',
       '--player-progress': '#0ea5e9', '--player-progress-bg': 'rgba(15,34,51,.1)',
       '--player-slider': '#0ea5e9', '--player-slider-bg': 'rgba(15,34,51,.12)',
       '--player-equalizer': '#0ea5e9', '--player-visualizer': '#0ea5e9',
+      // Estados sobre fondo claro (AA ≥4.5)
+      '--player-success': '#15803d', '--player-warning': '#b45309', '--player-error': '#b91c1c',
     },
     intensity: 'low', visualizer: 'bars',
     effects: { glow: 0.4, scanlines: false, glitch: false, crt: false, hud: false, petals: false },
@@ -223,6 +225,9 @@ const BASE_TOKENS = {
   '--player-error': '#fb7185',
 };
 
+/* Clases .sp-theme-<nombre>: respaldo CSS del tema elegido */
+const THEME_CLASSES = Object.keys(CONFIGS).map((n) => 'sp-theme-' + n);
+
 const FX_CLASS = {
   scanlines: 'sp-fx-scanlines',
   glitch: 'sp-fx-glitch',
@@ -267,6 +272,16 @@ class PlayerThemeManager {
     return AUTO_MAP[this.appTheme()] || 'sakura';
   }
 
+  /* Pinta tokens y clase de tema en un elemento .sakura-player.
+     Se usa para la raíz y para la barra inferior (mini reproductor),
+     que se monta en <body> y por eso no hereda de la raíz. */
+  _paint(el, name, tokens) {
+    Object.entries(tokens).forEach(([k, v]) => el.style.setProperty(k, v));
+    el.classList.remove(...THEME_CLASSES);
+    el.classList.add('sp-theme-' + name);
+    el.classList.toggle('sp-anim-off', this.animationsEnabled() === 'off');
+  }
+
   /* Aplica los tokens al elemento raíz del reproductor */
   apply(root) {
     this.root = root;
@@ -274,14 +289,19 @@ class PlayerThemeManager {
     const cfg = CONFIGS[name] || CONFIGS.sakura;
     this.current = { name, cfg };
 
-    // Clase de tema manual (para overrides de CSS como .sp-theme-arctic)
-    root.classList.remove('sp-theme-arctic', 'sp-theme-sakura-dark');
-    if (name === 'arctic') root.classList.add('sp-theme-arctic');
-    if (name === 'sakura-dark') root.classList.add('sp-theme-sakura-dark');
-
     // Tokens (base + específicos del tema)
     const tokens = Object.assign({}, BASE_TOKENS, cfg.tokens);
-    Object.entries(tokens).forEach(([k, v]) => root.style.setProperty(k, v));
+
+    // Raíz + todo .sakura-player que viva fuera de ella (mini reproductor):
+    // así el modo manual también llega a la barra inferior, que no hereda
+    // de la raíz porque se monta en <body>.
+    const enApp = Array.from(document.querySelectorAll('.sakura-player'));
+    if (!root.classList.contains('sakura-player')) enApp.push(root);
+    enApp.forEach((el) => this._paint(el, name, tokens));
+
+    // <html> para que toasts, diálogos y cualquier nodo en <body>
+    // (fuera de la raíz) también hereden los tokens.
+    Object.entries(tokens).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
 
     // Efectos
     Object.entries(FX_CLASS).forEach(([fx, cls]) => {

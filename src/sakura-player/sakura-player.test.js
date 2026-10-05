@@ -56,3 +56,80 @@ describe('Temas del reproductor', () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------
+   Contraste WCAG AA (≥4.5) de los tokens de texto en los 13 temas
+   ------------------------------------------------------------------ */
+function parseColor(c) {
+  if (Array.isArray(c)) return c;
+  const s = String(c).trim();
+  let m = s.match(/^#([0-9a-f]{6})$/i);
+  if (m) { const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 1]; }
+  m = s.match(/^#([0-9a-f]{3})$/i);
+  if (m) { const h = m[1]; return [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16), 1]; }
+  m = s.match(/^rgba?\(([^)]+)\)$/i);
+  if (m) { const p = m[1].split(',').map((x) => parseFloat(x)); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+  return null;
+}
+function composite(fg, bg) {
+  const f = parseColor(fg), b = parseColor(bg);
+  if (!f) throw new Error('color inválido: ' + fg);
+  const a = f[3] === undefined ? 1 : f[3];
+  return [f[0] * a + b[0] * (1 - a), f[1] * a + b[1] * (1 - a), f[2] * a + b[2] * (1 - a)];
+}
+function luminance(rgb) {
+  const [r, g, b] = rgb.map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(a, b) {
+  const l1 = luminance(parseColor(a)), l2 = luminance(parseColor(b));
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+function rgbStr(c) {
+  return 'rgb(' + c.slice(0, 3).map((v) => Math.round(v)).join(', ') + ')';
+}
+
+describe('Contraste WCAG AA de los tokens', () => {
+  const TEXT_PAIRS = [
+    ['texto sobre fondo', (t) => t['--player-text'], (t, bg) => bg],
+    ['texto secundario', (t) => t['--player-text-secondary'], (t, bg) => bg],
+    ['texto sobre tarjeta', (t) => t['--player-text'], (t) => t['--player-bg-card']],
+    ['secundario sobre tarjeta', (t) => t['--player-text-secondary'], (t) => t['--player-bg-card']],
+    ['botón primario', () => '#08040c', (t) => t['--player-primary']],
+    ['botón hover', () => '#08040c', (t) => t['--player-accent-hover']],
+    ['badge/acentos', (t) => t['--player-accent'], (t, bg) => bg],
+    ['aviso', (t) => t['--player-warning'], (t, bg) => bg],
+    ['error', (t) => t['--player-error'], (t, bg) => bg],
+    ['éxito', (t) => t['--player-success'], (t, bg) => bg],
+  ];
+
+  it('todos los pares de texto llegan a ≥4.5 en los 13 temas', () => {
+    const fallas = [];
+    for (const [id, cfg] of Object.entries(CONFIGS)) {
+      const t = { ...BASE_TOKENS, ...cfg.tokens };
+      const bg = t['--player-bg'];
+      for (const [name, fgFn, bgFn] of TEXT_PAIRS) {
+        const bgv = bgFn(t, bg);
+        // el fondo puede ser translúcido: se compone primero sobre --player-bg
+        const bgComp = parseColor(bgv)[3] < 1 ? composite(bgv, bg) : parseColor(bgv).slice(0, 3);
+        const fgComp = composite(fgFn(t), bgComp);
+        const r = contrast(rgbStr(fgComp), rgbStr(bgComp));
+        if (r < 4.5) fallas.push(`${id} · ${name}: ${r.toFixed(2)}`);
+      }
+    }
+    expect(fallas, fallas.join(' | ')).toEqual([]);
+  });
+
+  it('el fondo es oscuro o claro de forma consistente con el texto', () => {
+    for (const [id, cfg] of Object.entries(CONFIGS)) {
+      const t = { ...BASE_TOKENS, ...cfg.tokens };
+      const bgLum = luminance(parseColor(t['--player-bg']));
+      const textLum = luminance(parseColor(t['--player-text']));
+      // texto claro sobre fondo oscuro, o texto oscuro sobre fondo claro
+      expect(bgLum < 0.5 ? textLum > 0.4 : textLum < 0.3, id).toBe(true);
+    }
+  });
+});

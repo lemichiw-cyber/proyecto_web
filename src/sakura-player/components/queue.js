@@ -23,6 +23,7 @@ export class QueueView {
   }
 
   mount() {
+    this._unbind();
     this.root.querySelector('#sp-q-clear').addEventListener('click', () => {
       player.clearQueue();
       this._render();
@@ -32,9 +33,18 @@ export class QueueView {
       player.setQueue(q, player.index);
       this._render();
     });
-    player.on('queue', () => this._render());
-    player.on('trackchange', () => this._render());
+    this._onQueue = () => this._render();
+    this._onTrack = () => this._render();
+    player.on('queue', this._onQueue);
+    player.on('trackchange', this._onTrack);
     this._render();
+  }
+
+  _unbind() {
+    if (this._onQueue) player.off('queue', this._onQueue);
+    if (this._onTrack) player.off('trackchange', this._onTrack);
+    this._onQueue = null;
+    this._onTrack = null;
   }
 
   _render() {

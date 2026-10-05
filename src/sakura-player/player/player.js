@@ -65,6 +65,11 @@ export class Player {
 
   /* ---------------- eventos ---------------- */
   on(evt, fn) { (this.listeners[evt] = this.listeners[evt] || []).push(fn); return this; }
+  off(evt, fn) {
+    if (!fn) { this.listeners[evt] = []; return this; }
+    this.listeners[evt] = (this.listeners[evt] || []).filter((f) => f !== fn);
+    return this;
+  }
   emit(evt, payload) { (this.listeners[evt] || []).forEach((fn) => fn(payload)); }
 
   _bind() {

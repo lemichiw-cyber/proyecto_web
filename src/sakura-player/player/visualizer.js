@@ -38,13 +38,25 @@ export class Visualizer {
 
   start() {
     if (this._raf) return;
-    const loop = () => { this._draw(); this._raf = requestAnimationFrame(loop); };
+    const loop = () => {
+      this._draw();
+      this._raf = requestAnimationFrame(loop);
+    };
     this._raf = requestAnimationFrame(loop);
   }
 
   stop() {
     if (this._raf) cancelAnimationFrame(this._raf);
     this._raf = null;
+  }
+
+  /* Intensidad "none" = menos fotogramas (rendimiento) */
+  _shouldDraw() {
+    if (this.intensity !== 'none') return true;
+    const now = performance.now();
+    if (now - (this._lastDraw || 0) < 250) return false; // ~4 fps
+    this._lastDraw = now;
+    return true;
   }
 
   _data() {
@@ -56,6 +68,7 @@ export class Visualizer {
   }
 
   _draw() {
+    if (!this._shouldDraw()) return;
     const { ctx, canvas } = this;
     const w = canvas.getBoundingClientRect().width;
     const h = canvas.getBoundingClientRect().height;
@@ -84,7 +97,7 @@ export class Visualizer {
       g.addColorStop(0, this.colors.primary);
       g.addColorStop(1, this.colors.accent);
       ctx.fillStyle = g;
-      ctx.globalAlpha = this.intensity === 'high' ? 0.95 : 0.8;
+      ctx.globalAlpha = this.intensity === 'high' ? 0.95 : (this.intensity === 'none' ? 0.7 : 0.8);
       ctx.fillRect(x, h - bh, bw, bh);
     }
     ctx.globalAlpha = 1;
@@ -95,7 +108,7 @@ export class Visualizer {
     ctx.lineWidth = 2;
     ctx.strokeStyle = this.colors.accent;
     ctx.shadowColor = this.colors.primary;
-    ctx.shadowBlur = this.intensity === 'high' ? 18 : 8;
+    ctx.shadowBlur = this.intensity === 'high' ? 18 : (this.intensity === 'none' ? 0 : 8);
     ctx.beginPath();
     const step = Math.max(1, Math.floor(data.length / 120));
     let first = true;
@@ -111,7 +124,7 @@ export class Visualizer {
 
   _particles(ctx, w, h, data, playing) {
     const level = data ? data[Math.floor(data.length * 0.15)] / 255 : 0;
-    if (playing && this.particles.length < 90 && Math.random() < 0.4) {
+    if (this.intensity !== 'none' && playing && this.particles.length < 90 && Math.random() < 0.4) {
       this.particles.push({
         x: Math.random() * w, y: h + 6,
         vx: (Math.random() - 0.5) * 0.6, vy: -(0.6 + Math.random() * 1.6 + level * 2),

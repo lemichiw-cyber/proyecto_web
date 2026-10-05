@@ -11,6 +11,7 @@ import { Visualizer } from './player/visualizer.js';
 import { library } from './library/library.js';
 import { themeManager } from './theme/player-theme-manager.js';
 import { SearchView } from './components/search.js';
+import { NowPlayingView } from './components/nowplaying.js';
 import { LibraryView } from './components/library.js';
 import { PlaylistView } from './components/playlists.js';
 import { MixerView } from './components/mixer.js';
@@ -20,6 +21,7 @@ import { MiniPlayer } from './components/mini-player.js';
 import { icon, toast, emptyState, spinner, promptDialog, escapeHtml, coverHtml } from './components/ui.js';
 
 const VIEWS = [
+  { id: 'player', label: 'Reproductor', icon: 'note' },
   { id: 'search', label: 'Buscar', icon: 'search' },
   { id: 'library', label: 'Biblioteca', icon: 'home' },
   { id: 'playlists', label: 'Playlists', icon: 'list' },
@@ -54,6 +56,7 @@ class SakuraPlayer {
     // Vistas
     const content = this.root.querySelector('#sp-view-content');
     this.views = {
+      player: new NowPlayingView(content),
       search: new SearchView(content, this._ctx()),
       library: new LibraryView(content, this._ctx()),
       playlists: new PlaylistView(content, this._ctx()),

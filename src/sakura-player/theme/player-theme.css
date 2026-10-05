@@ -244,8 +244,11 @@
 
 /* ===================================================================
    09 — CRIMSON (rojo oscuro, rojo brillante, negro, bordó)
+   Solo existe como tema manual del reproductor: se ancla a su clase
+   (los bloques por [data-theme] van con :where() para que la elección
+   manual siempre pueda sobrescribirlos).
    =================================================================== */
-[data-theme="light"] .sakura-player {
+.sakura-player.sp-theme-crimson {
   --player-bg: #0e0508;
   --player-bg-secondary: #180a0e;
   --player-bg-card: rgba(248, 113, 113, .07);
@@ -268,16 +271,19 @@
 
 /* ===================================================================
    10 — ARCTIC (blanco, azul hielo, cyan, gris claro)
+   En modo automático es el tema de [data-theme="light"]; la clase lo
+   habilita también en modo manual con cualquier tema de la app.
    =================================================================== */
-[data-theme="light"] .sakura-player.sp-theme-arctic {
+:where([data-theme="light"]) .sakura-player,
+.sakura-player.sp-theme-arctic {
   --player-bg: #f4f8fb;
   --player-bg-secondary: #e6eef5;
   --player-bg-card: #ffffff;
   --player-text: #0f2233;
-  --player-text-secondary: #5b7a90;
+  --player-text-secondary: #4d6a84;
   --player-primary: #0ea5e9;
   --player-secondary: #22d3ee;
-  --player-accent: #38bdf8;
+  --player-accent: #0369a1;
   --player-accent-hover: #0284c7;
   --player-border: rgba(14, 165, 233, .25);
   --player-border-glow: rgba(14, 165, 233, .45);
@@ -288,12 +294,17 @@
   --player-slider-bg: rgba(15, 34, 51, .12);
   --player-equalizer: #0ea5e9;
   --player-visualizer: #0ea5e9;
+  /* Estados legibles sobre fondo claro (WCAG AA) */
+  --player-success: #15803d;
+  --player-warning: #b45309;
+  --player-error: #b91c1c;
 }
 
 /* ===================================================================
    11 — RETRO (verde terminal, ámbar, negro, CRT)
+   También es solo tema manual del reproductor: .sp-theme-retro.
    =================================================================== */
-[data-theme="sakura"] .sakura-player {
+.sakura-player.sp-theme-retro {
   --player-bg: #050807;
   --player-bg-secondary: #0a120d;
   --player-bg-card: rgba(51, 255, 102, .06);
@@ -316,8 +327,10 @@
 
 /* ===================================================================
    12 — SAKURA DARK / ANIME (rosa fuerte, púrpura, azul nocturno)
+   Automático para [data-theme="sakura"] y disponible en modo manual.
    =================================================================== */
-[data-theme="sakura"] .sakura-player.sp-theme-sakura-dark {
+:where([data-theme="sakura"]) .sakura-player,
+.sakura-player.sp-theme-sakura-dark {
   --player-bg: #0a0410;
   --player-bg-secondary: #140a20;
   --player-bg-card: rgba(255, 79, 216, .07);
@@ -653,6 +666,28 @@
   font-size: .82rem;
   font-weight: 600;
 }
+
+/* ===================================================================
+   Animaciones — opción global "Desactivar animaciones" (sección 30)
+   Corta transiciones y animaciones CSS; el visualizador baja a
+   intensidad "none" (menos fotogramas y sin efectos) por JS.
+   =================================================================== */
+.sakura-player.sp-anim-off *,
+.sakura-player.sp-anim-off *::before,
+.sakura-player.sp-anim-off *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+}
+.sakura-player.sp-anim-off .sp-petal { display: none !important; }
+.sakura-player.sp-anim-off .sp-card:hover { transform: none; }
+.sakura-player.sp-anim-off .sp-btn:hover,
+.sakura-player.sp-anim-off .sp-card:hover { box-shadow: none; }
+/* El spinner es un indicador funcional: se mantiene aunque haya animaciones off */
+.sakura-player.sp-anim-off .sp-spinner {
+  animation: spSpin 1.4s linear infinite !important;
+}
+.sakura-player.sp-anim-off .sp-progress-fill { transition: none !important; }
 
 .sp-visualizer-wrap {
   position: relative;

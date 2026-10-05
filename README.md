@@ -14,7 +14,8 @@ header).
 
 Reproductor de música integrado: **YouTube Music** (vía backend Python) +
 **archivos locales**, con ecualizador de 10 bandas, mezclador, visualizador,
-cola, favoritos, playlists y mini reproductor.
+vista Reproductor (portada, progreso, shuffle, repeat, favoritos, cola),
+cola, playlists y mini reproductor.
 
 ```
 src/sakura-player/
@@ -27,7 +28,8 @@ src/sakura-player/
   library/library.js       biblioteca (canciones, artistas, álbumes, favoritos…)
   library/local-files.js   MP3/WAV/FLAC/OGG/M4A + metadatos + portada
   components/              búsqueda, biblioteca, playlists, cola, mezclador,
-                           mini reproductor, upload, utilidades de UI
+                           vista Reproductor, mini reproductor, upload,
+                           utilidades de UI
   theme/                   tokens de tema + gestor (auto/manual)
 backend/
   main.py                  FastAPI + CORS + health
