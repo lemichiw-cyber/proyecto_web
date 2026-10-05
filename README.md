@@ -74,13 +74,20 @@ backend falla. Causas posibles, en orden de probabilidad:
    (ver arriba) y recargá la página.
 2. **CORS bloqueando el origen** — el navegador corta la petición si la página
    se sirve desde un origen no permitido. Por defecto se acepta **cualquier
-   puerto local** (`localhost`/`127.0.0.1`) y `https://lemichiw-cyber.github.io`;
-   si cambiaste `SAKURA_CORS_ORIGINS`, asegurate de incluir el origen desde el
-   que servís la app.
+   puerto local** (`localhost`/`127.0.0.1`), `https://lemichiw-cyber.github.io`
+   y `https://proyecto-web-2-bygl.onrender.com`; si cambiaste
+   `SAKURA_CORS_ORIGINS` (recordá: **reemplaza** la lista por defecto),
+   asegurate de incluir el origen desde el que servís la app. El backend
+   también responde el preflight de *Private Network Access* que Chrome hace
+   cuando un sitio público pide a un servicio local.
 3. **El backend está en otro puerto o máquina** — la URL base se guarda en
    `localStorage` con la clave `sakuraPlayerApiBase` (default
-   `http://127.0.0.1:8000`); se puede cambiar desde la consola con
+   `http://127.0.0.1:8000`); se puede cambiar desde `Ajustes → Backend`
+   (campo + «Guardar» y «Probar») o con
    `localStorage.setItem('sakuraPlayerApiBase','http://127.0.0.1:8000')`.
+   **`127.0.0.1` es la propia máquina**: si abrís el sitio desplegado en otro
+   dispositivo (teléfono, otra PC), el backend tiene que correr **en ese
+   dispositivo** o hay que apuntar la URL a donde está el backend.
 
 Verificación: `curl http://127.0.0.1:8000/api/music/search?q=test&filter=songs`
 debe devolver JSON con `"songs":[...]`.

@@ -38,6 +38,7 @@ _CORS_DEFAULT = ",".join([
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://lemichiw-cyber.github.io",
+    "https://proyecto-web-2-bygl.onrender.com",
 ])
 _CORS = [o.strip() for o in os.getenv("SAKURA_CORS_ORIGINS", _CORS_DEFAULT).split(",") if o.strip()]
 
@@ -57,6 +58,12 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Private Network Access (Chrome): un sitio público (Render, GitHub
+    # Pages) pidiendo a este backend local envía un preflight con
+    # `Access-Control-Request-Private-Network: true`; sin esta opción la
+    # respuesta no lleva `Access-Control-Allow-Private-Network` y el
+    # navegador corta la petición aunque el origen esté permitido.
+    allow_private_network=True,
 )
 
 # Routers
