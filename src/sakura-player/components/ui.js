@@ -163,12 +163,12 @@ export function trackRow(track, { index, actions } = {}) {
   return '<div class="sp-queue-item' + fav + '" data-track-id="' + track.id + '">' +
     (index !== undefined ? '<span style="font-size:.72rem;color:var(--player-text-secondary);min-width:1.4rem;text-align:right;">' + (index + 1) + '</span>' : '') +
     coverHtml(track, '40px') +
-    '<div style="flex:1;min-width:0;">' +
+    '<div class="sp-track-info" style="flex:1;min-width:0;">' +
       '<div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(track.title) + '</div>' +
       '<div style="font-size:.72rem;color:var(--player-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(track.artist || '') + (track.album ? ' · ' + escapeHtml(track.album) : '') + '</div>' +
     '</div>' +
-    (track.durationText || track.duration ? '<span style="font-size:.72rem;color:var(--player-text-secondary);">' + (track.durationText || formatTime(track.duration)) + '</span>' : '') +
-    (actions || '') +
+    (track.durationText || track.duration ? '<span class="sp-track-time" style="font-size:.72rem;color:var(--player-text-secondary);">' + (track.durationText || formatTime(track.duration)) + '</span>' : '') +
+    (actions ? '<div class="sp-track-actions">' + actions + '</div>' : '') +
   '</div>';
 }
 

@@ -725,6 +725,22 @@
 .sp-queue-item:hover { background: var(--player-bg-card); }
 .sp-queue-item.current { background: var(--player-bg-card); border-left: 3px solid var(--player-primary); }
 
+/* Acciones de la fila (play/cola/favorito/menú) en su propio contenedor */
+.sp-track-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex: none;
+}
+
+/* Móvil: la fila pasa a dos líneas. En pantallas angostas todo en una
+   sola línea dejaba el título en 2-3 caracteres ("S.."). */
+@media (max-width: 560px) {
+  .sp-queue-item { flex-wrap: wrap; row-gap: .3rem; }
+  .sp-track-info { flex: 1 1 auto; }
+  .sp-track-actions { width: 100%; justify-content: flex-end; }
+}
+
 .sp-tab {
   padding: .45rem .9rem;
   border-radius: 99px;
