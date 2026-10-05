@@ -47,7 +47,64 @@ pip install -r requirements.txt
 uvicorn main:app --reload        # → http://127.0.0.1:8000
 ```
 
+Si tu sistema no trae `pip`, usá [uv](https://astral.sh/uv/) (no lo necesita):
+
+```bash
+cd backend
+uv venv .venv --python python3
+uv pip install -r requirements.txt --python .venv/bin/python
+.venv/bin/python -m uvicorn main:app --reload
+```
+
 Documentación interactiva: `http://127.0.0.1:8000/docs`.
+
+Comprobación rápida:
+
+```bash
+curl http://127.0.0.1:8000/api/health
+# → {"ok":true,...,"ytmusic":{"ok":true,"authenticated":false},...}
+```
+
+### Si ves «Backend apagado o sin conexión»
+
+Es el mensaje **amigable** que muestra el reproductor cuando la petición al
+backend falla. Causas posibles, en orden de probabilidad:
+
+1. **El backend no está corriendo** — arrancalo con `uvicorn main:app --reload`
+   (ver arriba) y recargá la página.
+2. **CORS bloqueando el origen** — el navegador corta la petición si la página
+   se sirve desde un origen no permitido. Por defecto se acepta **cualquier
+   puerto local** (`localhost`/`127.0.0.1`) y `https://lemichiw-cyber.github.io`;
+   si cambiaste `SAKURA_CORS_ORIGINS`, asegurate de incluir el origen desde el
+   que servís la app.
+3. **El backend está en otro puerto o máquina** — la URL base se guarda en
+   `localStorage` con la clave `sakuraPlayerApiBase` (default
+   `http://127.0.0.1:8000`); se puede cambiar desde la consola con
+   `localStorage.setItem('sakuraPlayerApiBase','http://127.0.0.1:8000')`.
+
+Verificación: `curl http://127.0.0.1:8000/api/music/search?q=test&filter=songs`
+debe devolver JSON con `"songs":[...]`.
+
+### Streaming (cómo llega el audio)
+
+YouTube entrega los formatos de audio firmados (`signatureCipher`), así que el
+backend usa **yt-dlp** para resolver la URL directa. El navegador no habla con
+YouTube: reproduce desde `GET /api/music/stream/{id}`, un proxy que:
+
+- reenvía las cabeceras **`Range`** → respuestas `206`, con lo que el seek y la
+  precarga del `<audio>` funcionan;
+- añade **CORS**, necesario porque `<audio crossOrigin="anonymous">` debe
+  poder alimentar el grafo Web Audio (EQ, mezclador y visualizador);
+- reenvía el `User-Agent` con el que se extrajo la URL (exigido por Google);
+- cachea la URL 10 minutos (expiran en ~6 h).
+
+Si yt-dlp falla, se intenta con los formatos de ytmusicapi que traen URL
+directa. Verificación:
+
+```bash
+curl -r 0-4095 http://127.0.0.1:8000/api/music/stream/<videoId> -o /dev/null -w "%{http_code}"
+# → 206
+```
 
 ### Autenticación de YouTube Music
 
@@ -65,7 +122,7 @@ Copiá `backend/.env.example` a `backend/.env` y ajustá:
 | Variable | Para qué |
 |---|---|
 | `SAKURA_HOST` / `SAKURA_PORT` | Escucha del backend |
-| `SAKURA_CORS_ORIGINS` | Orígenes permitidos (default: `http://localhost:5173`) |
+| `SAKURA_CORS_ORIGINS` | Orígenes extra permitidos (default: dev/preview/`github.io`) |
 | `YTMUSIC_AUTH_FILE` | Ruta del archivo de sesión (default: `auth.json`) |
 | `YTMUSIC_ALLOW_ANONYMOUS` | Permitir modo invitado si no hay auth |
 

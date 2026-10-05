@@ -14,6 +14,7 @@ Autenticación:
 from __future__ import annotations
 
 import os
+import shutil
 import time
 from typing import Any, Optional
 
@@ -191,37 +192,97 @@ class YouTubeMusicService:
     def get_song(self, video_id: str) -> dict:
         client = self._ensure_client()
         data = client.get_song(video_id)
-        track = normalize_track(data.get("videoDetails") or {})
+        vd = data.get("videoDetails") or {}
+        # videoDetails trae título, autor y miniaturas pero no artistas
+        # ni álbum en el formato que espera normalize_track: se adapta.
+        item = {
+            "videoId": video_id,
+            "title": vd.get("title"),
+            "artists": [{"name": vd.get("author") or "", "id": vd.get("channelId")}],
+            "lengthSeconds": vd.get("lengthSeconds"),
+            "thumbnails": (vd.get("thumbnail") or {}).get("thumbnails") or [],
+        }
+        track = normalize_track(item)
         track["id"] = video_id
+        secs = track.get("duration") or 0
+        track["durationText"] = f"{secs // 60}:{secs % 60:02d}" if secs else ""
+        # get_song no incluye el álbum: se completa con una búsqueda ligera.
+        if not track.get("album"):
+            try:
+                for r in client.search(f"{track['title']} {track['artist']}".strip(), filter="songs", limit=5):
+                    if r.get("videoId") == video_id:
+                        album = r.get("album") or {}
+                        track["album"] = album.get("name", "")
+                        track["albumId"] = album.get("id")
+                        break
+            except Exception:  # noqa: BLE001 - el álbum es opcional
+                pass
         return track
 
-    def get_stream_url(self, video_id: str, use_cache: bool = True) -> Optional[str]:
-        """URL de audio (formato progresivo con soporte Range) o None.
+    def get_stream_media(self, video_id: str, use_cache: bool = True) -> Optional[dict]:
+        """URL de audio + cabeceras para el proxy de streaming (o None).
 
-        Se cachea 10 minutos para no repetir la llamada a ytmusicapi en
+        YouTube entrega los formatos con `signatureCipher` (sin URL plana),
+        así que la extracción la hace yt-dlp, que descifra la firma y el
+        parámetro `n`. Se cachea 10 minutos para no repetir la llamada en
         cada petición Range del reproductor.
         """
         if use_cache:
             hit = self._stream_cache.get(video_id)
             if hit and time.time() - hit[0] < 600:
-                return hit[1]
-        client = self._ensure_client()
-        data = client.get_song(video_id)
-        streaming = data.get("streamingData") or {}
-        # Formatos progresivos primero (soportan Range y son más simples)
-        formats = streaming.get("formats") or []
-        audio = [f for f in formats if (f.get("mimeType") or "").startswith("audio")]
-        if not audio:
-            audio = [f for f in (streaming.get("adaptiveFormats") or [])
-                     if (f.get("mimeType") or "").startswith("audio")]
-        if not audio:
+                return {"url": hit[1], "headers": hit[2] if len(hit) > 2 else {}}
+        media = self._extract_ytdlp(video_id) or self._extract_ytmusic(video_id)
+        if media and use_cache:
+            self._stream_cache[video_id] = (time.time(), media["url"], media.get("headers") or {})
+        return media
+
+    def get_stream_url(self, video_id: str, use_cache: bool = True) -> Optional[str]:
+        media = self.get_stream_media(video_id, use_cache=use_cache)
+        return media["url"] if media else None
+
+    def _extract_ytdlp(self, video_id: str) -> Optional[dict]:
+        """Extracción con yt-dlp (soporta signatureCipher y URL con parámetro n)."""
+        try:
+            from yt_dlp import YoutubeDL
+        except Exception:  # noqa: BLE001 - dependencia opcional
             return None
-        # Preferir progresivo con mayor bitrate; si no, el mejor adaptativo
-        best = max(audio, key=lambda f: f.get("bitrate") or 0)
-        url = best.get("url")
-        if url and use_cache:
-            self._stream_cache[video_id] = (time.time(), url)
-        return url
+        opts = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "skip_download": True,
+            "socket_timeout": 20,
+            "retries": 1,
+        }
+        # Sin runtime JS algunos formatos quedan inaccesibles; si hay node, se usa.
+        if shutil.which("node"):
+            opts["js_runtimes"] = {"node": {}}
+        try:
+            with YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+        except Exception:  # noqa: BLE001 - el respaldo sigue disponible
+            return None
+        url = (info or {}).get("url")
+        if not url:
+            return None
+        headers = (info or {}).get("http_headers") or {}
+        ua = headers.get("User-Agent") or ""
+        return {"url": url, "headers": {"User-Agent": ua} if ua else {}}
+
+    def _extract_ytmusic(self, video_id: str) -> Optional[dict]:
+        """Respaldo: formatos que ytmusicapi devuelve con URL directa (sin cipher)."""
+        try:
+            client = self._ensure_client()
+            streaming = client.get_song(video_id).get("streamingData") or {}
+            formats = list(streaming.get("formats") or []) + list(streaming.get("adaptiveFormats") or {})
+            audio = [f for f in formats if (f.get("mimeType") or "").startswith("audio") and f.get("url")]
+            if not audio:
+                return None
+            best = max(audio, key=lambda f: f.get("bitrate") or 0)
+            return {"url": best["url"], "headers": {}}
+        except Exception:  # noqa: BLE001
+            return None
 
     def get_watch_playlist(self, video_id: str, limit: int = 25) -> list:
         """Cola tipo 'Mix de YouTube' a partir de una canción."""
@@ -239,6 +300,9 @@ class YouTubeMusicService:
         client = self._ensure_client()
         data = client.get_artist(browse_id)
         out = normalize_artist(data)
+        # get_artist devuelve channelId (a veces distinto al solicitado tras
+        # una redirección de canal); sin él se conserva el id pedido.
+        out["id"] = data.get("channelId") or browse_id
         out["description"] = data.get("description") or ""
         out["songs"] = [normalize_track(t) for t in (data.get("songs", {}) or {}).get("results") or []]
         out["albums"] = [normalize_album(a) for a in (data.get("albums", {}) or {}).get("results") or []]
@@ -250,6 +314,8 @@ class YouTubeMusicService:
         client = self._ensure_client()
         data = client.get_album(browse_id)
         out = normalize_album(data)
+        # get_album no incluye el browseId en la respuesta: se usa el pedido.
+        out["id"] = browse_id
         out["description"] = data.get("description") or ""
         out["tracks"] = [normalize_track(t) for t in data.get("tracks") or []]
         return out

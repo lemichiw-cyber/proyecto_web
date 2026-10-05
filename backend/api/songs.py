@@ -31,18 +31,19 @@ def stream_song(video_id: str, request: Request):
     visualizador) y el seek funciona con peticiones Range.
     """
     try:
-        url = get_service().get_stream_url(video_id)
+        media = get_service().get_stream_media(video_id)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail="No se pudo obtener el stream") from exc
-    if not url:
+    if not media or not media.get("url"):
         raise HTTPException(status_code=404, detail="Stream no disponible para esta canción")
 
-    fwd = {}
+    # YouTube exige el mismo User-Agent con el que se extrajo la URL
+    fwd = dict(media.get("headers") or {})
     rng = request.headers.get("range")
     if rng:
         fwd["Range"] = rng
     try:
-        resp = requests.get(url, headers=fwd, stream=True, timeout=30)
+        resp = requests.get(media["url"], headers=fwd, stream=True, timeout=30)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail="No se pudo contactar con YouTube Music") from exc
     if resp.status_code not in (200, 206):
