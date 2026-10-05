@@ -3,8 +3,11 @@
 Plataforma educativa institucional. App web estática (SPA) con Pomodoro,
 notificaciones, persistencia en `localStorage` y soporte offline vía PWA.
 
-10 temas: `sakura`, `chicawa`, `mlp`, `pastel`, `dark`, `dawn`, `light`,
-`ocean`, `paraiso`, `sunset`.
+12 temas: `sakura`, `chicawa`, `mlp`, `pastel`, `dark`, `dawn`, `light`,
+`ocean`, `paraiso`, `sunset`, `frutiger`, `dreamcore`.
+
+`sakura`, `frutiger` y `dreamcore` además reproducen música de fondo en
+segundo plano (pista en `public/audio/`, control de volumen en el header).
 
 ---
 

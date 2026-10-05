@@ -150,7 +150,27 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          THEME — Cambio de tema claro/oscuro/pastel
          =================================================================== */
-      var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso'];
+      var themeOrder = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore'];
+
+      /* Música de fondo por tema: id del <audio> que suena en segundo plano */
+      var THEME_MUSIC = { sakura: 'sakura-audio', frutiger: 'frutiger-audio', dreamcore: 'dreamcore-audio' };
+
+      function themeAudio(theme) {
+        var id = THEME_MUSIC[theme];
+        return id ? document.getElementById(id) : null;
+      }
+
+      function themeAudios() {
+        var list = [];
+        for (var k in THEME_MUSIC) {
+          if (Object.prototype.hasOwnProperty.call(THEME_MUSIC, k)) {
+            var el = document.getElementById(THEME_MUSIC[k]);
+            if (el) list.push(el);
+          }
+        }
+        return list;
+      }
+
       var currentTheme = localStorage.getItem('cherrybombTheme') || 'light';
 
       /* Asegurar que el valor guardado sea válido */
@@ -161,29 +181,31 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('cherrybombTheme', theme);
 
-        var sakuraAudio = document.getElementById('sakura-audio');
-        if (sakuraAudio) {
-          var vol = parseFloat(localStorage.getItem('cherrybombVol') || '0.5');
-          sakuraAudio.volume = vol;
-          if (theme === 'sakura' && vol > 0) {
-            sakuraAudio.play().catch(function () {});
-          } else {
-            sakuraAudio.pause();
-            sakuraAudio.currentTime = 0;
+        var vol = parseFloat(localStorage.getItem('cherrybombVol') || '0.5');
+        var activa = themeAudio(theme);
+        var audios = themeAudios();
+        for (var a = 0; a < audios.length; a++) {
+          var el = audios[a];
+          el.volume = vol;
+          if (el === activa) {
+            if (vol > 0) el.play().catch(function () {});
+          } else if (!el.paused) {
+            el.pause();
+            try { el.currentTime = 0; } catch (err) { /* sin seek si aún no cargó */ }
           }
         }
         var volCtrl = $('vol-control');
         if (volCtrl) {
-          if (theme === 'sakura') volCtrl.classList.remove('hidden');
+          if (activa) volCtrl.classList.remove('hidden');
           else volCtrl.classList.add('hidden');
         }
 
-        var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower', paraiso:'sun' };
+        var themeIcons = { light:'sun', dark:'moon', pastel:'flower', sunset:'sunset', dawn:'sun-high', ocean:'droplet', mlp:'star', chicawa:'question', sakura:'flower', paraiso:'sun', frutiger:'droplet', dreamcore:'star' };
         var iconFile = themeIcons[theme] || 'moon';
         var btns = document.querySelectorAll('.btn-theme-toggle');
         for (var i = 0; i < btns.length; i++) btns[i].innerHTML = '<img src="' + iconSrc(iconFile) + '" style="width:18px;height:18px;display:block" alt="Tema">';
         var meta = document.querySelector('meta[name="theme-color"]');
-        var metaColor = theme === 'dark' ? '#0f172a' : theme === 'pastel' ? '#f0d9e8' : theme === 'sunset' ? '#2a1810' : theme === 'dawn' ? '#faf0d0' : theme === 'ocean' ? '#d0e8f0' : theme === 'mlp' ? '#e8d0f0' : theme === 'sakura' ? '#160C1E' : theme === 'paraiso' ? '#0d0b14' : '#2563eb';
+        var metaColor = theme === 'dark' ? '#0f172a' : theme === 'pastel' ? '#f0d9e8' : theme === 'sunset' ? '#2a1810' : theme === 'dawn' ? '#faf0d0' : theme === 'ocean' ? '#d0e8f0' : theme === 'mlp' ? '#e8d0f0' : theme === 'sakura' ? '#160C1E' : theme === 'paraiso' ? '#0d0b14' : theme === 'frutiger' ? '#eaf7ff' : theme === 'dreamcore' ? '#eeecfb' : '#2563eb';
         if (meta) meta.content = metaColor;
         // Marcar tarjeta activa en el modal y en la sección
         var cards = document.querySelectorAll('#theme-options .theme-card, #theme-options-section .theme-card');
@@ -199,11 +221,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var volSlider = $('vol-slider');
       var volControl = $('vol-control');
       var btnVol = $('btn-vol');
-      var sakuraAudio = document.getElementById('sakura-audio');
 
       function volSet(vol, save) {
         var v = Math.max(0, Math.min(1, parseFloat(vol) || 0));
-        if (sakuraAudio) sakuraAudio.volume = v;
+        var audios = themeAudios();
+        for (var a = 0; a < audios.length; a++) audios[a].volume = v;
         if (volSlider) volSlider.value = Math.round(v * 100);
         if (v === 0) {
           if (btnVol) btnVol.classList.add('muted');
@@ -222,12 +244,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       if (volSlider) {
         volSlider.addEventListener('input', function () {
           var v = parseFloat(this.value) / 100;
-          if (sakuraAudio) sakuraAudio.volume = v;
           volSet(v, true);
-          if (v === 0) {
-            sakuraAudio && sakuraAudio.pause();
-          } else if (currentTheme === 'sakura') {
-            sakuraAudio && sakuraAudio.play().catch(function () {});
+          var audios = themeAudios();
+          var activa = themeAudio(currentTheme);
+          for (var a = 0; a < audios.length; a++) {
+            if (v === 0) {
+              audios[a].pause();
+            } else if (audios[a] === activa) {
+              audios[a].play().catch(function () {});
+            }
           }
         });
       }
@@ -237,7 +262,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedVol = localStorage.getItem('cherrybombVol');
       volSet(savedVol === null ? 0.5 : savedVol, false);
       if (volControl) {
-        if (currentTheme === 'sakura') volControl.classList.remove('hidden');
+        if (themeAudio(currentTheme)) volControl.classList.remove('hidden');
         else volControl.classList.add('hidden');
       }
 
@@ -273,7 +298,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function seleccionarTema(theme) {
         aplicarTheme(theme);
         cerrarTemas();
-        var nombres = { light:'claro', dark:'oscuro', pastel:'pastel', sunset:'atardecer', dawn:'amanecer', ocean:'océano', mlp:'My Little Pony', chicawa:'Chicawa', sakura:'Sakura', paraiso:'Paraíso' };
+        var nombres = { light:'claro', dark:'oscuro', pastel:'pastel', sunset:'atardecer', dawn:'amanecer', ocean:'océano', mlp:'My Little Pony', chicawa:'Chicawa', sakura:'Sakura', paraiso:'Paraíso', frutiger:'Frutiger Aero', dreamcore:'Dreamcore' };
         mostrarToast('Tema cambiado a ' + (nombres[theme] || theme) + ' 🌸', 'success');
       }
       window.seleccionarTema = seleccionarTema;
