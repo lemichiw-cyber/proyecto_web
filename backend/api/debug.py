@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 
 import requests
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 router = APIRouter(prefix="/api/debug", tags=["debug"])
 
@@ -29,6 +29,35 @@ def _resumen(resp: requests.Response) -> dict:
         "len": len(resp.content),
         "snip": resp.text[:260].replace("\n", " ").replace("\r", ""),
     }
+
+
+@router.get("/googlevideo")
+def googlevideo(url: str = Query(..., description="URL videoplayback de googlevideo.com")) -> dict:
+    """¿Puede este entorno entregar bytes de audio? (solo *.googlevideo.com)
+
+    Comprueba el último eslabón del streaming en la nube: aún con URL
+    fresca, si googlevideo rechaza la IP del servicio, reproducir es
+    imposible desde ahí.
+    """
+    from urllib.parse import urlparse
+
+    host = urlparse(url).hostname or ""
+    if not host.endswith(".googlevideo.com"):
+        raise HTTPException(status_code=400, detail="solo URLs de *.googlevideo.com")
+    try:
+        r = requests.get(
+            url,
+            headers={"Range": "bytes=0-4095", "User-Agent": _UA_WEB},
+            timeout=20,
+        )
+        return {
+            "status": r.status_code,
+            "len": len(r.content),
+            "ctype": (r.headers.get("Content-Type") or "")[:60],
+            "accept_ranges": r.headers.get("Accept-Ranges"),
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"{type(exc).__name__}: {exc}"}
 
 
 @router.get("/youtube")
