@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import albums, artists, library, playlists, search, songs
+from api import albums, artists, debug, library, playlists, search, songs
 from api.deps import get_service
 
 load_dotenv()
@@ -70,6 +70,7 @@ app.add_middleware(
 )
 
 # Routers
+app.include_router(debug.router)
 app.include_router(search.router)
 app.include_router(songs.router)
 app.include_router(artists.router)
