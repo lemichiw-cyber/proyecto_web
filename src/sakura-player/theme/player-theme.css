@@ -387,6 +387,22 @@
   text-shadow: 2px 0 var(--player-secondary), -2px 0 var(--player-accent);
 }
 
+/* Pantalla CRT: viñeta, redondeo y brillo de tubo en el visualizador */
+.sakura-player.sp-fx-crt .sp-visualizer-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .55), 0 0 18px var(--player-border-glow);
+}
+.sakura-player.sp-fx-crt .sp-visualizer-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, .45) 100%);
+  z-index: 1;
+}
+
 /* Pétalos sakura */
 .sakura-player.sp-fx-petals .sp-visualizer-wrap {
   position: relative;

@@ -171,10 +171,13 @@ Copiá `backend/.env.example` a `backend/.env` y ajustá:
 ### Temas del reproductor
 
 El reproductor usa tokens CSS (`--player-*`) y **se adapta solo** al tema de la
-app (modo automático). En `Ajustes` del reproductor se puede elegir un tema manual
-entre 12 configuraciones: Sakura, Cyberpunk, Neon, Ocean, Forest, Sunset,
-Midnight, Lavender, Crimson, Arctic, Retro y Sakura Dark. Cada una cambia
-colores, glow, bordes, animaciones (intensidad) y estilo del visualizador.
+app (modo automático), con un look distinto para **cada uno de los 12 temas**
+de la app (si dos temas compartieran paleta, cambiar de tema no se notaría).
+En `Ajustes` del reproductor se puede elegir un tema manual entre 12
+configuraciones: Sakura, Cyberpunk, Neon, Ocean, Forest, Sunset, Midnight,
+Lavender, Crimson, Arctic, Retro y Sakura Dark. Cada una cambia colores, glow,
+bordes, animaciones (intensidad), estilo del visualizador y efectos
+(scanlines, glitch, CRT, HUD, pétalos).
 
 ### Offline
 

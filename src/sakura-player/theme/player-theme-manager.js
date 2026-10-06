@@ -201,7 +201,12 @@ const CONFIGS = {
   },
 };
 
-/* Mapa automático: tema de proyecto_web -> configuración del reproductor */
+/* Mapa automático: tema de proyecto_web -> configuración del reproductor.
+   Un valor string usa la configuración tal cual; un objeto
+   { base, tokens, visualizer, effects } la extiende con ajustes propios
+   para que cada uno de los 12 temas de la app tenga look distinto
+   (antes pastel, mlp y dreamcore compartían lavender: cambiar de tema
+   no modificaba nada del reproductor). */
 const AUTO_MAP = {
   light: 'arctic',
   dark: 'cyberpunk',
@@ -209,12 +214,44 @@ const AUTO_MAP = {
   sunset: 'sunset',
   dawn: 'forest',
   ocean: 'ocean',
-  mlp: 'lavender',
+  mlp: {
+    base: 'lavender',
+    tokens: {
+      '--player-bg': '#160a26', '--player-bg-secondary': '#20103a',
+      '--player-bg-card': 'rgba(255,102,196,.09)', '--player-text': '#fdf2ff',
+      '--player-text-secondary': '#d9b8ea', '--player-primary': '#ff66c4',
+      '--player-secondary': '#60a5fa', '--player-accent': '#ffd93d',
+      '--player-accent-hover': '#a5f3fc', '--player-border': 'rgba(255,102,196,.35)',
+      '--player-border-glow': 'rgba(255,102,196,.6)',
+      '--player-shadow': '0 8px 28px rgba(255,102,196,.25)',
+      '--player-progress': '#ff66c4', '--player-progress-bg': 'rgba(255,255,255,.12)',
+      '--player-slider': '#ff66c4', '--player-slider-bg': 'rgba(255,255,255,.16)',
+      '--player-equalizer': '#ff66c4', '--player-visualizer': '#ff66c4',
+    },
+    visualizer: 'bars',
+    effects: { glow: 1.1, scanlines: false, glitch: false, crt: false, hud: false, petals: false },
+  },
   chicawa: 'sakura',
   sakura: 'sakura-dark',
   paraiso: 'midnight',
   frutiger: 'neon',
-  dreamcore: 'lavender',
+  dreamcore: {
+    base: 'neon',
+    tokens: {
+      '--player-bg': '#0b0e21', '--player-bg-secondary': '#131838',
+      '--player-bg-card': 'rgba(165,180,252,.09)', '--player-text': '#eef1ff',
+      '--player-text-secondary': '#b6bfe6', '--player-primary': '#a5b4fc',
+      '--player-secondary': '#7dd3fc', '--player-accent': '#fbcfe8',
+      '--player-accent-hover': '#c7d2fe', '--player-border': 'rgba(165,180,252,.35)',
+      '--player-border-glow': 'rgba(165,180,252,.55)',
+      '--player-shadow': '0 8px 30px rgba(129,140,248,.28)',
+      '--player-progress': '#a5b4fc', '--player-progress-bg': 'rgba(255,255,255,.12)',
+      '--player-slider': '#a5b4fc', '--player-slider-bg': 'rgba(255,255,255,.16)',
+      '--player-equalizer': '#a5b4fc', '--player-visualizer': '#a5b4fc',
+    },
+    visualizer: 'particles',
+    effects: { glow: 1.2, scanlines: false, glitch: false, crt: false, hud: false, petals: false },
+  },
   'sakura-player': 'sakura',
 };
 
@@ -269,7 +306,16 @@ class PlayerThemeManager {
 
   resolveConfig() {
     if (this.mode === 'manual' && CONFIGS[this.manualTheme]) return this.manualTheme;
-    return AUTO_MAP[this.appTheme()] || 'sakura';
+    const entrada = AUTO_MAP[this.appTheme()];
+    const base = typeof entrada === 'string' ? entrada : entrada && entrada.base;
+    return (base && CONFIGS[base]) ? base : 'sakura';
+  }
+
+  /* Entrada del mapa automático cuando trae ajustes propios (o null) */
+  _autoEntry() {
+    if (this.mode === 'manual') return null;
+    const e = AUTO_MAP[this.appTheme()];
+    return e && typeof e === 'object' ? e : null;
   }
 
   /* Pinta tokens y clase de tema en un elemento .sakura-player.
@@ -287,10 +333,13 @@ class PlayerThemeManager {
     this.root = root;
     const name = this.resolveConfig();
     const cfg = CONFIGS[name] || CONFIGS.sakura;
+    const auto = this._autoEntry();
     this.current = { name, cfg };
 
-    // Tokens (base + específicos del tema)
-    const tokens = Object.assign({}, BASE_TOKENS, cfg.tokens);
+    // Tokens (base + específicos del tema + ajustes del mapa automático)
+    const tokens = Object.assign({}, BASE_TOKENS, cfg.tokens, auto && auto.tokens);
+    const visualizer = (auto && auto.visualizer) || cfg.visualizer;
+    const effects = Object.assign({}, cfg.effects, auto && auto.effects);
 
     // Raíz + todo .sakura-player que viva fuera de ella (mini reproductor):
     // así el modo manual también llega a la barra inferior, que no hereda
@@ -305,7 +354,7 @@ class PlayerThemeManager {
 
     // Efectos
     Object.entries(FX_CLASS).forEach(([fx, cls]) => {
-      root.classList.toggle(cls, !!cfg.effects[fx]);
+      root.classList.toggle(cls, !!effects[fx]);
     });
 
     // Intensidad de animación global
@@ -317,7 +366,7 @@ class PlayerThemeManager {
       detail: {
         name, label: cfg.label,
         intensity: anim === 'off' ? 'none' : cfg.intensity,
-        visualizer: cfg.visualizer,
+        visualizer,
         colors: {
           primary: cfg.tokens['--player-primary'],
           secondary: cfg.tokens['--player-secondary'],

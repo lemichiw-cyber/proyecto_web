@@ -51,9 +51,30 @@ describe('Temas del reproductor', () => {
   it('el mapa automático cubre los 13 temas de la app', () => {
     const appThemes = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore', 'sakura-player'];
     for (const t of appThemes) {
-      expect(AUTO_MAP[t], t).toBeTruthy();
-      expect(CONFIGS[AUTO_MAP[t]], `${t} → ${AUTO_MAP[t]}`).toBeTruthy();
+      const e = AUTO_MAP[t];
+      expect(e, t).toBeTruthy();
+      const base = typeof e === 'string' ? e : e.base;
+      expect(CONFIGS[base], `${t} → ${base}`).toBeTruthy();
+      if (typeof e !== 'string') {
+        expect(Object.keys(e.tokens || {}).length, `${t} sin tokens`).toBeGreaterThan(0);
+        expect(e.visualizer).toBeTruthy();
+        expect(e.effects).toBeTruthy();
+      }
     }
+  });
+
+  it('los 12 temas de la app tienen look distinto en el reproductor', () => {
+    const doce = ['light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp', 'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore'];
+    const firmas = new Map();
+    for (const id of doce) {
+      const e = AUTO_MAP[id];
+      const base = typeof e === 'string' ? e : e.base;
+      const t = { ...BASE_TOKENS, ...CONFIGS[base].tokens, ...(typeof e === 'string' ? {} : e.tokens) };
+      const firma = `${t['--player-primary']}|${t['--player-bg']}`;
+      expect(firmas.has(firma), `${id} idéntico a ${firmas.get(firma)}`).toBe(false);
+      firmas.set(firma, id);
+    }
+    expect(firmas.size).toBe(12);
   });
 });
 
@@ -114,6 +135,23 @@ describe('Contraste WCAG AA de los tokens', () => {
       for (const [name, fgFn, bgFn] of TEXT_PAIRS) {
         const bgv = bgFn(t, bg);
         // el fondo puede ser translúcido: se compone primero sobre --player-bg
+        const bgComp = parseColor(bgv)[3] < 1 ? composite(bgv, bg) : parseColor(bgv).slice(0, 3);
+        const fgComp = composite(fgFn(t), bgComp);
+        const r = contrast(rgbStr(fgComp), rgbStr(bgComp));
+        if (r < 4.5) fallas.push(`${id} · ${name}: ${r.toFixed(2)}`);
+      }
+    }
+    expect(fallas, fallas.join(' | ')).toEqual([]);
+  });
+
+  it('los looks del mapa automático con ajustes propios también pasan AA', () => {
+    const fallas = [];
+    for (const [id, e] of Object.entries(AUTO_MAP)) {
+      if (typeof e === 'string') continue;
+      const t = { ...BASE_TOKENS, ...CONFIGS[e.base].tokens, ...e.tokens };
+      const bg = t['--player-bg'];
+      for (const [name, fgFn, bgFn] of TEXT_PAIRS) {
+        const bgv = bgFn(t, bg);
         const bgComp = parseColor(bgv)[3] < 1 ? composite(bgv, bg) : parseColor(bgv).slice(0, 3);
         const fgComp = composite(fgFn(t), bgComp);
         const r = contrast(rgbStr(fgComp), rgbStr(bgComp));
