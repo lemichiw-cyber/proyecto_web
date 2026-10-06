@@ -456,7 +456,7 @@ class SakuraPlayer {
       }
       if (this._offline) { this._offline = false; this._renderOffline(); }
     } catch (err) {
-      if (status) status.innerHTML = '<span style="color:var(--player-error);>● Backend apagado</span> — andá a Ajustes para ver cómo conectarlo.';
+      if (status) status.innerHTML = '<span style="color:var(--player-error);">● Backend apagado</span> — andá a Ajustes para ver cómo conectarlo.';
     }
   }
 }

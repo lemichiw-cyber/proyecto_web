@@ -133,3 +133,67 @@ describe('Contraste WCAG AA de los tokens', () => {
     }
   });
 });
+
+describe('Cliente del backend (mensajes amigables)', () => {
+  it('sitio desplegado con API local explica el caso de un dispositivo sin backend', async () => {
+    const { friendlyError, PlayerError } = await import('./api/client.js');
+    const prev = globalThis.location;
+    // Sitio servido desde Render (host no local) + API por defecto 127.0.0.1:
+    // es exactamente el caso "no funciona en celular".
+    globalThis.location = { hostname: 'proyecto-web-2-bygl.onrender.com' };
+    try {
+      const msg = friendlyError(new PlayerError('backend_offline', 'x'));
+      expect(msg).toContain('127.0.0.1');
+      expect(msg).toContain('Ajustes');
+      // Sin location (node puro) → mensaje genérico
+      delete globalThis.location;
+      expect(friendlyError(new PlayerError('backend_offline', 'x'))).toBe('Backend apagado o sin conexión');
+      // Página servida en local + backend caído → genérico también
+      globalThis.location = { hostname: 'localhost' };
+      expect(friendlyError(new PlayerError('backend_offline', 'x'))).toBe('Backend apagado o sin conexión');
+    } finally {
+      if (prev === undefined) delete globalThis.location;
+      else globalThis.location = prev;
+    }
+  });
+});
+
+describe('Reintentos del cliente', () => {
+  it('reintenta una vez cuando la petición aborta por timeout (cold start)', async () => {
+    const { api } = await import('./api/client.js');
+    const prev = globalThis.fetch;
+    let llamadas = 0;
+    globalThis.fetch = async () => {
+      llamadas += 1;
+      if (llamadas === 1) {
+        const e = new Error('The user aborted a request.');
+        e.name = 'AbortError';
+        throw e;
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true, service: 'nube' }) };
+    };
+    try {
+      const h = await api.health();
+      expect(h.ok).toBe(true);
+      expect(llamadas).toBe(2); // intento 1 agotado → reintento exitoso
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it('no reintenta si el fallo no es un timeout (backend apagado)', async () => {
+    const { api } = await import('./api/client.js');
+    const prev = globalThis.fetch;
+    let llamadas = 0;
+    globalThis.fetch = async () => {
+      llamadas += 1;
+      throw new TypeError('Failed to fetch');
+    };
+    try {
+      await expect(api.health()).rejects.toMatchObject({ code: 'backend_offline' });
+      expect(llamadas).toBe(1); // conexión rechazada: fallo inmediato, sin reintento
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+});

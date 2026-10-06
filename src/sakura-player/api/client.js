@@ -55,7 +55,7 @@ function cacheSet(key, value) {
 /* ------------------------------------------------------------------
    Petición base
    ------------------------------------------------------------------ */
-async function request(path, { method = 'GET', body, signal, timeout = 15000 } = {}) {
+async function request(path, { method = 'GET', body, signal, timeout = 15000, retried = false } = {}) {
   const url = getApiBase() + path;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
@@ -74,7 +74,17 @@ async function request(path, { method = 'GET', body, signal, timeout = 15000 } =
     });
   } catch (err) {
     clearTimeout(timer);
-    if (err && err.name === 'AbortError') throw new PlayerError('network', 'La solicitud fue cancelada');
+    if (err && err.name === 'AbortError') {
+      // ¿Canceló el llamador (p. ej. se tipeó una búsqueda nueva)?
+      if (signal && signal.aborted) throw new PlayerError('network', 'La solicitud fue cancelada');
+      // Fue nuestro timeout: un backend en la nube recién "despertando"
+      // (cold start del plan gratuito) tarda ~50 s. Los GET se reintantan
+      // una vez con más tiempo antes de dar por perdido el backend.
+      if (method === 'GET' && !retried) {
+        return request(path, { method, body, signal, timeout: 60000, retried: true });
+      }
+      throw new PlayerError('backend_offline', 'El backend tardó demasiado en responder');
+    }
     throw new PlayerError('backend_offline', 'El backend no está disponible');
   }
   clearTimeout(timer);
@@ -160,10 +170,28 @@ export function debounce(fn, wait = 350) {
 /* ------------------------------------------------------------------
    Mensajes de error amigables (sección 19)
    ------------------------------------------------------------------ */
+/* ¿La página está servida desde un host que no es local? */
+function servedRemotely() {
+  try {
+    return typeof location !== 'undefined' && !!location.hostname &&
+      !/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/.test(location.hostname);
+  } catch (e) { return false; }
+}
+
+/* ¿La API apunta a la propia máquina del navegador? */
+function apiPointsLocal() {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(getApiBase());
+}
+
 export function friendlyError(err) {
   if (err instanceof PlayerError) {
     switch (err.code) {
-      case 'backend_offline': return 'Backend apagado o sin conexión';
+      case 'backend_offline':
+        // Sitio desplegado (Render/GitHub Pages) apuntando a 127.0.0.1:
+        // en este dispositivo no existe ese backend (caso típico: celular).
+        return (servedRemotely() && apiPointsLocal())
+          ? 'Este sitio apunta a 127.0.0.1, que en este dispositivo no existe: configurá el backend en Ajustes → Backend'
+          : 'Backend apagado o sin conexión';
       case 'network': return 'Sin conexión con el servidor';
       case 'not_found': return 'No se encontró el contenido';
       case 'auth': return 'Sesión de YouTube Music no disponible';
