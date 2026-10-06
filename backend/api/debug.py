@@ -19,8 +19,6 @@ _UA_WEB = (
 )
 _UA_APP = "com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip"
 
-_CONTEXT = {"client": {"clientName": "WEB", "clientVersion": "2.20250312.04.00", "hl": "en", "gl": "US"}}
-
 
 def _resumen(resp: requests.Response) -> dict:
     return {
@@ -33,40 +31,67 @@ def _resumen(resp: requests.Response) -> dict:
 
 @router.get("/youtube")
 def youtube(video_id: str = Query("juRFjpB5Ppg")) -> dict:
-    """Sondea /player, /next y /watch con y sin cookie de consentimiento."""
-    post = lambda url, hdrs: requests.post(  # noqa: E731
-        url, json={"context": _CONTEXT, "videoId": video_id,
-                   "contentCheckOk": True, "racyCheckOk": True},
-        headers=hdrs, timeout=15,
-    )
-    get = lambda url, hdrs: requests.get(url, headers=hdrs, timeout=15)  # noqa: E731
+    """Sondea hosts/clientes alternativos de YouTube con y sin SOCS.
+
+    Cada caso reporta status/ctype y `player` = si el cuerpo contiene
+    `streamingData` (la única vía a una URL de audio).
+    """
+    def _mk(resp: requests.Response) -> dict:
+        out = _resumen(resp)
+        out["player"] = '"streamingData"' in resp.text
+        return out
+
+    def post(url, ctx_client, ua, cookie=None):
+        hdrs = {"User-Agent": ua}
+        if cookie:
+            hdrs["Cookie"] = cookie
+        return requests.post(
+            url,
+            json={"context": {"client": ctx_client},
+                  "videoId": video_id, "contentCheckOk": True, "racyCheckOk": True},
+            headers=hdrs, timeout=15,
+        )
+
+    WEB = {"clientName": "WEB", "clientVersion": "2.20250312.04.00", "hl": "en", "gl": "US"}
+    ANDROID = {"clientName": "ANDROID", "clientVersion": "19.09.37",
+               "androidSdkVersion": 34, "hl": "en", "gl": "US"}
+    ANDROID_VR = {"clientName": "ANDROID_VR", "clientVersion": "1.60.19",
+                  "androidSdkVersion": 34, "hl": "en", "gl": "US"}
+    IOS = {"clientName": "IOS", "clientVersion": "19.09.3", "deviceModel": "iPhone14,3",
+           "hl": "en", "gl": "US"}
+    TV = {"clientName": "TVHTML5", "clientVersion": "7.20250312.16.00", "hl": "en", "gl": "US"}
 
     casos = [
-        ("player_www_sin_cookie", lambda: post("https://www.youtube.com/youtubei/v1/player",
-                                               {"User-Agent": _UA_WEB})),
-        ("player_www_socs", lambda: post("https://www.youtube.com/youtubei/v1/player",
-                                         {"User-Agent": _UA_WEB, "Cookie": "SOCS=CAI"})),
-        ("player_music_socs", lambda: post("https://music.youtube.com/youtubei/v1/player",
-                                           {"User-Agent": _UA_WEB, "Cookie": "SOCS=CAI"})),
-        ("next_socs", lambda: post("https://www.youtube.com/youtubei/v1/next",
-                                   {"User-Agent": _UA_WEB, "Cookie": "SOCS=CAI"})),
-        ("watch_sin_cookie", lambda: get(f"https://www.youtube.com/watch?v={video_id}",
-                                         {"User-Agent": _UA_WEB})),
-        ("watch_socs", lambda: get(f"https://www.youtube.com/watch?v={video_id}",
-                                   {"User-Agent": _UA_WEB, "Cookie": "SOCS=CAI"})),
-        ("watch_android_ua_socs", lambda: get(f"https://www.youtube.com/watch?v={video_id}",
-                                              {"User-Agent": _UA_APP, "Cookie": "SOCS=CAI"})),
-        # control: /search sí funciona (comparar ctype/snip con los demás)
+        ("gstatic_player_web", lambda: post("https://youtubei.googleapis.com/youtubei/v1/player",
+                                            WEB, _UA_WEB, "SOCS=CAI")),
+        ("gstatic_player_android", lambda: post("https://youtubei.googleapis.com/youtubei/v1/player",
+                                                ANDROID, _UA_APP)),
+        ("gstatic_player_android_vr", lambda: post("https://youtubei.googleapis.com/youtubei/v1/player",
+                                                   ANDROID_VR, _UA_APP)),
+        ("gstatic_player_ios", lambda: post("https://youtubei.googleapis.com/youtubei/v1/player",
+                                            IOS, "com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 17_4 like Mac OS X)")),
+        ("m_player_web", lambda: post("https://m.youtube.com/youtubei/v1/player",
+                                      WEB, _UA_WEB, "SOCS=CAI")),
+        ("nocookie_player_web", lambda: post("https://www.youtube-nocookie.com/youtubei/v1/player",
+                                             WEB, _UA_WEB, "SOCS=CAI")),
+        ("tv_player_www", lambda: post("https://www.youtube.com/youtubei/v1/player",
+                                       TV, "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version", "SOCS=CAI")),
+        ("embed_html", lambda: requests.get(f"https://www.youtube.com/embed/{video_id}",
+                                            headers={"User-Agent": _UA_WEB}, timeout=15)),
+        ("oembed", lambda: requests.get(
+            f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
+            headers={"User-Agent": _UA_WEB}, timeout=15)),
+        # control: funciona → comparar contra los demás
         ("search_control", lambda: requests.post(
             "https://www.youtube.com/youtubei/v1/search",
-            json={"context": _CONTEXT, "query": "bad bunny"},
+            json={"context": {"client": WEB}, "query": "bad bunny"},
             headers={"User-Agent": _UA_WEB, "Cookie": "SOCS=CAI"}, timeout=15)),
     ]
 
     out: dict = {}
     for nombre, probe in casos:
         try:
-            out[nombre] = _resumen(probe())
+            out[nombre] = _mk(probe())
         except Exception as exc:  # noqa: BLE001 - el error también es diagnóstico
             out[nombre] = {"error": f"{type(exc).__name__}: {exc}"}
     return out
