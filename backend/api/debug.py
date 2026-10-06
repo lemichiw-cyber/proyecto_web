@@ -8,6 +8,8 @@ motivo real desde fuera. Solo diagnóstico, no lo usa el frontend.
 
 from __future__ import annotations
 
+import re
+
 import requests
 from fastapi import APIRouter, Query
 
@@ -39,6 +41,11 @@ def youtube(video_id: str = Query("juRFjpB5Ppg")) -> dict:
     def _mk(resp: requests.Response) -> dict:
         out = _resumen(resp)
         out["player"] = '"streamingData"' in resp.text
+        # En HTML (embed/watch): ¿trae la respuesta del player incrustada?
+        m = re.search(r'playabilityStatus"\s*:\s*\{[^{}]*?"status"\s*:\s*"([A-Z_]+)"', resp.text)
+        out["play"] = m.group(1) if m else None
+        out["ytinit"] = '"ytInitialPlayerResponse"' in resp.text
+        out["cipher"] = '"signatureCipher"' in resp.text
         return out
 
     def post(url, ctx_client, ua, cookie=None):
@@ -78,6 +85,17 @@ def youtube(video_id: str = Query("juRFjpB5Ppg")) -> dict:
                                        TV, "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version", "SOCS=CAI")),
         ("embed_html", lambda: requests.get(f"https://www.youtube.com/embed/{video_id}",
                                             headers={"User-Agent": _UA_WEB}, timeout=15)),
+        ("embed_movil", lambda: requests.get(
+            f"https://www.youtube.com/embed/{video_id}",
+            headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) "
+                                   "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 "
+                                   "Mobile/15E148 Safari/604.1"},
+            timeout=15)),
+        ("embed_nocookie", lambda: requests.get(f"https://www.youtube-nocookie.com/embed/{video_id}",
+                                                headers={"User-Agent": _UA_WEB}, timeout=15)),
+        ("watch_con_params", lambda: requests.get(
+            f"https://www.youtube.com/watch?v={video_id}&bpctr=9999999999&has_verified=1",
+            headers={"User-Agent": _UA_WEB, "Cookie": "SOCS=CAI; PREF=fm=mp4"}, timeout=15)),
         ("oembed", lambda: requests.get(
             f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
             headers={"User-Agent": _UA_WEB}, timeout=15)),
