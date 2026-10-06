@@ -10,6 +10,8 @@ Ejecución:
 from __future__ import annotations
 
 import os
+import shutil
+import sys
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
@@ -96,6 +98,11 @@ def health() -> dict:
         "service": "sakura-player",
         "ytmusic": yt,
         "authenticated": yt.get("authenticated", False),
+        # Entorno de ejecución: yt-dlp resuelve las firmas con node si existe.
+        "runtime": {
+            "node": bool(shutil.which("node")),
+            "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+        },
     }
 
 

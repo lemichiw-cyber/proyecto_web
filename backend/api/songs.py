@@ -14,10 +14,15 @@ _CHUNK = 64 * 1024
 
 
 @router.get("/song/{video_id}")
-def get_song(video_id: str) -> dict:
+def get_song(video_id: str, request: Request) -> dict:
     try:
         return get_service().get_song(video_id)
     except Exception as exc:  # noqa: BLE001
+        if request.query_params.get("debug"):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Canción no encontrada — {type(exc).__name__}: {exc}",
+            ) from exc
         raise HTTPException(status_code=404, detail="Canción no encontrada") from exc
 
 
@@ -31,11 +36,21 @@ def stream_song(video_id: str, request: Request):
     visualizador) y el seek funciona con peticiones Range.
     """
     try:
-        media = get_service().get_stream_media(video_id)
+        errores: list = []
+        media = get_service().get_stream_media(video_id, errors=errores)
     except Exception as exc:  # noqa: BLE001
+        if request.query_params.get("debug"):
+            raise HTTPException(
+                status_code=502,
+                detail=f"No se pudo obtener el stream — {type(exc).__name__}: {exc}",
+            ) from exc
         raise HTTPException(status_code=502, detail="No se pudo obtener el stream") from exc
     if not media or not media.get("url"):
-        raise HTTPException(status_code=404, detail="Stream no disponible para esta canción")
+        # ?debug=1 expone el motivo de cada intento (solo diagnóstico).
+        detalle = "Stream no disponible para esta canción"
+        if request.query_params.get("debug") and errores:
+            detalle += " — " + " | ".join(e[:300] for e in errores[:6])
+        raise HTTPException(status_code=404, detail=detalle)
 
     # YouTube exige el mismo User-Agent con el que se extrajo la URL
     fwd = dict(media.get("headers") or {})
@@ -80,9 +95,14 @@ def recommendations(limit: int = Query(20, ge=1, le=50)) -> dict:
 
 
 @router.get("/watch-playlist/{video_id}")
-def watch_playlist(video_id: str, limit: int = Query(25, ge=1, le=100)) -> dict:
+def watch_playlist(video_id: str, request: Request, limit: int = Query(25, ge=1, le=100)) -> dict:
     """Mix tipo 'Radio' a partir de una canción (no requiere auth)."""
     try:
         return {"tracks": get_service().get_watch_playlist(video_id, limit=limit)}
     except Exception as exc:  # noqa: BLE001
+        if request.query_params.get("debug"):
+            raise HTTPException(
+                status_code=502,
+                detail=f"No se pudo generar la cola — {type(exc).__name__}: {exc}",
+            ) from exc
         raise HTTPException(status_code=502, detail="No se pudo generar la cola") from exc

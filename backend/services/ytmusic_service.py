@@ -21,6 +21,11 @@ from typing import Any, Optional
 from ytmusicapi import YTMusic
 
 
+def _log(msg: str) -> None:
+    """Log a stdout: uvicorn lo envía a los Logs del servicio en Render."""
+    print(f"[sakura] {msg}", flush=True)
+
+
 # ----------------------------------------------------------------------
 # Normalización de helpers
 # ----------------------------------------------------------------------
@@ -191,7 +196,11 @@ class YouTubeMusicService:
 
     def get_song(self, video_id: str) -> dict:
         client = self._ensure_client()
-        data = client.get_song(video_id)
+        try:
+            data = client.get_song(video_id)
+        except Exception as exc:  # noqa: BLE001 - se propaga con contexto al log
+            _log(f"get_song({video_id}) falló: {type(exc).__name__}: {exc}")
+            raise
         vd = data.get("videoDetails") or {}
         # videoDetails trae título, autor y miniaturas pero no artistas
         # ni álbum en el formato que espera normalize_track: se adapta.
@@ -219,75 +228,111 @@ class YouTubeMusicService:
                 pass
         return track
 
-    def get_stream_media(self, video_id: str, use_cache: bool = True) -> Optional[dict]:
+    def get_stream_media(
+        self, video_id: str, use_cache: bool = True, errors: Optional[list] = None
+    ) -> Optional[dict]:
         """URL de audio + cabeceras para el proxy de streaming (o None).
 
         YouTube entrega los formatos con `signatureCipher` (sin URL plana),
         así que la extracción la hace yt-dlp, que descifra la firma y el
         parámetro `n`. Se cachea 10 minutos para no repetir la llamada en
         cada petición Range del reproductor.
+
+        `errors` (opcional) se rellena con el motivo de cada intento
+        fallido: la ruta /stream lo expone con ?debug=1.
         """
         if use_cache:
             hit = self._stream_cache.get(video_id)
             if hit and time.time() - hit[0] < 600:
                 return {"url": hit[1], "headers": hit[2] if len(hit) > 2 else {}}
-        media = self._extract_ytdlp(video_id) or self._extract_ytmusic(video_id)
+        media = self._extract_ytdlp(video_id, errors=errors) or self._extract_ytmusic(
+            video_id, errors=errors
+        )
         if media and use_cache:
             self._stream_cache[video_id] = (time.time(), media["url"], media.get("headers") or {})
+        if not media:
+            _log(f"stream({video_id}): sin URL tras {len(errors or [])} intento(s)")
         return media
 
     def get_stream_url(self, video_id: str, use_cache: bool = True) -> Optional[str]:
         media = self.get_stream_media(video_id, use_cache=use_cache)
         return media["url"] if media else None
 
-    def _extract_ytdlp(self, video_id: str) -> Optional[dict]:
-        """Extracción con yt-dlp (soporta signatureCipher y URL con parámetro n)."""
+    def _extract_ytdlp(self, video_id: str, errors: Optional[list] = None) -> Optional[dict]:
+        """Extracción con yt-dlp (soporta signatureCipher y URL con parámetro n).
+
+        Prueba los clientes `default` (WEB) y `android` (URL sin firma, no
+        necesita runtime JS). En IPs de datacenter el cliente WEB suele
+        recibir bot-check y el `android` sigue respondiendo.
+        """
         try:
             from yt_dlp import YoutubeDL
         except Exception:  # noqa: BLE001 - dependencia opcional
             return None
-        opts = {
-            "format": "bestaudio/best",
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
-            "skip_download": True,
-            "socket_timeout": 20,
-            "retries": 1,
-        }
-        # Sin runtime JS algunos formatos quedan inaccesibles; si hay node, se usa.
-        if shutil.which("node"):
-            opts["js_runtimes"] = {"node": {}}
-        try:
-            with YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-        except Exception:  # noqa: BLE001 - el respaldo sigue disponible
-            return None
-        url = (info or {}).get("url")
-        if not url:
-            return None
-        headers = (info or {}).get("http_headers") or {}
-        ua = headers.get("User-Agent") or ""
-        return {"url": url, "headers": {"User-Agent": ua} if ua else {}}
+        if errors is None:
+            errors = []
+        for clientes in (None, ["android"]):
+            etiqueta = "default" if clientes is None else "+".join(clientes)
+            opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+                "skip_download": True,
+                "socket_timeout": 15,
+                "retries": 0,
+            }
+            if clientes:
+                opts["extractor_args"] = {"youtube": {"player_client": clientes}}
+            # Sin runtime JS algunos formatos quedan inaccesibles; si hay node, se usa.
+            if shutil.which("node"):
+                opts["js_runtimes"] = {"node": {}}
+            try:
+                with YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(
+                        f"https://www.youtube.com/watch?v={video_id}", download=False
+                    )
+            except Exception as exc:  # noqa: BLE001 - sigue con el siguiente cliente
+                errors.append(f"yt-dlp[{etiqueta}]: {type(exc).__name__}: {exc}")
+                _log(f"yt-dlp[{etiqueta}] falló para {video_id}: {exc}")
+                continue
+            url = (info or {}).get("url")
+            if not url:
+                errors.append(f"yt-dlp[{etiqueta}]: extrajo sin URL de audio")
+                _log(f"yt-dlp[{etiqueta}] no devolvió URL para {video_id}")
+                continue
+            headers = (info or {}).get("http_headers") or {}
+            ua = headers.get("User-Agent") or ""
+            return {"url": url, "headers": {"User-Agent": ua} if ua else {}}
+        return None
 
-    def _extract_ytmusic(self, video_id: str) -> Optional[dict]:
+    def _extract_ytmusic(self, video_id: str, errors: Optional[list] = None) -> Optional[dict]:
         """Respaldo: formatos que ytmusicapi devuelve con URL directa (sin cipher)."""
+        if errors is None:
+            errors = []
         try:
             client = self._ensure_client()
             streaming = client.get_song(video_id).get("streamingData") or {}
             formats = list(streaming.get("formats") or []) + list(streaming.get("adaptiveFormats") or {})
             audio = [f for f in formats if (f.get("mimeType") or "").startswith("audio") and f.get("url")]
             if not audio:
+                errors.append("ytmusic: sin formatos de audio con URL directa")
                 return None
             best = max(audio, key=lambda f: f.get("bitrate") or 0)
             return {"url": best["url"], "headers": {}}
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"ytmusic: {type(exc).__name__}: {exc}")
+            _log(f"respaldo ytmusic para {video_id} falló: {exc}")
             return None
 
     def get_watch_playlist(self, video_id: str, limit: int = 25) -> list:
         """Cola tipo 'Mix de YouTube' a partir de una canción."""
         client = self._ensure_client()
-        data = client.get_watch_playlist(videoId=video_id, limit=limit)
+        try:
+            data = client.get_watch_playlist(videoId=video_id, limit=limit)
+        except Exception as exc:  # noqa: BLE001 - el log muestra el motivo en Render
+            _log(f"get_watch_playlist({video_id}) falló: {type(exc).__name__}: {exc}")
+            raise
         tracks = []
         for item in data.get("tracks") or []:
             if item.get("videoId"):
