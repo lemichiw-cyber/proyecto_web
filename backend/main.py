@@ -76,6 +76,16 @@ app.include_router(playlists.router)
 app.include_router(library.router)
 
 
+@app.get("/", tags=["meta"])
+def root() -> dict:
+    """Respuesta para el health check por defecto de la plataforma.
+
+    Render/Heroku comprueban `/` al arrancar: sin esta ruta el servicio
+    marcaría 404 y quedaría en loop de reinicios.
+    """
+    return {"ok": True, "service": "sakura-player", "health": "/api/health", "docs": "/docs"}
+
+
 @app.get("/api/health", tags=["meta"])
 def health() -> dict:
     """Estado del backend y de la conexión con YouTube Music."""
