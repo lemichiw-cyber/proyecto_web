@@ -683,12 +683,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           document.addEventListener('keydown', keyHandler);
         });
       }
-      function dialogPrompt(msg, title, defaultValue) {
+      function dialogPrompt(msg, title, defaultValue, type) {
         return new Promise(function (resolve) {
           dialogOverlay.classList.add('open');
           $('dialog-content').innerHTML = title ? '<div class="modal-dialog-icon"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoyMHB4O2hlaWdodDoyMHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik03IDdoLTFhMiAyIDAgMCAwIC0yIDJ2OWEyIDIgMCAwIDAgMiAyaDlhMiAyIDAgMCAwIDIgLTJ2LTEiIC8+CiAgPHBhdGggZD0iTTIwLjM4NSA2LjU4NWEyLjEgMi4xIDAgMCAwIC0yLjk3IC0yLjk3bC04LjQxNSA4LjM4NXYzaDNsOC4zODUgLTguNDE1IiAvPgogIDxwYXRoIGQ9Ik0xNiA1bDMgMyIgLz4KPC9zdmc+" width="20" height="20" style="width:20px;height:20px;display:block" alt=""> </div><div class="modal-dialog-title">' + escapeHtml(title) + '</div><div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>' : '<div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>';
           $('dialog-input-wrap').classList.remove('hidden');
           var input = $('dialog-input');
+          input.type = type || 'text';
           input.value = defaultValue || '';
           input.focus();
           $('dialog-buttons').innerHTML = '<button class="btn btn-outline" id="dialog-cancel-btn">Cancelar</button><button class="btn btn-primary" id="dialog-confirm-btn">Aceptar</button>';
@@ -1158,6 +1159,123 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function examGuardarStorage() { localStorage.setItem(EXAM_KEY, JSON.stringify(examenes)); }
 
+      /* ===== RESULTADOS: historial de notas por estudiante ===== */
+      var EXAM_RES_KEY = 'bachillerato_exam_resultados';
+      var examResultados = JSON.parse(localStorage.getItem(EXAM_RES_KEY) || '[]');
+
+      function examResGuardar() { localStorage.setItem(EXAM_RES_KEY, JSON.stringify(examResultados)); }
+      function examIntentosMax(e) { var n = parseInt(e && e.intentos, 10); return n > 0 ? n : 3; }
+      function examNotaMin(e) { var n = parseInt(e && e.notamin, 10); return n > 0 && n <= 100 ? n : 60; }
+      function examEmailEstudiante() { return usuarioActual && usuarioActual.email ? usuarioActual.email : 'invitado'; }
+      function examNombreEstudiante() {
+        if (!usuarioActual) return 'Invitado';
+        return usuarioActual.nombre || usuarioActual.email || 'Invitado';
+      }
+      function examIntentosUsados(titulo, email) {
+        return examResultados.filter(function (r) { return r.examen === titulo && r.estudiante === email; }).length;
+      }
+      function examDesordenar(arr) {
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+
+      /* Intentos que lleva el estudiante sobre el examen seleccionado */
+      function examRenderMisIntentos() {
+        var box = $('exam-mis-intentos');
+        if (!box) return;
+        var idx = parseInt($('exam-select').value, 10);
+        if (isNaN(idx) || !examenes[idx]) { box.textContent = ''; return; }
+        var e = examenes[idx];
+        var usados = examIntentosUsados(e.titulo, examEmailEstudiante());
+        var max = examIntentosMax(e);
+        var notaMin = examNotaMin(e);
+        var intentos = examResultados.filter(function (r) { return r.examen === e.titulo && r.estudiante === examEmailEstudiante(); });
+        var mejor = intentos.reduce(function (m, r) { return Math.max(m, r.porcentaje); }, -1);
+        box.innerHTML = 'Intentos usados: <strong>' + usados + '/' + max + '</strong>' +
+          ' · Nota m&iacute;nima para aprobar: <strong>' + notaMin + '%</strong>' +
+          (mejor >= 0 ? ' · Tu mejor nota: <strong style="color:' + (mejor >= notaMin ? 'var(--green)' : 'var(--red)') + ';">' + mejor + '%</strong>' : '') +
+          (usados >= max ? '<br><span style="color:var(--red);font-weight:600;">No te quedan intentos.</span>' : '');
+      }
+
+      /* Panel de resultados (pestaña docente) */
+      function examRenderResultados() {
+        var cont = $('exam-resultados');
+        var filtro = $('exam-res-filtro');
+        if (!cont || !filtro) return;
+
+        var opts = '<option value="">Todos los ex&aacute;menes</option>' + examenes.map(function (e, i) {
+          return '<option value="' + i + '">' + escapeHtml(e.titulo) + '</option>';
+        }).join('');
+        if (filtro.innerHTML !== opts) { filtro.innerHTML = opts; filtro.value = ''; }
+        var sel = filtro.value;
+
+        var filas = examResultados.slice();
+        if (sel !== '' && examenes[sel]) filas = filas.filter(function (r) { return r.examen === examenes[sel].titulo; });
+        filas.sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
+
+        if (filas.length === 0) {
+          cont.innerHTML = emptyMsg('Todavía no hay resultados.', { icon: '📊', title: 'Resultados', desc: 'Cada vez que un estudiante rinde el examen, su nota queda registrada acá.' });
+          return;
+        }
+
+        var notas = filas.map(function (r) { return r.porcentaje; });
+        var promedio = Math.round(notas.reduce(function (a, b) { return a + b; }, 0) / notas.length);
+        var aprueban = filas.filter(function (r) { return r.aprobado; }).length;
+        var chipNotaMin = (sel !== '' && examenes[sel])
+          ? '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Nota m&iacute;nima: <strong>' + examNotaMin(examenes[sel]) + '%</strong></div>'
+          : '';
+
+        cont.innerHTML =
+          '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">' +
+            '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Intentos: <strong>' + filas.length + '</strong></div>' +
+            '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Promedio: <strong>' + promedio + '%</strong></div>' +
+            '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Aprobados: <strong style="color:var(--green);">' + aprueban + '/' + filas.length + '</strong></div>' +
+            chipNotaMin +
+          '</div>' +
+          '<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:.85rem;">' +
+            '<thead><tr style="text-align:left;color:var(--gray-500);">' +
+              '<th style="padding:.4rem;">Estudiante</th><th style="padding:.4rem;">Examen</th><th style="padding:.4rem;">Fecha</th><th style="padding:.4rem;">Nota</th><th style="padding:.4rem;">Estado</th>' +
+            '</tr></thead><tbody>' +
+            filas.map(function (r) {
+              var color = r.aprobado ? 'var(--green)' : 'var(--red)';
+              return '<tr style="border-top:1px solid var(--gray-100);">' +
+                '<td style="padding:.45rem;">' + escapeHtml(r.nombre) + '</td>' +
+                '<td style="padding:.45rem;">' + escapeHtml(r.examen) + '</td>' +
+                '<td style="padding:.45rem;color:var(--gray-500);">' + fechaCorta(r.fecha) + '</td>' +
+                '<td style="padding:.45rem;font-weight:700;color:' + color + ';">' + r.porcentaje + '% (' + r.aciertos + '/' + r.total + ')</td>' +
+                '<td style="padding:.45rem;">' + (r.aprobado ? '✅ Aprobado' : '❌ Reprobado') + (r.violaciones ? ' · ⚠ ' + r.violaciones : '') + '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table></div>';
+      }
+
+      function examExportarResultados() {
+        if (!exigirPermiso('crear')) return;
+        if (examResultados.length === 0) { mostrarToast('No hay resultados para exportar.', 'error'); return; }
+        var filas = [['Estudiante', 'Correo', 'Examen', 'Fecha', 'Aciertos', 'Total', 'Porcentaje', 'Nota mínima', 'Aprobado', 'Violaciones']];
+        examResultados.slice().sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); }).forEach(function (r) {
+          filas.push([r.nombre, r.email || '', r.examen, r.fecha, r.aciertos, r.total, r.porcentaje + '%', r.notamin + '%', r.aprobado ? 'Sí' : 'No', r.violaciones || 0]);
+        });
+        var csv = '﻿' + filas.map(function (fila) {
+          return fila.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';');
+        }).join('\n');
+        try {
+          var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = 'resultados-examenes.csv';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+          mostrarToast('CSV descargado.', 'success');
+        } catch (e) { mostrarToast('No se pudo exportar el CSV.', 'error'); }
+      }
+
       function examRenderGuardados() {
         var container = $('exam-lista-guardados');
         if (examenes.length === 0) { container.innerHTML = emptyMsg('Aún no hay exámenes guardados.', { icon: '📄', title: 'Exámenes', desc: 'Creá un examen desde el formulario de arriba.' }); return; }
@@ -1165,7 +1283,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           examenes.map(function (e, idx) {
             var preg = e.preguntas ? e.preguntas.length : 0;
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong style="font-size:.9rem;">' + escapeHtml(e.titulo) + '</strong><br><span style="font-size:.78rem;color:var(--gray-500);">' + preg + ' preg · ' + e.tiempo + ' min</span></div>' +
+              '<div><strong style="font-size:.9rem;">' + escapeHtml(e.titulo) + '</strong><br><span style="font-size:.78rem;color:var(--gray-500);">' + preg + ' preg · ' + e.tiempo + ' min · ' + examIntentosMax(e) + ' intentos · mínimo ' + examNotaMin(e) + '%' + (e.barajar ? ' · barajado' : '') + '</span></div>' +
               '<button class="btn btn-sm btn-outline" data-perm="eliminar" onclick="examEliminar(' + idx + ')"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
           }).join('') + '</div>';
       }
@@ -1256,13 +1374,21 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function examGuardar() {
         var titulo = $('exam-titulo').value.trim();
         var tiempo = parseInt($('exam-tiempo').value, 10) || 60;
+        var notamin = parseInt($('exam-notamin').value, 10);
+        var intentos = parseInt($('exam-intentos').value, 10);
+        var barajar = $('exam-barajar') ? !!$('exam-barajar').checked : false;
         if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
+        if (isNaN(notamin) || notamin < 1 || notamin > 100) { $('exam-guardar-msg').textContent = '⚠️ La nota mínima va de 1 a 100.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
+        if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var preguntas = examGetPreguntas();
         if (preguntas.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Agrega al menos 1 pregunta.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        examenes.push({ titulo: titulo, tiempo: tiempo, preguntas: preguntas });
+        examenes.push({ titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, creado: new Date().toISOString() });
         examGuardarStorage();
         examRenderGuardados();
+        examRenderResultados();
         examCargarSelect();
+        $('exam-guardar-msg').textContent = '✅ Examen guardado.';
+        $('exam-guardar-msg').style.color = 'var(--green)';
       }
 
       /* ===== ANTI-CHEAT ===== */
@@ -1459,7 +1585,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var sel = $('exam-select');
         sel.innerHTML = '';
         if (examenes.length === 0) {
-          sel.innerHTML = '<option value="">— Sin exámenes disponibles —</option>'; return;
+          sel.innerHTML = '<option value="">— Sin exámenes disponibles —</option>';
+          examRenderMisIntentos();
+          return;
         }
         examenes.forEach(function (e, i) {
           var opt = document.createElement('option');
@@ -1467,17 +1595,30 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           opt.textContent = e.titulo + ' (' + e.preguntas.length + ' preg, ' + e.tiempo + ' min)';
           sel.appendChild(opt);
         });
+        examRenderMisIntentos();
       }
 
       function examComenzar() {
         var idx = parseInt($('exam-select').value, 10);
         if (isNaN(idx) || !examenes[idx]) { mostrarToast('Selecciona un examen válido.', 'error'); return; }
+        var e = examenes[idx];
+        var usados = examIntentosUsados(e.titulo, examEmailEstudiante());
+        var max = examIntentosMax(e);
+        if (usados >= max) {
+          mostrarToast('Ya usaste tus ' + max + ' intento' + (max === 1 ? '' : 's') + ' de "' + e.titulo + '".', 'error');
+          examRenderMisIntentos();
+          return;
+        }
+        var copia = JSON.parse(JSON.stringify(e));
+        if (copia.barajar && Array.isArray(copia.preguntas)) copia.preguntas = examDesordenar(copia.preguntas);
         examEnCurso = {
           idx: idx,
-          examen: JSON.parse(JSON.stringify(examenes[idx])),
+          examen: copia,
           respuestas: [],
-          tiempoRestante: examenes[idx].tiempo * 60,
-          iniciado: Date.now()
+          tiempoRestante: e.tiempo * 60,
+          iniciado: Date.now(),
+          intento: usados + 1,
+          intentosMax: max
         };
         examRenderSimulador();
         examIniciarTimer();
@@ -1576,30 +1717,101 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
 
+      function examTextoRespuesta(q, valor) {
+        if (valor === null || valor === undefined || valor === '') return 'Sin responder';
+        if (q.tipo === 'completar') return String(valor);
+        if (q.tipo === 'vf') return Number(valor) === 1 ? 'Verdadero' : 'Falso';
+        if (q.tipo === 'multiple') return String.fromCharCode(65 + Number(valor)) + ') ' + ((q.opciones || [])[Number(valor)] || '');
+        return String(valor);
+      }
+
+      function examTextoCorrecta(q) {
+        if (q.tipo === 'completar') return q.respuesta || '—';
+        if (q.tipo === 'vf') return Number(q.correcta) === 1 ? 'Verdadero' : 'Falso';
+        if (q.tipo === 'multiple') return String.fromCharCode(65 + Number(q.correcta)) + ') ' + ((q.opciones || [])[Number(q.correcta)] || '');
+        return '—';
+      }
+
       function examEnviar() {
         if (!examEnCurso) return;
         clearInterval(examTimerId);
         examCleanupAntiCheat();
         var respuestas = examRecolectarRespuestas();
+        var preguntas = examEnCurso.examen.preguntas;
+        var detalle = [];
         var correctas = 0;
-        examEnCurso.examen.preguntas.forEach(function (q, i) {
-          if (respuestas[i] === null || respuestas[i] === '') return;
-          if (q.tipo === 'completar') {
-            if (respuestas[i] === (q.respuesta || '').toLowerCase()) correctas++;
-          } else {
-            if (respuestas[i] === q.correcta) correctas++;
+        preguntas.forEach(function (q, i) {
+          var dada = respuestas[i];
+          var ok = false;
+          if (dada !== null && dada !== '' && dada !== undefined) {
+            ok = (q.tipo === 'completar')
+              ? dada === (q.respuesta || '').toLowerCase()
+              : dada === q.correcta;
           }
+          if (ok) correctas++;
+          detalle.push({ ok: ok, dada: dada, q: q });
         });
-        var total = examEnCurso.examen.preguntas.length;
+
+        var total = preguntas.length;
         var porcentaje = total > 0 ? Math.round(correctas / total * 100) : 0;
-        var aprobado = porcentaje >= 60;
+        var notaMin = examNotaMin(examEnCurso.examen);
+        var aprobado = porcentaje >= notaMin;
+        var intento = examEnCurso.intento || (examIntentosUsados(examEnCurso.examen.titulo, examEmailEstudiante()) + 1);
+        var intentosMax = examEnCurso.intentosMax || examIntentosMax(examEnCurso.examen);
+        var tituloExamen = examEnCurso.examen.titulo;
+        var violaciones = examViolaciones;
 
         $('exam-simulador').classList.add('hidden');
         var resultEl = $('exam-resultado');
         resultEl.className = 'exam-resultado' + (aprobado ? ' aprobado' : ' reprobado');
         resultEl.classList.remove('hidden');
         $('exam-nota').textContent = correctas + '/' + total;
-        $('exam-mensaje').textContent = aprobado ? '✅ ¡Aprobado! (' + porcentaje + '%)' : '❌ Reprobado (' + porcentaje + '%). Mínimo 60%';
+        $('exam-mensaje').textContent = aprobado
+          ? '✅ ¡Aprobado! (' + porcentaje + '% · mínimo ' + notaMin + '%)'
+          : '❌ Reprobado (' + porcentaje + '%). Mínimo ' + notaMin + '%';
+
+        // Retroalimentación pregunta por pregunta
+        var fb = $('exam-feedback');
+        if (fb) {
+          fb.innerHTML = '<div style="font-weight:700;margin:1rem 0 .5rem;">Retroalimentación</div>' +
+            detalle.map(function (d, i) {
+              return '<div style="padding:.5rem .65rem;border-radius:8px;margin-bottom:.4rem;font-size:.85rem;background:' + (d.ok ? 'rgba(46,204,113,.14)' : 'rgba(231,76,60,.14)') + ';">' +
+                '<strong>' + (d.ok ? '✅' : '❌') + ' ' + (i + 1) + '. ' + escapeHtml(d.q.texto) + '</strong>' +
+                '<div style="color:var(--gray-600);">Tu respuesta: ' + escapeHtml(examTextoRespuesta(d.q, d.dada)) + '</div>' +
+                (d.ok ? '' : '<div style="color:var(--green);">Respuesta correcta: ' + escapeHtml(examTextoCorrecta(d.q)) + '</div>') +
+              '</div>';
+            }).join('') +
+            '<div style="font-size:.83rem;color:var(--gray-500);margin-top:.5rem;">Intento ' + intento + ' de ' + intentosMax +
+              (violaciones ? ' · ⚠ ' + violaciones + ' violación' + (violaciones === 1 ? '' : 'es') + ' de seguridad' : '') + '</div>';
+        }
+
+        // Registro del intento
+        examResultados.push({
+          examen: tituloExamen,
+          estudiante: examEmailEstudiante(),
+          nombre: examNombreEstudiante(),
+          fecha: new Date().toISOString(),
+          aciertos: correctas,
+          total: total,
+          porcentaje: porcentaje,
+          notamin: notaMin,
+          aprobado: aprobado,
+          intento: intento,
+          violaciones: violaciones,
+          detalle: detalle.map(function (d) {
+            return {
+              ok: d.ok,
+              pregunta: d.q.texto,
+              dada: examTextoRespuesta(d.q, d.dada),
+              correcta: examTextoCorrecta(d.q)
+            };
+          })
+        });
+        examResGuardar();
+        examRenderMisIntentos();
+        examRenderResultados();
+        mostrarToast('Resultado guardado: ' + porcentaje + '%.', aprobado ? 'success' : 'error');
+
         examEnCurso = null;
       }
 
@@ -1636,6 +1848,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       // Init
       examRenderGuardados();
       examCargarSelect();
+      examRenderResultados();
+      var examResFiltro = $('exam-res-filtro');
+      if (examResFiltro) examResFiltro.addEventListener('change', examRenderResultados);
+      var btnExamCsv = $('btn-exam-csv');
+      if (btnExamCsv) btnExamCsv.addEventListener('click', examExportarResultados);
+      var examSelectEl = $('exam-select');
+      if (examSelectEl) examSelectEl.addEventListener('change', examRenderMisIntentos);
 
       // Plan de Trabajo init
       var planGrupoSelect = $('plan-grupo');
@@ -2177,9 +2396,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             $('aula-tab-gestion').classList.toggle('hidden', tab !== 'gestion');
             $('aula-tab-estudiantes').classList.toggle('hidden', tab !== 'estudiantes');
             $('aula-tab-tareas').classList.toggle('hidden', tab !== 'tareas');
+            if ($('aula-tab-asistencia')) $('aula-tab-asistencia').classList.toggle('hidden', tab !== 'asistencia');
             if ($('aula-tab-inscripcion')) $('aula-tab-inscripcion').classList.toggle('hidden', tab !== 'inscripcion');
             if ($('aula-tab-sala')) $('aula-tab-sala').classList.toggle('hidden', tab !== 'sala');
             if (tab === 'tareas') renderAulaTareas();
+            if (tab === 'asistencia') renderAulaAsistencia();
             if (tab === 'inscripcion') renderInscripcion();
             if (tab === 'sala') renderSala();
           });
@@ -2405,33 +2626,374 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       });
       renderActividades();
 
+      /* ===================================================================
+         FOROS — temas con mensajes, respuestas, estados y filtros
+         =================================================================== */
+      var MATERIAS_FORO = [
+        ['', 'Todas las materias'], ['general', 'General'], ['matematicas', 'Matem\u00E1ticas'],
+        ['fisica', 'F\u00edsica'], ['quimica', 'Qu\u00EDmica'], ['biologia', 'Biolog\u00EDa'],
+        ['literatura', 'Literatura'], ['historia', 'Historia'], ['ingles', 'Ingl\u00E9s'],
+      ];
+      var ESTADOS_FORO = {
+        abierto: { t: 'Abierto', c: 'badge-blue' },
+        resuelto: { t: 'Resuelto', c: 'badge-green' },
+        cerrado: { t: 'Cerrado', c: 'badge-amber' },
+      };
+      var foroAbierto = -1;      // índice del tema abierto en pantalla
+      var foroResponderA = null; // id del mensaje al que se responde (null = al tema)
+
+      // Migración de los foros viejos ({titulo, desc}) al formato con hilos
+      (function migrarForos() {
+        var cambia = false;
+        foros.forEach(function (f) {
+          if (!f.id) { f.id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); cambia = true; }
+          if (!Array.isArray(f.mensajes)) { f.mensajes = []; cambia = true; }
+          if (!f.estado) { f.estado = 'abierto'; cambia = true; }
+          if (f.fijado === undefined) { f.fijado = false; cambia = true; }
+          if (f.materia === undefined) { f.materia = ''; cambia = true; }
+          if (!f.creada) { f.creada = new Date().toISOString(); cambia = true; }
+          if (!f.autor) { f.autor = { nombre: 'An\u00F3nimo', email: '', rol: '' }; cambia = true; }
+          f.mensajes.forEach(function (m) {
+            if (!m.id) { m.id = 'm' + Math.random().toString(36).slice(2, 9); cambia = true; }
+            if (!Array.isArray(m.respuestas)) { m.respuestas = []; cambia = true; }
+            if (!m.autor) { m.autor = { nombre: 'An\u00F3nimo', email: '', rol: '' }; cambia = true; }
+            if (!m.fecha) { m.fecha = new Date().toISOString(); cambia = true; }
+          });
+        });
+        if (cambia) guardarSeccion('foros', foros);
+      })();
+
+      function foroYo() {
+        return usuarioActual
+          ? { nombre: usuarioActual.nombre || usuarioActual.email, email: usuarioActual.email, rol: usuarioActual.rol }
+          : null;
+      }
+      function foroCuentaRespuestas(f) {
+        var n = f.mensajes.length;
+        f.mensajes.forEach(function (m) { n += (m.respuestas || []).length; });
+        return n;
+      }
+      function foroNombreMateria(v) {
+        var m = MATERIAS_FORO.find(function (x) { return x[0] === v; });
+        return m ? m[1] : v;
+      }
+      function fechaCorta(iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+      function foroPuedeBorrar(autor) {
+        var yo = foroYo();
+        if (yo && autor && autor.email && autor.email === yo.email) return true;
+        return tienePermiso('eliminar');
+      }
+      function foroBadgeRol(rol) {
+        var c = (typeof ROLES_BADGE !== 'undefined' && ROLES_BADGE[rol]) || 'badge-blue';
+        var t = (typeof ROLES_LABEL !== 'undefined' && ROLES_LABEL[rol]) || rol;
+        return '<span class="badge ' + c + '" style="font-size:.68rem;">' + escapeHtml(t || '') + '</span>';
+      }
+
+      (function initForoFiltros() {
+        var sel = $('foro-filtro-materia');
+        if (sel) {
+          sel.innerHTML = MATERIAS_FORO.map(function (m) {
+            return '<option value="' + m[0] + '">' + m[1] + '</option>';
+          }).join('');
+        }
+        ['foro-buscar', 'foro-filtro-estado', 'foro-filtro-materia'].forEach(function (id) {
+          var el = $(id);
+          if (el) el.addEventListener('input', function () { if (foroAbierto < 0) renderForos(); });
+        });
+      })();
+
       function renderForos() {
         var el = $('foro-lista');
-        if (foros.length === 0) { el.innerHTML = emptyMsg('No hay foros activos.', { icon: '💬', title: 'Foros', desc: 'Creá un foro para iniciar una discusión con tu grupo.', actionText: '+ Nuevo foro', actionFn: function() { $('btn-foro-add').click(); } }); return; }
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          foros.map(function (f, i) {
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(f.titulo) + '</strong>' + (f.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(f.desc) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="foros" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
-          }).join('') + '</div>';
-        el.querySelectorAll('.seccion-del').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            foros.splice(parseInt(this.dataset.idx), 1);
-            guardarSeccion('foros', foros);
+        var det = $('foro-detalle');
+        if (!el || !det) return;
+
+        // Tema abierto: se muestra el hilo en vez de la lista
+        if (foroAbierto >= 0 && foros[foroAbierto]) {
+          el.classList.add('hidden');
+          det.classList.remove('hidden');
+          renderForoDetalle();
+          return;
+        }
+        foroAbierto = -1;
+        el.classList.remove('hidden');
+        det.classList.add('hidden');
+        det.innerHTML = '';
+
+        var q = (($('foro-buscar') && $('foro-buscar').value) || '').toLowerCase().trim();
+        var estado = $('foro-filtro-estado') ? $('foro-filtro-estado').value : 'todos';
+        var materia = $('foro-filtro-materia') ? $('foro-filtro-materia').value : '';
+
+        var visibles = foros.map(function (f, i) { return { f: f, i: i }; }).filter(function (x) {
+          if (estado !== 'todos' && x.f.estado !== estado) return false;
+          if (materia && x.f.materia !== materia) return false;
+          if (q && String(x.f.titulo).toLowerCase().indexOf(q) === -1 &&
+              String(x.f.desc || '').toLowerCase().indexOf(q) === -1) return false;
+          return true;
+        }).sort(function (a, b) {
+          var pa = a.f.fijado ? 1 : 0, pb = b.f.fijado ? 1 : 0;
+          if (pa !== pb) return pb - pa;
+          return String(b.f.creada).localeCompare(String(a.f.creada));
+        });
+
+        if (visibles.length === 0) {
+          el.innerHTML = foros.length === 0
+            ? emptyMsg('No hay temas todavía.', { icon: '\uD83D\uDCAC', title: 'Foros', desc: 'Cre\u00E1 un tema para iniciar una discusi\u00F3n con tu grupo.', actionText: '+ Nuevo tema', actionFn: function () { $('btn-foro-add').click(); } })
+            : emptyMsg('Ning\u00FAn tema coincide con el filtro.', { icon: '\uD83D\uDD0D', title: 'Sin resultados', desc: 'Prob\u00E1 con otra b\u00FAsqueda o limpi\u00E1 los filtros.' });
+          return;
+        }
+
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' + visibles.map(function (x) {
+          var f = x.f;
+          var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
+          var meta = [];
+          if (f.fijado) meta.push('\uD83D\uDCCC Fijado');
+          meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
+          if (f.materia) meta.push(escapeHtml(foroNombreMateria(f.materia)));
+          meta.push(fechaCorta(f.creada));
+          return '<div style="padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+            '<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">' +
+              '<div style="flex:1;min-width:0;">' +
+                '<button class="btn btn-sm foro-abrir" data-idx="' + x.i + '" style="padding:0;background:none;border:none;color:var(--gray-900);font-weight:700;text-align:left;font-size:.95rem;">' + escapeHtml(f.titulo) + '</button>' +
+                (f.desc ? '<p style="font-size:.83rem;color:var(--gray-500);margin:.15rem 0 0;">' + escapeHtml(f.desc) + '</p>' : '') +
+                '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.75rem;color:var(--gray-500);margin-top:.35rem;">' +
+                  '<span class="badge ' + st.c + '" style="font-size:.7rem;">' + st.t + '</span>' +
+                  '<span>' + meta.join(' \u00B7 ') + '</span>' +
+                  '<span>\uD83D\uDCAC ' + foroCuentaRespuestas(f) + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;gap:.35rem;flex-shrink:0;">' +
+                (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline foro-estado" data-idx="' + x.i + '" style="font-size:.75rem;">' + (f.estado === 'resuelto' ? 'Reabrir' : '\u2714 Resuelto') + '</button>' : '') +
+                '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + x.i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button>' +
+              '</div>' +
+            '</div></div>';
+        }).join('') + '</div>';
+
+        el.querySelectorAll('.foro-abrir').forEach(function (b) {
+          b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
+        });
+        el.querySelectorAll('.foro-estado').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (!exigirPermiso('editar')) return;
+            var f = foros[parseInt(this.dataset.idx, 10)];
+            if (!f) return;
+            f.estado = f.estado === 'resuelto' ? 'abierto' : 'resuelto';
+            foroGuardar();
             renderForos();
-            mostrarToast('Foro eliminado.', 'success');
+            mostrarToast(f.estado === 'resuelto' ? 'Tema marcado como resuelto.' : 'Tema reabierto.', 'success');
+          });
+        });
+        el.querySelectorAll('.seccion-del').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (!exigirPermiso('eliminar')) return;
+            foros.splice(parseInt(this.dataset.idx, 10), 1);
+            foroGuardar();
+            renderForos();
+            mostrarToast('Tema eliminado.', 'success');
           });
         });
       }
+
+      function abrirForo(idx) { foroAbierto = idx; foroResponderA = null; renderForos(); }
+      function cerrarForo() { foroAbierto = -1; foroResponderA = null; renderForos(); }
+
+      function renderForoDetalle() {
+        var det = $('foro-detalle');
+        var f = foros[foroAbierto];
+        if (!det) return;
+        if (!f) { foroAbierto = -1; renderForos(); return; }
+
+        var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
+        var yo = foroYo();
+        var cerrado = f.estado === 'cerrado';
+        var meta = [];
+        meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
+        if (f.materia) meta.push(escapeHtml(foroNombreMateria(f.materia)));
+        meta.push(fechaCorta(f.creada));
+        meta.push(foroCuentaRespuestas(f) + ' participaci\u00F3n' + (foroCuentaRespuestas(f) === 1 ? '' : 'es'));
+
+        var mensajes = f.mensajes.map(function (m) {
+          var respuestas = (m.respuestas || []).map(function (r) {
+            return '<div style="margin:.4rem 0 0 .9rem;padding:.45rem .6rem;background:var(--gray-50);border-left:3px solid var(--gray-200);border-radius:0 8px 8px 0;">' +
+              '<div style="display:flex;justify-content:space-between;gap:.5rem;">' +
+                '<strong style="font-size:.82rem;">' + escapeHtml(r.autor ? r.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(r.autor ? r.autor.rol : '') + '</strong>' +
+                '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(r.fecha) + '</span>' +
+              '</div>' +
+              '<p style="font-size:.85rem;margin:.2rem 0 0;">' + escapeHtml(r.texto) + '</p>' +
+              '<div style="display:flex;justify-content:flex-end;gap:.4rem;margin-top:.3rem;">' +
+                (foroPuedeBorrar(r.autor) ? '<button class="btn btn-sm btn-outline foro-del-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red);font-size:.72rem;">Eliminar</button>' : '') +
+              '</div></div>';
+          }).join('');
+
+          return '<div style="padding:.7rem 0;border-bottom:1px solid var(--gray-100);">' +
+            '<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">' +
+              '<strong style="font-size:.88rem;">' + escapeHtml(m.autor ? m.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(m.autor ? m.autor.rol : '') + '</strong>' +
+              '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(m.fecha) + '</span>' +
+            '</div>' +
+            '<p style="font-size:.88rem;margin:.35rem 0 .4rem;white-space:pre-wrap;">' + escapeHtml(m.texto) + '</p>' +
+            '<div style="display:flex;gap:.5rem;">' +
+              (cerrado ? '' : '<button class="btn btn-sm btn-outline foro-responder" data-mid="' + m.id + '" style="font-size:.75rem;">\u21A9 Responder</button>') +
+              (foroPuedeBorrar(m.autor) ? '<button class="btn btn-sm btn-outline foro-del-msg" data-mid="' + m.id + '" style="color:var(--red);font-size:.75rem;">Eliminar</button>' : '') +
+            '</div>' + respuestas + '</div>';
+        }).join('');
+        if (!f.mensajes.length) {
+          mensajes = emptyMsg('Todav\u00EDa no hay respuestas.', { icon: '\uD83D\uDCAC', title: 'Sin comentarios', desc: 'S\u00E9 el primero en participar de este tema.' });
+        }
+
+        det.innerHTML =
+          '<div style="display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">' +
+            '<div style="min-width:0;">' +
+              '<h3 style="margin:0;">' + (f.fijado ? '\uD83D\uDCCC ' : '') + escapeHtml(f.titulo) + '</h3>' +
+              (f.desc ? '<p style="font-size:.85rem;color:var(--gray-500);margin:.3rem 0 0;">' + escapeHtml(f.desc) + '</p>' : '') +
+              '<div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.76rem;color:var(--gray-500);margin-top:.4rem;align-items:center;">' +
+                '<span class="badge ' + st.c + '" style="font-size:.7rem;">' + st.t + '</span>' + meta.join(' \u00B7 ') +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap;">' +
+              (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline" id="foro-fijar" style="font-size:.78rem;">' + (f.fijado ? 'Quitar fijado' : '\uD83D\uDCCC Fijar') + '</button>' : '') +
+              (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline" id="foro-cerrar" style="font-size:.78rem;">' + (cerrado ? 'Reabrir tema' : 'Cerrar tema') + '</button>' : '') +
+              '<button class="btn btn-outline btn-sm" id="foro-volver">\u2190 Volver</button>' +
+            '</div>' +
+          '</div>' +
+          '<div style="margin-top:.9rem;">' + mensajes + '</div>' +
+          (cerrado
+            ? '<p style="font-size:.83rem;color:var(--gray-500);margin-top:.9rem;">\uD83D\uDD12 Este tema est\u00E1 cerrado: no se pueden agregar respuestas.</p>'
+            : (yo
+                ? '<div style="margin-top:.9rem;">' +
+                    '<div id="foro-respuesta-a" class="hidden" style="font-size:.78rem;color:var(--gray-500);margin-bottom:.3rem;"></div>' +
+                    '<textarea id="foro-texto" rows="3" placeholder="Escrib\u00ED tu respuesta..." aria-label="Tu respuesta" style="width:100%;padding:.55rem .7rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>' +
+                    '<div style="display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end;">' +
+                      '<button class="btn btn-primary btn-sm" id="foro-publicar">Publicar respuesta</button>' +
+                    '</div>' +
+                  '</div>'
+                : '<p style="font-size:.83rem;color:var(--gray-500);margin-top:.9rem;">Inici\u00E1 sesi\u00F3n para responder.</p>'));
+
+        var volver = $('foro-volver');
+        if (volver) volver.addEventListener('click', cerrarForo);
+        var fijar = $('foro-fijar');
+        if (fijar) fijar.addEventListener('click', function () {
+          if (!exigirPermiso('editar')) return;
+          f.fijado = !f.fijado;
+          foroGuardar();
+          renderForoDetalle();
+          mostrarToast(f.fijado ? 'Tema fijado.' : 'Tema desfijado.', 'success');
+        });
+        var cerrarBtn = $('foro-cerrar');
+        if (cerrarBtn) cerrarBtn.addEventListener('click', function () {
+          if (!exigirPermiso('editar')) return;
+          f.estado = cerrado ? 'abierto' : 'cerrado';
+          foroGuardar();
+          renderForoDetalle();
+          mostrarToast(f.estado === 'cerrado' ? 'Tema cerrado.' : 'Tema reabierto.', 'success');
+        });
+
+        det.querySelectorAll('.foro-responder').forEach(function (b) {
+          b.addEventListener('click', function () {
+            foroResponderA = this.dataset.mid;
+            var hint = $('foro-respuesta-a');
+            var msg = f.mensajes.find(function (m) { return m.id === foroResponderA; });
+            if (hint && msg) {
+              hint.textContent = 'Respondiendo a ' + (msg.autor ? msg.autor.nombre : '') + '  (click en "Publicar" para cancelar)';
+              hint.classList.remove('hidden');
+            }
+            var t = $('foro-texto');
+            if (t) t.focus();
+          });
+        });
+
+        det.querySelectorAll('.foro-del-msg').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var idx = f.mensajes.findIndex(function (m) { return m.id === this.dataset.mid; }, this);
+            var m = idx >= 0 ? f.mensajes[idx] : null;
+            if (!m) return;
+            if (!foroPuedeBorrar(m.autor)) { mostrarToast('No pod\u00E9s borrar ese mensaje.', 'error'); return; }
+            if (!confirm('\u00BFBorrar este mensaje y sus respuestas?')) return;
+            f.mensajes.splice(idx, 1);
+            foroGuardar();
+            renderForoDetalle();
+            mostrarToast('Mensaje eliminado.', 'success');
+          });
+        });
+        det.querySelectorAll('.foro-del-resp').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
+            if (!m) return;
+            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
+            if (ridx < 0) return;
+            if (!foroPuedeBorrar(m.respuestas[ridx].autor)) { mostrarToast('No pod\u00E9s borrar esa respuesta.', 'error'); return; }
+            if (!confirm('\u00BFBorrar esta respuesta?')) return;
+            m.respuestas.splice(ridx, 1);
+            foroGuardar();
+            renderForoDetalle();
+            mostrarToast('Respuesta eliminada.', 'success');
+          });
+        });
+
+        var publicar = $('foro-publicar');
+        if (publicar) publicar.addEventListener('click', function () {
+          var yo2 = foroYo();
+          if (!yo2) { mostrarToast('Inici\u00E1 sesi\u00F3n para responder.', 'error'); return; }
+          var t = $('foro-texto');
+          var texto = t ? t.value.trim() : '';
+          if (!texto) { mostrarToast('Escrib\u00ED una respuesta.', 'error'); return; }
+          var ahora = new Date().toISOString();
+          if (foroResponderA) {
+            var destino = f.mensajes.find(function (m) { return m.id === foroResponderA; });
+            if (destino) {
+              destino.respuestas = destino.respuestas || [];
+              destino.respuestas.push({ id: 'r' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora });
+              foroGuardar();
+              foroResponderA = null;
+              renderForoDetalle();
+              mostrarToast('Respuesta publicada.', 'success');
+              return;
+            }
+          }
+          f.mensajes.push({ id: 'm' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, respuestas: [] });
+          foroGuardar();
+          renderForoDetalle();
+          mostrarToast('Respuesta publicada.', 'success');
+        });
+        var textoEl = $('foro-texto');
+        if (textoEl) textoEl.addEventListener('input', function () {
+          if (foroResponderA && !this.value) {
+            foroResponderA = null;
+            var hint = $('foro-respuesta-a');
+            if (hint) hint.classList.add('hidden');
+          }
+        });
+      }
+
+      function foroGuardar() { guardarSeccion('foros', foros); }
+
       $('btn-foro-add').addEventListener('click', function () {
         if (!exigirPermiso('crear')) return;
-        dialogPrompt('T\u00EDtulo del foro:', 'Nuevo foro').then(function (titulo) {
-          if (!titulo) return;
+        dialogPrompt('T\u00EDtulo del tema:', 'Nuevo tema').then(function (titulo) {
+          if (!titulo || !titulo.trim()) return;
           dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            foros.push({ titulo: titulo.trim(), desc: (desc || '').trim() });
-            guardarSeccion('foros', foros);
-            renderForos();
-            mostrarToast('Foro creado.', 'success');
+            dialogPrompt('Materia: general, matematicas, fisica, quimica, biologia, literatura, historia o ingles', 'Materia', 'general').then(function (materia) {
+              var mat = String(materia || '').trim().toLowerCase();
+              var valido = MATERIAS_FORO.some(function (m) { return m[0] === mat && m[0] !== ''; });
+              foros.push({
+                id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                titulo: titulo.trim(),
+                desc: (desc || '').trim(),
+                materia: valido ? mat : 'general',
+                estado: 'abierto',
+                fijado: false,
+                creada: new Date().toISOString(),
+                autor: foroYo() || { nombre: 'An\u00F3nimo', email: '', rol: '' },
+                mensajes: [],
+              });
+              foroGuardar();
+              renderForos();
+              mostrarToast('Tema creado.', 'success');
+            });
           });
         });
       });
@@ -2613,40 +3175,270 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       });
       renderHorario();
 
+      /* ===================================================================
+         CLASES EN LÍNEA — fecha real, plataforma, cuenta regresiva
+         =================================================================== */
+      var CLASES_AVISOS_KEY = 'claseAvisos';
+
+      (function migrarClases() {
+        var cambia = false;
+        clasesItems.forEach(function (c) {
+          if (!c.id) { c.id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); cambia = true; }
+          if (c.fecha === undefined) { c.fecha = ''; cambia = true; }
+          if (c.hora24 === undefined) { c.hora24 = ''; cambia = true; }
+          if (!c.duracion) { c.duracion = 90; cambia = true; }
+        });
+        if (cambia) guardarSeccion('clasesItems', clasesItems);
+      })();
+
+      function clasePlataforma(url) {
+        var u = String(url || '').toLowerCase();
+        if (u.indexOf('meet.google.com') !== -1) return { n: 'Google Meet', i: '\uD83C\uDFA5' };
+        if (u.indexOf('zoom.us') !== -1) return { n: 'Zoom', i: '\uD83D\uDD0C' };
+        if (u.indexOf('teams.microsoft.com') !== -1 || u.indexOf('teams.live.com') !== -1) return { n: 'MS Teams', i: '\uD83D\uDCBC' };
+        if (u.indexOf('discord') !== -1) return { n: 'Discord', i: '\uD83C\uDFAE' };
+        if (u.indexOf('webex') !== -1) return { n: 'Webex', i: '\uD83C\uDF10' };
+        return u ? { n: 'Otro enlace', i: '\uD83D\uDD17' } : { n: 'Sin enlace', i: '\u2014' };
+      }
+
+      function claseFecha(c) {
+        if (!c || !c.fecha || !c.hora24) return null;
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(c.fecha);
+        var h = /^(\d{1,2}):(\d{2})$/.exec(c.hora24);
+        if (!m || !h) return null;
+        var d = new Date(+m[1], +m[2] - 1, +m[3], +h[1], +h[2], 0, 0);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+      function fmtMinutos(mins) {
+        mins = Math.max(0, Math.round(mins));
+        if (mins < 60) return mins + ' min';
+        var h = Math.floor(mins / 60), m = mins % 60;
+        if (h < 24) return h + ' h' + (m ? ' ' + m + ' min' : '');
+        var d = Math.floor(h / 24), rh = h % 24;
+        return d + ' d' + (rh ? ' ' + rh + ' h' : '');
+      }
+
+      function claseEstado(c) {
+        var ini = claseFecha(c);
+        var ahora = new Date();
+        if (!ini) return { tipo: 'sin_fecha', texto: c.hora ? ('Hora habitual: ' + c.hora) : 'Sin fecha programada', abierto: !!c.enlace };
+        var dur = c.duracion || 90;
+        var fin = new Date(ini.getTime() + dur * 60000);
+        var abre = new Date(ini.getTime() - 15 * 60000);
+        if (ahora < abre) return { tipo: 'futura', texto: 'Comienza en ' + fmtMinutos((ini - ahora) / 60000), abierto: false };
+        if (ahora <= fin) return { tipo: 'en_vivo', texto: '\uD83D\uDD34 EN VIVO · quedan ' + fmtMinutos((fin - ahora) / 60000), abierto: true };
+        return { tipo: 'finalizada', texto: 'Clase finalizada · ' + pad2(ini.getDate()) + '/' + pad2(ini.getMonth() + 1) + ' ' + pad2(ini.getHours()) + ':' + pad2(ini.getMinutes()), abierto: false };
+      }
+
+      function claseCuandoTexto(c) {
+        var ini = claseFecha(c);
+        if (!ini) return c.hora ? ('\u23F0 ' + c.hora) : '\u23F0 Sin fecha programada';
+        return '\uD83D\uDCC5 ' + pad2(ini.getDate()) + '/' + pad2(ini.getMonth() + 1) + '/' + ini.getFullYear() +
+          ' \u00B7 \u23F0 ' + pad2(ini.getHours()) + ':' + pad2(ini.getMinutes());
+      }
+
+      function claseColor(tipo) {
+        if (tipo === 'en_vivo') return 'var(--red)';
+        if (tipo === 'futura') return 'var(--green)';
+        if (tipo === 'finalizada') return 'var(--gray-400)';
+        return 'var(--gray-500)';
+      }
+
       function renderClases() {
         var el = $('clase-lista');
-        if (clasesItems.length === 0) { el.innerHTML = emptyMsg('No hay clases programadas.', { icon: '🎥', title: 'Clases en línea', desc: 'Agregá enlaces de tus próximas clases virtuales.' }); return; }
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          clasesItems.map(function (c, i) {
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(c.titulo) + '</strong><br>' +
-              (c.enlace ? '<a href="' + escapeHtml(c.enlace) + '" target="_blank" style="font-size:.82rem;">' + escapeHtml(c.enlace) + '</a>' : '<span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(c.hora || '') + '</span>') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
-          }).join('') + '</div>';
+        if (!el) return;
+        if (clasesItems.length === 0) {
+          el.innerHTML = emptyMsg('No hay clases programadas.', { icon: '\uD83C\uDFA5', title: 'Clases en línea', desc: 'Agregá el enlace y la fecha de tu próxima clase virtual.', actionText: '+ Agregar clase', actionFn: function () { $('btn-clase-add').click(); } });
+          renderProximaClase();
+          return;
+        }
+
+        // Próximas primero: las con fecha ordenadas por inicio, las sin fecha al final
+        var ahora = new Date();
+        var orden = clasesItems.map(function (c, i) { return { c: c, i: i }; }).sort(function (a, b) {
+          var fa = claseFecha(a.c), fb = claseFecha(b.c);
+          if (fa && fb) {
+            var ea = fa > ahora ? 0 : 1, eb = fb > ahora ? 0 : 1;
+            if (ea !== eb) return ea - eb;
+            return ea === 0 ? fa - fb : fb - fa;
+          }
+          if (fa) return -1;
+          if (fb) return 1;
+          return 0;
+        });
+
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' + orden.map(function (x) {
+          var c = x.c;
+          var st = claseEstado(c);
+          var pl = clasePlataforma(c.enlace);
+          return '<div style="padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;border-left:3px solid ' + claseColor(st.tipo) + ';">' +
+            '<div style="display:flex;justify-content:space-between;gap:.6rem;flex-wrap:wrap;align-items:center;">' +
+              '<div style="min-width:0;flex:1;">' +
+                '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' +
+                  '<strong style="font-size:.92rem;">' + escapeHtml(c.titulo) + '</strong>' +
+                  '<span class="badge badge-blue" style="font-size:.68rem;">' + pl.i + ' ' + escapeHtml(pl.n) + '</span>' +
+                '</div>' +
+                '<div style="font-size:.78rem;color:var(--gray-500);margin-top:.2rem;">' + escapeHtml(claseCuandoTexto(c)) + '</div>' +
+                '<div class="clase-cuenta" data-idx="' + x.i + '" style="font-size:.85rem;font-weight:700;color:' + claseColor(st.tipo) + ';">' + escapeHtml(st.texto) + '</div>' +
+              '</div>' +
+              '<div style="display:flex;gap:.4rem;flex-wrap:wrap;flex-shrink:0;">' +
+                '<button class="btn btn-sm btn-primary clase-entrar" data-idx="' + x.i + '"' + (st.abierto ? '' : ' disabled') + ' title="' + (st.abierto ? 'Abrir la clase en una pestaña nueva' : 'Se habilita 15 min antes del inicio') + '">\u25B6 Entrar ahora</button>' +
+                (c.enlace ? '<button class="btn btn-sm btn-outline clase-copiar" data-idx="' + x.i + '" title="Copiar el enlace">\uD83D\uDCCB Copiar</button>' : '') +
+                '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + x.i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button>' +
+              '</div>' +
+            '</div></div>';
+        }).join('') + '</div>';
+
+        el.querySelectorAll('.clase-entrar').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var c = clasesItems[parseInt(this.dataset.idx, 10)];
+            if (!c || !c.enlace) { mostrarToast('Esta clase no tiene enlace.', 'error'); return; }
+            if (!claseEstado(c).abierto) { mostrarToast('La clase se habilita 15 min antes del inicio.', 'error'); return; }
+            window.open(c.enlace, '_blank', 'noopener');
+          });
+        });
+        el.querySelectorAll('.clase-copiar').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var c = clasesItems[parseInt(this.dataset.idx, 10)];
+            if (!c || !c.enlace) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(c.enlace).then(function () { mostrarToast('Enlace copiado.', 'success'); },
+                function () { mostrarToast('No se pudo copiar el enlace.', 'error'); });
+            } else {
+              mostrarToast('Tu navegador no permite copiar automáticamente.', 'error');
+            }
+          });
+        });
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
-            clasesItems.splice(parseInt(this.dataset.idx), 1);
+            if (!exigirPermiso('eliminar')) return;
+            clasesItems.splice(parseInt(this.dataset.idx, 10), 1);
             guardarSeccion('clasesItems', clasesItems);
             renderClases();
             mostrarToast('Clase eliminada.', 'success');
           });
         });
+        renderProximaClase();
       }
+
+      /* Banner "Próxima clase" en el inicio */
+      function proximaClaseIdx() {
+        var enVivo = -1, proxima = -1, mejor = null;
+        clasesItems.forEach(function (c, i) {
+          var ini = claseFecha(c);
+          if (!ini) return;
+          var st = claseEstado(c);
+          if (st.tipo === 'en_vivo' && enVivo < 0) enVivo = i;
+          if (st.tipo === 'futura' && (proxima < 0 || ini < mejor)) { proxima = i; mejor = ini; }
+        });
+        return enVivo >= 0 ? enVivo : proxima;
+      }
+
+      function renderProximaClase() {
+        var box = $('inicio-proxima-clase');
+        if (!box) return;
+        if (!logueado) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+        var idx = proximaClaseIdx();
+        if (idx < 0) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+        var c = clasesItems[idx];
+        var st = claseEstado(c);
+        var pl = clasePlataforma(c.enlace);
+        box.classList.remove('hidden');
+        box.innerHTML = '<div class="card" style="margin-bottom:1.25rem;border-left:4px solid ' + claseColor(st.tipo) + ';">' +
+          '<div style="display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;align-items:center;">' +
+            '<div style="min-width:0;">' +
+              '<div style="font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-500);font-weight:700;">\uD83C\uDFA5 ' + (st.tipo === 'en_vivo' ? 'Clase en vivo' : 'Próxima clase') + '</div>' +
+              '<div style="font-weight:700;margin-top:.2rem;">' + escapeHtml(c.titulo) + '</div>' +
+              '<div style="font-size:.8rem;color:var(--gray-500);">' + escapeHtml(claseCuandoTexto(c)) + ' · ' + escapeHtml(pl.n) + '</div>' +
+              '<div style="font-size:.85rem;font-weight:700;color:' + claseColor(st.tipo) + ';">' + escapeHtml(st.texto) + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:.5rem;flex-shrink:0;">' +
+              '<button class="btn btn-sm btn-outline" data-clase-ir="1">Ver clases</button>' +
+              '<button class="btn btn-sm btn-primary" data-clase-idx="' + idx + '"' + (st.abierto && c.enlace ? '' : ' disabled') + '>\u25B6 Entrar ahora</button>' +
+            '</div>' +
+          '</div></div>';
+        var ir = box.querySelector('[data-clase-ir]');
+        if (ir) ir.addEventListener('click', function () { mostrarApp('clases'); });
+        var entrar = box.querySelector('[data-clase-idx]');
+        if (entrar) entrar.addEventListener('click', function () {
+          if (c.enlace) window.open(c.enlace, '_blank', 'noopener');
+        });
+      }
+
+      /* Aviso 10 min antes de cada clase (una sola vez por clase) */
+      function avisarClases() {
+        try {
+          var hechos = JSON.parse(localStorage.getItem(CLASES_AVISOS_KEY) || '{}');
+          var ahora = new Date();
+          var cambia = false;
+          clasesItems.forEach(function (c) {
+            var ini = claseFecha(c);
+            if (!ini || hechos[c.id]) return;
+            var mins = (ini - ahora) / 60000;
+            if (mins > 0 && mins <= 10) {
+              hechos[c.id] = 1;
+              cambia = true;
+              mostrarToast('\uD83C\uDFA5 "' + c.titulo + '" comienza en ' + Math.max(1, Math.round(mins)) + ' min', 'success');
+              if (window.CherryBombNotifications && window.CherryBombNotifications.isSupported && window.CherryBombNotifications.isSupported()) {
+                window.CherryBombNotifications.send('Clase próxima: ' + c.titulo, 'Comienza en ' + Math.max(1, Math.round(mins)) + ' minutos', 'clase-' + c.id);
+              }
+            }
+          });
+          if (cambia) localStorage.setItem(CLASES_AVISOS_KEY, JSON.stringify(hechos));
+        } catch (e) { /* almacenamiento no disponible */ }
+      }
+
+      function clasesTick() {
+        var el = $('clase-lista');
+        if (el && !el.classList.contains('hidden')) {
+          clasesItems.forEach(function (c, i) {
+            var st = claseEstado(c);
+            var span = el.querySelector('.clase-cuenta[data-idx="' + i + '"]');
+            if (span) { span.textContent = st.texto; span.style.color = claseColor(st.tipo); }
+            var btn = el.querySelector('.clase-entrar[data-idx="' + i + '"]');
+            if (btn) btn.disabled = !st.abierto;
+          });
+        }
+        renderProximaClase();
+        avisarClases();
+      }
+      setInterval(clasesTick, 30000);
+
       $('btn-clase-add').addEventListener('click', function () {
         if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo de la clase:', 'Nueva clase').then(function (titulo) {
-          if (!titulo) return;
-          dialogPrompt('Enlace (opcional):', 'Enlace de clase').then(function (enlace) {
-            dialogPrompt('Hora (opcional):', 'Hora').then(function (hora) {
-              clasesItems.push({ titulo: titulo.trim(), enlace: (enlace || '').trim(), hora: (hora || '').trim() });
-              guardarSeccion('clasesItems', clasesItems);
-              renderClases();
-              mostrarToast('Clase agregada.', 'success');
+          if (!titulo || !titulo.trim()) return;
+          dialogPrompt('Enlace de la reuni\u00F3n (Meet, Zoom, Teams...):', 'Enlace', '', 'url').then(function (enlace) {
+            dialogPrompt('Fecha (d\u00EDa de la clase):', 'Fecha', '', 'date').then(function (fecha) {
+              dialogPrompt('Hora de inicio (24 h):', 'Hora', '', 'time').then(function (hora) {
+                var f = String(fecha || '').trim();
+                var h = String(hora || '').trim();
+                if (f && !/^\d{4}-\d{2}-\d{2}$/.test(f)) { mostrarToast('Fecha inv\u00E1lida.', 'error'); return; }
+                if (h && !/^\d{1,2}:\d{2}$/.test(h)) { mostrarToast('Hora inv\u00E1lida.', 'error'); return; }
+                if (h && h.length === 4) h = '0' + h;
+                clasesItems.push({
+                  id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                  titulo: titulo.trim(),
+                  enlace: (enlace || '').trim(),
+                  fecha: f,
+                  hora24: h,
+                  hora: '',
+                  duracion: 90,
+                });
+                guardarSeccion('clasesItems', clasesItems);
+                renderClases();
+                avisarClases();
+                mostrarToast(f && h ? 'Clase agregada con cuenta regresiva.' : 'Clase agregada (sin fecha: no tendr\u00E1 cuenta regresiva).', 'success');
+              });
             });
           });
         });
       });
       renderClases();
+      setInterval(avisarClases, 60000);
 
       function renderMensajes() {
         var el = $('msg-lista');
@@ -3000,6 +3792,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             });
           });
         }
+
+        renderLibreta();
       }
 
       /* ===================================================================
@@ -3186,6 +3980,341 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (!exigirPermiso('editar')) return;
         closeEntregasModal();
         mostrarToast('Calificaciones guardadas.', 'success');
+      });
+
+      /* ===================================================================
+         AULAS — Asistencia por sesión y libreta de calificaciones
+         =================================================================== */
+      var AULA_ASIST_KEY = 'aula_asistencia';
+      var aulaAsistencias = JSON.parse(localStorage.getItem(AULA_ASIST_KEY) || '[]');
+      var asistTemporal = {}; // cambios sin guardar: aulaId|fecha|nombre -> estado
+
+      function asistNorm(s) { return String(s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
+
+      function asistGuardarStorage() { localStorage.setItem(AULA_ASIST_KEY, JSON.stringify(aulaAsistencias)); }
+
+      function asistHoyISO() {
+        var d = new Date();
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+      }
+
+      function descargarCsv(filas, nombreArchivo) {
+        var csv = '\uFEFF' + filas.map(function (fila) {
+          return fila.map(function (c) { return '"' + String(c === null || c === undefined ? '' : c).replace(/"/g, '""') + '"'; }).join(';');
+        }).join('\n');
+        try {
+          var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = nombreArchivo;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+          mostrarToast('CSV descargado.', 'success');
+        } catch (e) { mostrarToast('No se pudo exportar el CSV.', 'error'); }
+      }
+
+      /* Estudiantes de un aula: inscritos (ESTUDIANTES_DB) + quienes entregaron */
+      function nombresDelAula(aulaId) {
+        var lista = [];
+        var mapa = {};
+        function add(nombre, id) {
+          if (!nombre) return;
+          var k = asistNorm(nombre);
+          if (!k) return;
+          if (mapa[k]) { if (id !== null && id !== undefined && mapa[k].id === null) mapa[k].id = id; return; }
+          var obj = { id: id === undefined ? null : id, nombre: nombre };
+          mapa[k] = obj;
+          lista.push(obj);
+        }
+        aulaInscripciones.forEach(function (i) {
+          if (i.aulaId !== aulaId) return;
+          var est = ESTUDIANTES_DB.find(function (e) { return e.id === i.estudianteId; });
+          if (est) add(est.nombre, est.id);
+        });
+        aulaTareas.forEach(function (t, ti) {
+          if (t.aulaId !== aulaId) return;
+          aulaEntregas.forEach(function (e) { if (e.tareaIdx === ti) add(e.estudiante, null); });
+        });
+        return lista;
+      }
+
+      function asistClave(aulaId, fecha, nombre) { return aulaId + '|' + fecha + '|' + asistNorm(nombre); }
+
+      function asistEtiqueta(estado) {
+        return estado === 'ausente' ? 'Ausente' : estado === 'justificado' ? 'Justificado' : 'Presente';
+      }
+
+      /* ---------- Registro del día ---------- */
+      function renderAulaAsistencia() {
+        var sel = $('aula-asist-aula');
+        if (!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
+          aulas.map(function (a) { return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + '</option>'; }).join('');
+        if (cur) sel.value = cur;
+        var fecha = $('aula-asist-fecha');
+        if (fecha && !fecha.value) fecha.value = asistHoyISO();
+        renderAulaAsistLista();
+        renderAulaAsistResumen();
+      }
+
+      function renderAulaAsistLista() {
+        var el = $('aula-asist-lista');
+        var statsEl = $('aula-asist-stats');
+        if (!el || !statsEl) return;
+        var aulaId = parseInt($('aula-asist-aula').value, 10);
+        var fecha = $('aula-asist-fecha').value;
+        if (!aulaId) {
+          el.innerHTML = emptyMsg('Seleccion\u00E1 un aula para registrar la asistencia.', { icon: '\u2705', title: 'Asistencia', desc: 'Eleg\u00ED el aula y la fecha de la sesi\u00F3n.' });
+          statsEl.innerHTML = '';
+          return;
+        }
+        var nombres = nombresDelAula(aulaId);
+        if (nombres.length === 0) {
+          el.innerHTML = emptyMsg('Este aula todav\u00EDa no tiene estudiantes.', { icon: '\uD83D\uDCDA', title: 'Sin estudiantes', desc: 'Inscrib\u00ED estudiantes desde la pesta\u00F1a Inscripci\u00F3n.' });
+          statsEl.innerHTML = '';
+          return;
+        }
+        var registro = aulaAsistencias.find(function (r) { return r.aulaId === aulaId && r.fecha === fecha; });
+        var guardados = registro ? registro.registros : [];
+        function estadoDe(nombre) {
+          var k = asistNorm(nombre);
+          var g = guardados.find(function (x) { return asistNorm(x.nombre) === k; });
+          if (g) return g.estado;
+          return asistTemporal[asistClave(aulaId, fecha, nombre)] || 'presente';
+        }
+
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + nombres.map(function (n) {
+          var est = estadoDe(n.nombre);
+          var color = est === 'ausente' ? 'var(--red)' : est === 'justificado' ? '#e67e22' : 'var(--green)';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;flex-wrap:wrap;">' +
+            '<span style="font-size:.9rem;">' + escapeHtml(n.nombre) + '</span>' +
+            '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' +
+              '<span class="asist-estado-texto" style="font-size:.78rem;font-weight:700;color:' + color + ';">' + asistEtiqueta(est) + '</span>' +
+              '<div class="asist-btns" data-perm="editar" style="display:flex;gap:.3rem;">' +
+                ['presente', 'ausente', 'justificado'].map(function (e) {
+                  var activo = est === e;
+                  var c = e === 'presente' ? 'var(--green)' : e === 'ausente' ? 'var(--red)' : '#e67e22';
+                  return '<button type="button" class="asist-estado" data-nombre="' + escapeHtml(n.nombre) + '" data-estado="' + e + '" aria-pressed="' + activo + '" aria-label="' + asistEtiqueta(e) + ' para ' + escapeHtml(n.nombre) + '" style="font-size:.75rem;padding:.3rem .55rem;border-radius:8px;cursor:pointer;font:inherit;font-weight:600;' + (activo ? 'background:' + c + ';color:#fff;border:1px solid ' + c + ';' : 'background:#fff;color:' + c + ';border:1px solid var(--gray-300);') + '">' + (e === 'presente' ? 'Presente' : e === 'ausente' ? 'Ausente' : 'Justif.') + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+
+        var cont = { presente: 0, ausente: 0, justificado: 0 };
+        nombres.forEach(function (n) { cont[estadoDe(n.nombre)]++; });
+        statsEl.innerHTML =
+          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Presentes: <strong style="color:var(--green);">' + cont.presente + '</strong></span>' +
+          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Ausentes: <strong style="color:var(--red);">' + cont.ausente + '</strong></span>' +
+          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Justificados: <strong style="color:#e67e22;">' + cont.justificado + '</strong></span>' +
+          (guardados.length
+            ? '<span style="padding:.3rem .6rem;background:#d4edda;color:#155724;border-radius:8px;">Guardado \u2713</span>'
+            : '<span style="padding:.3rem .6rem;background:#fff3cd;color:#856404;border-radius:8px;">Sin guardar</span>');
+
+        el.querySelectorAll('.asist-estado').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            if (!exigirPermiso('editar')) return;
+            asistTemporal[asistClave(aulaId, fecha, this.dataset.nombre)] = this.dataset.estado;
+            renderAulaAsistLista();
+          });
+        });
+      }
+
+      function renderAulaAsistResumen() {
+        var el = $('aula-asist-resumen');
+        if (!el) return;
+        var aulaId = parseInt($('aula-asist-aula').value, 10);
+        if (!aulaId) { el.innerHTML = emptyMsg('Seleccion\u00E1 un aula para ver el resumen.', { icon: '\uD83D\uDCC8', title: 'Resumen' }); return; }
+        var sesiones = aulaAsistencias.filter(function (r) { return r.aulaId === aulaId; });
+        if (sesiones.length === 0) {
+          el.innerHTML = emptyMsg('Todav\u00EDa no hay asistencias guardadas.', { icon: '\uD83D\uDCC8', title: 'Sin registros', desc: 'Registr\u00E1 la asistencia de una sesi\u00F3n para ver el resumen por estudiante.' });
+          return;
+        }
+        var filas = nombresDelAula(aulaId).map(function (n) {
+          var s = { presente: 0, ausente: 0, justificado: 0, total: 0 };
+          sesiones.forEach(function (reg) {
+            var g = reg.registros.find(function (x) { return asistNorm(x.nombre) === asistNorm(n.nombre); });
+            if (!g) return;
+            s.total++;
+            if (s[g.estado] !== undefined) s[g.estado]++;
+          });
+          var pct = s.total ? Math.round((s.presente / s.total) * 100) : 0;
+          return { nombre: n.nombre, s: s, pct: pct };
+        }).sort(function (a, b) { return a.pct - b.pct || a.nombre.localeCompare(b.nombre); });
+
+        el.innerHTML = '<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:.85rem;">' +
+          '<thead><tr style="text-align:left;color:var(--gray-500);">' +
+            '<th style="padding:.4rem;">Estudiante</th><th style="padding:.4rem;">Sesiones</th><th style="padding:.4rem;">Presente</th>' +
+            '<th style="padding:.4rem;">Ausente</th><th style="padding:.4rem;">Justif.</th><th style="padding:.4rem;">% asistencia</th>' +
+          '</tr></thead><tbody>' +
+          filas.map(function (r) {
+            var color = r.pct >= 80 ? 'var(--green)' : r.pct >= 60 ? '#e67e22' : 'var(--red)';
+            return '<tr style="border-top:1px solid var(--gray-100);">' +
+              '<td style="padding:.45rem;">' + escapeHtml(r.nombre) + '</td>' +
+              '<td style="padding:.45rem;">' + r.s.total + '</td>' +
+              '<td style="padding:.45rem;color:var(--green);">' + r.s.presente + '</td>' +
+              '<td style="padding:.45rem;color:var(--red);">' + r.s.ausente + '</td>' +
+              '<td style="padding:.45rem;color:#e67e22;">' + r.s.justificado + '</td>' +
+              '<td style="padding:.45rem;font-weight:700;color:' + color + ';">' + r.pct + '%</td></tr>';
+          }).join('') +
+          '</tbody></table></div>' +
+          '<div style="font-size:.78rem;color:var(--gray-500);margin-top:.5rem;">' + sesiones.length + ' sesi\u00F3n' + (sesiones.length === 1 ? '' : 'es') + ' registrada' + (sesiones.length === 1 ? '' : 's') + ' \u00B7 ordenado de menor a mayor asistencia.</div>';
+      }
+
+      if ($('btn-asist-guardar')) $('btn-asist-guardar').addEventListener('click', function () {
+        if (!exigirPermiso('editar')) return;
+        var aulaId = parseInt($('aula-asist-aula').value, 10);
+        var fecha = $('aula-asist-fecha').value;
+        if (!aulaId || !fecha) { mostrarToast('Seleccion\u00E1 un aula y una fecha.', 'error'); return; }
+        var nombres = nombresDelAula(aulaId);
+        if (nombres.length === 0) { mostrarToast('Este aula no tiene estudiantes.', 'error'); return; }
+        var idx = -1;
+        for (var i = 0; i < aulaAsistencias.length; i++) {
+          if (aulaAsistencias[i].aulaId === aulaId && aulaAsistencias[i].fecha === fecha) { idx = i; break; }
+        }
+        var previos = idx >= 0 ? aulaAsistencias[idx].registros : [];
+        var registros = nombres.map(function (n) {
+          var k = asistClave(aulaId, fecha, n.nombre);
+          var previo = previos.find(function (x) { return asistNorm(x.nombre) === asistNorm(n.nombre); });
+          var estado = asistTemporal[k] || (previo ? previo.estado : 'presente');
+          return { nombre: n.nombre, estudianteId: n.id, estado: estado };
+        });
+        var reg = { aulaId: aulaId, fecha: fecha, registros: registros, guardado: new Date().toISOString() };
+        if (idx >= 0) aulaAsistencias[idx] = reg; else aulaAsistencias.push(reg);
+        Object.keys(asistTemporal).forEach(function (k) {
+          if (k.indexOf(aulaId + '|' + fecha + '|') === 0) delete asistTemporal[k];
+        });
+        asistGuardarStorage();
+        renderAulaAsistLista();
+        renderAulaAsistResumen();
+        mostrarToast('Asistencia del ' + fecha + ' guardada.', 'success');
+      });
+
+      if ($('btn-asist-todos')) $('btn-asist-todos').addEventListener('click', function () {
+        if (!exigirPermiso('editar')) return;
+        var aulaId = parseInt($('aula-asist-aula').value, 10);
+        var fecha = $('aula-asist-fecha').value;
+        if (!aulaId) { mostrarToast('Seleccion\u00E1 un aula.', 'error'); return; }
+        nombresDelAula(aulaId).forEach(function (n) {
+          asistTemporal[asistClave(aulaId, fecha, n.nombre)] = 'presente';
+        });
+        renderAulaAsistLista();
+        mostrarToast('Todos marcados como presentes.', 'success');
+      });
+
+      if ($('btn-asist-csv')) $('btn-asist-csv').addEventListener('click', function () {
+        if (!exigirPermiso('editar')) return;
+        var aulaId = parseInt($('aula-asist-aula').value, 10);
+        if (!aulaId) { mostrarToast('Seleccion\u00E1 un aula.', 'error'); return; }
+        var sesiones = aulaAsistencias.filter(function (r) { return r.aulaId === aulaId; });
+        if (sesiones.length === 0) { mostrarToast('No hay asistencias para exportar.', 'error'); return; }
+        var filas = [['Estudiante', 'Sesiones', 'Presentes', 'Ausentes', 'Justificados', '% asistencia']];
+        nombresDelAula(aulaId).forEach(function (n) {
+          var s = { presente: 0, ausente: 0, justificado: 0, total: 0 };
+          sesiones.forEach(function (reg) {
+            var g = reg.registros.find(function (x) { return asistNorm(x.nombre) === asistNorm(n.nombre); });
+            if (!g) return;
+            s.total++;
+            if (s[g.estado] !== undefined) s[g.estado]++;
+          });
+          filas.push([n.nombre, s.total, s.presente, s.ausente, s.justificado, (s.total ? Math.round((s.presente / s.total) * 100) : 0) + '%']);
+        });
+        descargarCsv(filas, 'asistencia-aula.csv');
+      });
+
+      if ($('aula-asist-aula')) $('aula-asist-aula').addEventListener('change', function () {
+        renderAulaAsistLista();
+        renderAulaAsistResumen();
+      });
+      if ($('aula-asist-fecha')) $('aula-asist-fecha').addEventListener('change', renderAulaAsistLista);
+
+      /* ---------- Libreta: estudiantes x tareas ---------- */
+      function libretaDatos(aulaId) {
+        var tareas = [];
+        aulaTareas.forEach(function (t, i) { if (t.aulaId === aulaId) tareas.push({ t: t, i: i }); });
+        var filas = nombresDelAula(aulaId).map(function (n) {
+          var celdas = tareas.map(function (x) {
+            var entrega = aulaEntregas.find(function (e) {
+              return e.tareaIdx === x.i && asistNorm(e.estudiante) === asistNorm(n.nombre);
+            });
+            if (!entrega) return { nota: null, entregada: false };
+            var eidx = aulaEntregas.indexOf(entrega);
+            var cal = aulaCalificaciones.find(function (c) { return c.entregaIdx === eidx; });
+            return { nota: cal ? cal.nota : null, entregada: true };
+          });
+          var notas = celdas.filter(function (c) { return c.nota !== null; }).map(function (c) { return c.nota; });
+          var prom = notas.length ? Math.round(notas.reduce(function (a, b) { return a + b; }, 0) / notas.length) : null;
+          return { nombre: n.nombre, celdas: celdas, prom: prom };
+        });
+        return { tareas: tareas, filas: filas };
+      }
+
+      function renderLibreta() {
+        var sel = $('libreta-aula');
+        var cont = $('libreta-tabla');
+        if (!sel || !cont) return;
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
+          aulas.map(function (a) { return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + '</option>'; }).join('');
+        if (cur) sel.value = cur;
+        var aulaId = parseInt(sel.value, 10);
+        if (!aulaId) {
+          cont.innerHTML = emptyMsg('Seleccion\u00E1 un aula para ver su libreta.', { icon: '\uD83D\uDCCA', title: 'Libreta', desc: 'Matriz de estudiantes por tarea con el promedio de cada uno.' });
+          return;
+        }
+        var datos = libretaDatos(aulaId);
+        if (datos.tareas.length === 0) {
+          cont.innerHTML = emptyMsg('Este aula todav\u00EDa no tiene tareas.', { icon: '\uD83D\uDCCA', title: 'Sin tareas', desc: 'Cre\u00E1 una tarea en la pesta\u00F1a Tareas para empezar la libreta.' });
+          return;
+        }
+        if (datos.filas.length === 0) {
+          cont.innerHTML = emptyMsg('Sin estudiantes en esta aula.', { icon: '\uD83D\uDCDA', title: 'Sin estudiantes', desc: 'Inscrib\u00ED estudiantes o esper\u00E1 sus entregas.' });
+          return;
+        }
+        cont.innerHTML = '<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:.85rem;">' +
+          '<thead><tr style="text-align:left;color:var(--gray-500);">' +
+            '<th style="padding:.4rem;">Estudiante</th>' +
+            datos.tareas.map(function (x) { return '<th style="padding:.4rem;min-width:90px;">' + escapeHtml(x.t.titulo) + '</th>'; }).join('') +
+            '<th style="padding:.4rem;">Promedio</th>' +
+          '</tr></thead><tbody>' +
+          datos.filas.map(function (f) {
+            var colProm = f.prom === null ? 'var(--gray-400)' : f.prom >= 70 ? 'var(--green)' : f.prom >= 50 ? '#e67e22' : 'var(--red)';
+            return '<tr style="border-top:1px solid var(--gray-100);">' +
+              '<td style="padding:.45rem;">' + escapeHtml(f.nombre) + '</td>' +
+              f.celdas.map(function (c) {
+                if (c.nota === null) {
+                  return '<td style="padding:.45rem;text-align:center;color:' + (c.entregada ? '#e67e22' : 'var(--gray-400)') + ';">' + (c.entregada ? 'Sin nota' : '\u2014') + '</td>';
+                }
+                var col = c.nota >= 70 ? 'var(--green)' : c.nota >= 50 ? '#e67e22' : 'var(--red)';
+                return '<td style="padding:.45rem;text-align:center;font-weight:700;color:' + col + ';">' + c.nota + '</td>';
+              }).join('') +
+              '<td style="padding:.45rem;text-align:center;font-weight:800;color:' + colProm + ';">' + (f.prom === null ? '\u2014' : f.prom) + '</td>' +
+            '</tr>';
+          }).join('') +
+          '</tbody></table></div>' +
+          '<div style="font-size:.78rem;color:var(--gray-500);margin-top:.5rem;">' +
+            'Nota: <span style="color:var(--green);font-weight:700;">\u226570 verde</span> \u00B7 <span style="color:#e67e22;font-weight:700;">50\u201369 naranja</span> \u00B7 <span style="color:var(--red);font-weight:700;">&lt;50 rojo</span> \u00B7 \u201C\u2014\u201D sin entregar.' +
+          '</div>';
+      }
+
+      if ($('libreta-aula')) $('libreta-aula').addEventListener('change', renderLibreta);
+      if ($('btn-libreta-csv')) $('btn-libreta-csv').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
+        var aulaId = parseInt($('libreta-aula').value, 10);
+        if (!aulaId) { mostrarToast('Seleccion\u00E1 un aula.', 'error'); return; }
+        var datos = libretaDatos(aulaId);
+        if (datos.tareas.length === 0 || datos.filas.length === 0) { mostrarToast('No hay datos para exportar.', 'error'); return; }
+        var cabecera = ['Estudiante'].concat(datos.tareas.map(function (x) { return x.t.titulo; })).concat(['Promedio']);
+        var filas = [cabecera].concat(datos.filas.map(function (f) {
+          return [f.nombre]
+            .concat(f.celdas.map(function (c) { return c.nota === null ? '' : c.nota; }))
+            .concat([f.prom === null ? '' : f.prom]);
+        }));
+        descargarCsv(filas, 'libreta-aula.csv');
       });
 
       /* ===================================================================

@@ -1144,6 +1144,7 @@ unicode: "ebca"
   <path d="M16 17l-1.5 1.5" />
 </svg>
  Módulos</h2>
+          <div id="inicio-proxima-clase" class="hidden"></div>
           <div class="app-grid" id="inicio-apps"></div>
         </div>
       </section>
@@ -1244,8 +1245,19 @@ unicode: "eafd"
   <path d="M8 12l4 0" />
   <path d="M8 16l4 0" />
 </svg>
- Foros activos</h3><button class="btn btn-primary btn-sm" id="btn-foro-add" data-perm="crear">+ Nuevo foro</button></div>
+ Foros activos</h3><button class="btn btn-primary btn-sm" id="btn-foro-add" data-perm="crear">+ Nuevo tema</button></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1rem;">
+            <input type="search" id="foro-buscar" placeholder="Buscar tema..." aria-label="Buscar tema" style="flex:1;min-width:170px;padding:.5rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+            <select id="foro-filtro-estado" aria-label="Filtrar por estado" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <option value="todos">Todos los estados</option>
+              <option value="abierto">Abiertos</option>
+              <option value="resuelto">Resueltos</option>
+              <option value="cerrado">Cerrados</option>
+            </select>
+            <select id="foro-filtro-materia" aria-label="Filtrar por materia" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+          </div>
           <div id="foro-lista"><div class="empty-msg">No hay foros activos.</div></div>
+          <div id="foro-detalle" class="hidden"></div>
         </div>
       </div>
     </section>
@@ -2368,6 +2380,11 @@ unicode: "ea98"
               <div class="form-group"><label>Título del examen <strong>*</strong></label><input type="text" id="exam-titulo" placeholder="Ej: Examen de Cálculo Diferencial"></div>
               <div class="form-group" style="max-width:160px;"><label>Tiempo (minutos) <strong>*</strong></label><input type="number" id="exam-tiempo" min="1" max="180" value="60"></div>
             </div>
+            <div class="form-row" style="margin-top:.25rem;">
+              <div class="form-group" style="max-width:150px;"><label>Nota m&iacute;nima (%)</label><input type="number" id="exam-notamin" min="1" max="100" value="60"></div>
+              <div class="form-group" style="max-width:150px;"><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
+              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-barajar"> Barajar preguntas</label></div>
+            </div>
             <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
             <div class="flex-between" style="margin-bottom:.75rem;">
               <h3 style="font-size:.9rem;margin:0;"><!--
@@ -2445,6 +2462,17 @@ unicode: "ea6f"
  Exámenes guardados</h3>
             <div id="exam-lista-guardados"></div>
           </div>
+
+          <div class="card" style="margin-top:1rem;" data-perm="crear">
+            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+              <h3>&#128202; Resultados</h3>
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                <select id="exam-res-filtro" aria-label="Filtrar resultados por examen" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></select>
+                <button class="btn btn-sm btn-outline" id="btn-exam-csv" data-perm="crear">&#11015; Exportar CSV</button>
+              </div>
+            </div>
+            <div id="exam-resultados" style="margin-top:.75rem;"></div>
+          </div>
         </div>
 
         <!-- ===== TAB ESTUDIANTE: SIMULADOR ===== -->
@@ -2501,6 +2529,7 @@ unicode: "ed46"
 </svg>
  Comenzar</button></div>
             </div>
+            <div id="exam-mis-intentos" style="margin-top:.75rem;font-size:.85rem;color:var(--gray-500);"></div>
           </div>
 
           <div id="exam-simulador" class="hidden">
@@ -2541,6 +2570,7 @@ unicode: "eaa6"
           <div id="exam-resultado" class="hidden exam-resultado" style="margin-top:1rem;">
             <div class="nota" id="exam-nota">0/0</div>
             <div class="mensaje" id="exam-mensaje"></div>
+            <div id="exam-feedback" style="text-align:left;margin-top:.75rem;"></div>
           </div>
         </div>
 
@@ -2863,6 +2893,12 @@ unicode: "ea6f"
   <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" />
 </svg>
  Tareas</button>
+          <button data-aula-tab="asistencia">
+            <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+ Asistencia</button>
           <button data-aula-tab="inscripcion" data-perm="crear">
             <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -3175,6 +3211,17 @@ unicode: "ea6f"
  Tareas asignadas</h3></div>
               <div id="aula-tarea-creadas-lista"><div class="empty-msg">A&uacute;n no has asignado tareas.</div></div>
             </div>
+
+            <div class="card" style="margin-top:1rem;" id="aula-libreta-card">
+              <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+                <h3>&#128202; Libreta del aula</h3>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                  <select id="libreta-aula" aria-label="Aula de la libreta" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></select>
+                  <button class="btn btn-sm btn-outline" id="btn-libreta-csv" data-perm="crear">&#11015; Exportar CSV</button>
+                </div>
+              </div>
+              <div id="libreta-tabla" style="margin-top:.75rem;"></div>
+            </div>
           </div>
           <div id="aula-tarea-estudiante">
             <div class="card">
@@ -3222,6 +3269,30 @@ unicode: "ea5e"
  Tareas entregadas</h3></div>
               <div id="aula-tarea-entregadas-lista"><div class="empty-msg">A&uacute;n no has entregado tareas.</div></div>
             </div>
+          </div>
+        </div>
+
+        <!-- ===== TAB ASISTENCIA ===== -->
+        <div id="aula-tab-asistencia" class="hidden">
+          <div class="card">
+            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+              <h3>&#9989; Asistencia del aula</h3>
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                <select id="aula-asist-aula" aria-label="Aula" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></select>
+                <input type="date" id="aula-asist-fecha" aria-label="Fecha de la sesi&oacute;n" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">
+                <button class="btn btn-sm btn-outline" id="btn-asist-todos" data-perm="editar">Todos presentes</button>
+                <button class="btn btn-sm btn-primary" id="btn-asist-guardar" data-perm="editar">Guardar asistencia</button>
+              </div>
+            </div>
+            <div id="aula-asist-stats" style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0;font-size:.82rem;"></div>
+            <div id="aula-asist-lista"><div class="empty-msg">Seleccion&aacute; un aula para registrar la asistencia.</div></div>
+          </div>
+          <div class="card" style="margin-top:1rem;">
+            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+              <h3>&#128200; Resumen de asistencia</h3>
+              <button class="btn btn-sm btn-outline" id="btn-asist-csv" data-perm="editar">&#11015; Exportar CSV</button>
+            </div>
+            <div id="aula-asist-resumen" style="margin-top:.75rem;"></div>
           </div>
         </div>
 
