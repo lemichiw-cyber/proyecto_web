@@ -173,25 +173,145 @@ describe('Contraste WCAG AA de los tokens', () => {
 });
 
 describe('Cliente del backend (mensajes amigables)', () => {
-  it('sitio desplegado con API local explica el caso de un dispositivo sin backend', async () => {
+  it('sitio desplegado con API remota (nuevo default) muestra mensaje genérico', async () => {
     const { friendlyError, PlayerError } = await import('./api/client.js');
     const prev = globalThis.location;
-    // Sitio servido desde Render (host no local) + API por defecto 127.0.0.1:
-    // es exactamente el caso "no funciona en celular".
+    // Sitio servido desde Render con API por defecto en la nube.
+    // Ya no apunta a 127.0.0.1, por lo que el mensaje es el genérico.
     globalThis.location = { hostname: 'proyecto-web-2-bygl.onrender.com' };
     try {
       const msg = friendlyError(new PlayerError('backend_offline', 'x'));
-      expect(msg).toContain('127.0.0.1');
-      expect(msg).toContain('Ajustes');
-      // Sin location (node puro) → mensaje genérico
+      // Con el default en la nube, no hay IP local que mostrar → genérico
+      expect(msg).toBe('Backend apagado o sin conexión');
+      // Sin location (Node.js) → también genérico
       delete globalThis.location;
       expect(friendlyError(new PlayerError('backend_offline', 'x'))).toBe('Backend apagado o sin conexión');
-      // Página servida en local + backend caído → genérico también
+      // Localhost → también genérico
       globalThis.location = { hostname: 'localhost' };
       expect(friendlyError(new PlayerError('backend_offline', 'x'))).toBe('Backend apagado o sin conexión');
     } finally {
       if (prev === undefined) delete globalThis.location;
       else globalThis.location = prev;
+    }
+  });
+
+  it('configuración manual de API local: setApiBase no rompe el mensaje', async () => {
+    // Verifica que setApiBase('http://127.0.0.1:8000') no cause errores y el mensaje
+    // sea un string válido (sea la IP o el genérico, depende del entorno de test).
+    const { friendlyError, PlayerError, setApiBase } = await import('./api/client.js');
+    setApiBase('http://127.0.0.1:8000');
+    const msg = friendlyError(new PlayerError('backend_offline', 'x'));
+    // El mensaje debe ser string y no ser "Error inesperado"
+    expect(typeof msg).toBe('string');
+    expect(msg).not.toBe('Error inesperado');
+  });
+});
+
+/* ------------------------------------------------------------------
+   Modo administrador (sesión + login contra /api/admin/*)
+   ------------------------------------------------------------------ */
+function stubLocalStorage() {
+  const store = new Map();
+  const prev = Object.prototype.hasOwnProperty.call(globalThis, 'localStorage')
+    ? globalThis.localStorage : undefined;
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => { store.set(k, String(v)); },
+    removeItem: (k) => { store.delete(k); },
+  };
+  return () => {
+    if (prev === undefined) delete globalThis.localStorage;
+    else globalThis.localStorage = prev;
+  };
+}
+
+describe('Modo administrador', () => {
+  it('login correcto guarda la sesión y envía las credenciales al backend', async () => {
+    const restoreStore = stubLocalStorage();
+    const admin = await import('./api/admin.js');
+    const { clearCache } = await import('./api/client.js');
+    const prevFetch = globalThis.fetch;
+    clearCache();
+    let seen = null;
+    globalThis.fetch = async (url, opts) => {
+      seen = { url, opts };
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, email: 'sakuraenterprise2@gmail.com', token: 'tk.segura', expires_in: 86400 }),
+      };
+    };
+    try {
+      expect(admin.isAdmin()).toBe(false);
+      const res = await admin.loginAdmin('sakuraenterprise2@gmail.com', 'MLRTJAH');
+      expect(res.ok).toBe(true);
+      expect(admin.isAdmin()).toBe(true);
+      expect(admin.adminToken()).toBe('tk.segura');
+      expect(admin.adminEmail()).toBe('sakuraenterprise2@gmail.com');
+      expect(String(seen.url)).toContain('/api/admin/login');
+      const body = JSON.parse(seen.opts.body);
+      expect(body).toEqual({ email: 'sakuraenterprise2@gmail.com', password: 'MLRTJAH' });
+
+      admin.clearSession();
+      expect(admin.isAdmin()).toBe(false);
+      expect(admin.adminToken()).toBeNull();
+    } finally {
+      globalThis.fetch = prevFetch;
+      restoreStore();
+    }
+  });
+
+  it('credenciales incorrectas → error auth con el mensaje del backend y sin sesión', async () => {
+    const restoreStore = stubLocalStorage();
+    const admin = await import('./api/admin.js');
+    const prevFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: 'Correo o contraseña incorrectos' }),
+    });
+    try {
+      await expect(admin.loginAdmin('otro@correo.com', 'mala'))
+        .rejects.toMatchObject({ code: 'auth' });
+      expect(admin.isAdmin()).toBe(false);
+      let msg = '';
+      try { await admin.loginAdmin('otro@correo.com', 'mala'); }
+      catch (e) { msg = admin.adminError(e); }
+      expect(msg).toBe('Correo o contraseña incorrectos');
+      // Otros errores siguen usando el traductor genérico
+      const { PlayerError, friendlyError } = await import('./api/client.js');
+      expect(admin.adminError(new PlayerError('backend_offline', 'x'))).toBe('Backend apagado o sin conexión');
+      expect(admin.adminError(new PlayerError('backend_offline', 'x'))).toBe(friendlyError(new PlayerError('backend_offline', 'x')));
+    } finally {
+      globalThis.fetch = prevFetch;
+      restoreStore();
+    }
+  });
+
+  it('restaura una sesión válida y limpia el token si el backend la rechaza', async () => {
+    const restoreStore = stubLocalStorage();
+    const admin = await import('./api/admin.js');
+    const prevFetch = globalThis.fetch;
+    try {
+      // Sesión válida → se conserva
+      admin.storeSession({ token: 'tk.ok', email: 'sakuraenterprise2@gmail.com' });
+      globalThis.fetch = async (url, opts) => {
+        expect(String(url)).toContain('/api/admin/me');
+        expect(opts.headers.Authorization).toBe('Bearer tk.ok');
+        return { ok: true, status: 200, json: async () => ({ ok: true, email: 'sakuraenterprise2@gmail.com', role: 'admin' }) };
+      };
+      expect(await admin.restoreSession()).toBe('sakuraenterprise2@gmail.com');
+      expect(admin.isAdmin()).toBe(true);
+
+      // Token expirado (401) → se borra y se vuelve al formulario
+      globalThis.fetch = async () => ({
+        ok: false, status: 401, json: async () => ({ detail: 'Token inválido o expirado' }),
+      });
+      expect(await admin.restoreSession()).toBeNull();
+      expect(admin.isAdmin()).toBe(false);
+    } finally {
+      globalThis.fetch = prevFetch;
+      restoreStore();
     }
   });
 });

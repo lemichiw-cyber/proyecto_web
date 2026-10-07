@@ -9,7 +9,7 @@
 // el sitio funcione desde cualquier dispositivo; sin ella se usa el
 // backend de la propia máquina. Ajustes → Backend (localStorage) tiene
 // prioridad sobre ambas.
-const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'https://sakura-backend-indb.onrender.com';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 const LS_BASE_KEY = 'sakuraPlayerApiBase';
@@ -55,8 +55,9 @@ function cacheSet(key, value) {
 /* ------------------------------------------------------------------
    Petición base
    ------------------------------------------------------------------ */
-async function request(path, { method = 'GET', body, signal, timeout = 15000, retried = false } = {}) {
-  const url = getApiBase() + path;
+async function request(path, { method = 'GET', body, signal, timeout = 15000, retried = false, headers } = {}) {
+  // Normaliza barra final: una base con "/" producía "//api/..." (404)
+  const url = getApiBase().replace(/\/+$/, '') + path;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   // Si el llamador pasa su propio signal, lo respetamos
@@ -64,11 +65,13 @@ async function request(path, { method = 'GET', body, signal, timeout = 15000, re
     if (signal.aborted) ctrl.abort();
     else signal.addEventListener('abort', () => ctrl.abort(), { once: true });
   }
+  // Cabeceras propias (p. ej. Authorization del modo administrador)
+  const reqHeaders = body ? { 'Content-Type': 'application/json', ...(headers || {}) } : (headers || undefined);
   let res;
   try {
     res = await fetch(url, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: reqHeaders,
       body: body ? JSON.stringify(body) : undefined,
       signal: ctrl.signal,
     });
@@ -94,10 +97,16 @@ async function request(path, { method = 'GET', body, signal, timeout = 15000, re
   let data = null;
   try { data = await res.json(); } catch (e) { /* respuesta vacía o no-JSON */ }
 
+  // Si el caller abortó mientras se leía el cuerpo, res.ok sería true y se
+  // devolvería null → el caller lo guardaba en caché (búsquedas "envenenadas")
+  if (signal && signal.aborted) throw new PlayerError('network', 'La solicitud fue cancelada');
+
   if (!res.ok) {
-    const detail = (data && data.detail) || 'Error de API';
+    let detail = (data && data.detail) || 'Error de API';
+    // FastAPI devuelve detail como lista en errores de validación
+    if (Array.isArray(detail)) detail = detail.map((d) => (d && d.msg) || String(d)).join(' · ');
     if (res.status === 404) throw new PlayerError('not_found', detail);
-    if (res.status === 401) throw new PlayerError('auth', detail);
+    if (res.status === 401 || res.status === 403) throw new PlayerError('auth', detail);
     if (res.status === 400) throw new PlayerError('api', detail);
     if (res.status >= 500) throw new PlayerError('backend_offline', detail);
     throw new PlayerError('api', detail);
@@ -115,13 +124,13 @@ export const api = {
     const key = `search:${q}:${filter}:${limit}`;
     const hit = cacheGet(key);
     if (hit) return Promise.resolve(hit);
-    return request(`/api/music/search?q=${encodeURIComponent(q)}&filter=${filter}&limit=${limit}`, { signal })
-      .then((r) => { cacheSet(key, r); return r; });
+    return request(`/api/music/search?q=${encodeURIComponent(q)}&filter=${encodeURIComponent(filter)}&limit=${limit}`, { signal })
+      .then((r) => { if (r) cacheSet(key, r); return r; });
   },
 
   song: (id) => request(`/api/music/song/${encodeURIComponent(id)}`),
 
-  streamUrl: (id) => `${getApiBase()}/api/music/stream/${encodeURIComponent(id)}`,
+  streamUrl: (id) => `${getApiBase().replace(/\/+$/, '')}/api/music/stream/${encodeURIComponent(id)}`,
 
   artist: (id) => request(`/api/music/artist/${encodeURIComponent(id)}`),
 
@@ -154,6 +163,14 @@ export const api = {
 
   moveTrack: (id, videoId, toIndex) =>
     request(`/api/music/playlists/${encodeURIComponent(id)}/tracks/move`, { method: 'PUT', body: { videoId, toIndex } }),
+
+  /* ---------------- modo administrador ---------------- */
+  adminLogin: (email, password) =>
+    request('/api/admin/login', { method: 'POST', body: { email, password }, timeout: 30000 }),
+
+  adminMe: (token) => request('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } }),
+
+  adminStats: (token) => request('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
 };
 
 /* ------------------------------------------------------------------
@@ -161,10 +178,28 @@ export const api = {
    ------------------------------------------------------------------ */
 export function debounce(fn, wait = 350) {
   let t = null;
-  return function (...args) {
+  let lastArgs = null;
+  const debounced = function (...args) {
+    lastArgs = args;
     clearTimeout(t);
-    t = setTimeout(() => fn.apply(this, args), wait);
+    t = setTimeout(() => { lastArgs = null; fn.apply(this, args); }, wait);
   };
+  // flush corre ya (Enter en la búsqueda); cancel descarta (vista destruida)
+  debounced.flush = function () {
+    if (t !== null) {
+      clearTimeout(t);
+      t = null;
+      const a = lastArgs;
+      lastArgs = null;
+      if (a) fn.apply(this, a);
+    }
+  };
+  debounced.cancel = function () {
+    clearTimeout(t);
+    t = null;
+    lastArgs = null;
+  };
+  return debounced;
 }
 
 /* ------------------------------------------------------------------

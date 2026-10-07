@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import albums, artists, debug, library, playlists, search, songs
+from api import admin, albums, artists, debug, library, playlists, search, songs
 from api.deps import get_service
 
 load_dotenv()
@@ -77,6 +77,7 @@ app.include_router(artists.router)
 app.include_router(albums.router)
 app.include_router(playlists.router)
 app.include_router(library.router)
+app.include_router(admin.router)
 
 
 @app.get("/", tags=["meta"])
