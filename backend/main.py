@@ -78,6 +78,7 @@ app.include_router(albums.router)
 app.include_router(playlists.router)
 app.include_router(library.router)
 app.include_router(admin.router)
+app.include_router(accounts.router)          # <-- nuevo
 
 
 @app.get("/", tags=["meta"])
