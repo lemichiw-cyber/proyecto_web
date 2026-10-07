@@ -410,6 +410,7 @@ unicode: "eb4b"
 </span> Matrícula</a></li>
 <li><a data-app="estudio"><span class="nav-icon"><svg width="20" height="20" style="" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> Estudio</a></li>
 <li><a data-app="sakura-player"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span> Sakura Player</a></li>
+<li id="nav-auth" class="hidden"><a data-app="auth"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Usuarios</a></li>
 <li><a data-app="configuracion"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /></svg></span> Configuración</a></li>
       </ul>
     </nav>
@@ -465,167 +466,29 @@ unicode: "eaf8"
   <!-- ========== LOGIN MODAL (con roles) ========== -->
   <div class="modal-overlay" id="modal-login" role="dialog" aria-modal="true">
     <div class="modal">
-      <div class="flex-between"><h3>Iniciar sesión</h3><button class="modal-close" id="modal-login-close" aria-label="Cerrar">&times;</button></div>
+      <div class="flex-between"><h3 id="login-title">Iniciar sesión</h3><button class="modal-close" id="modal-login-close" aria-label="Cerrar">&times;</button></div>
       <form id="form-login">
-        <div class="form-group">
-          <label>Rol</label>
-          <select id="login-rol">
-            <option value="estudiante"><!--
-category: Document
-tags: [document, official, attest, signature, birth, death, gift, authenticity, seal, course, complete, qualification]
-version: "1.33"
-unicode: "ed76"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-  <path d="M13 17.5v4.5l2 -1.5l2 1.5v-4.5" />
-  <path d="M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73" />
-  <path d="M6 9l12 0" />
-  <path d="M6 12l3 0" />
-  <path d="M6 15l2 0" />
-</svg>
- Estudiante</option>
-            <option value="docente"><!--
-category: Map
-tags: [students, class, teachers, professors, doctors, hall, classroom, subject, science, break, lesson]
-version: "1.22"
-unicode: "ecf7"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" />
-  <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" />
-</svg>
- Docente</option>
-            <option value="director"><!--
-tags: [suit, buisness, fashion, clothes, accessory, clothing, tie, store, purchase, shopping]
-category: E-commerce
-version: "1.59"
-unicode: "f07e"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 22l4 -4l-2.5 -11l.993 -2.649a1 1 0 0 0 -.936 -1.351h-3.114a1 1 0 0 0 -.936 1.351l.993 2.649l-2.5 11l4 4" />
-  <path d="M10.5 7h3l5 5.5" />
-</svg>
- Director</option>
-            <option value="subdirector"><!--
-tags: [suit, buisness, fashion, clothes, accessory, clothing, tie, store, purchase, shopping]
-category: E-commerce
-version: "1.59"
-unicode: "f07e"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 22l4 -4l-2.5 -11l.993 -2.649a1 1 0 0 0 -.936 -1.351h-3.114a1 1 0 0 0 -.936 1.351l.993 2.649l-2.5 11l4 4" />
-  <path d="M10.5 7h3l5 5.5" />
-</svg>
- Subdirector</option>
-            <option value="coordinador"><!--
-category: Document
-tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, blank]
-version: "1.0"
-unicode: "ea6f"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
-  <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" />
-</svg>
- Coordinador</option>
-            <option value="padres"><!--
-tags: [community, team, cluster, society, gathering, crowd, network, collective, assembly, fellowship]
-version: "2.13"
-unicode: "fa21"
-category: System
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-  <path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1" />
-  <path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-  <path d="M17 10h2a2 2 0 0 1 2 2v1" />
-  <path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-  <path d="M3 13v-1a2 2 0 0 1 2 -2h2" />
-</svg>
- Padre de familia</option>
-            <option value="admin"><!--
-tags: [cog, edit, gear, preferences, tools, settings, config, options, control, operation]
-category: System
-version: "1.0"
-unicode: "eb20"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" />
-  <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
-</svg>
- Administrador</option>
-          </select>
-        </div>
+
         <div class="form-group"><label>Correo institucional</label><input type="email" id="login-email" placeholder="profesor@bachillerato.edu" required></div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" required minlength="6"></div>
         <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
         <div id="login-error" class="alert alert-error" role="alert" hidden>Credenciales inválidas.</div>
       </form>
-      <p class="link-muted"><a href="#" id="link-olvide">Olvidé mi contraseña</a></p>
+
+      <!-- Registro: siempre con rango ESTUDIANTE (el resto de rangos los
+           da un administrador desde Usuarios) -->
+      <form id="form-registro" class="hidden">
+        <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-nombre" placeholder="Ana García" required></div>
+        <div class="form-group"><label>Correo institucional</label><input type="email" id="reg-email" placeholder="estudiante@bachillerato.edu" required></div>
+        <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="••••••" required minlength="6"></div>
+        <div class="form-group"><label>Repetí la contraseña</label><input type="password" id="reg-pass2" placeholder="••••••" required minlength="6"></div>
+        <button type="submit" class="btn btn-primary btn-block">Crear cuenta de estudiante</button>
+        <div id="reg-error" class="alert alert-error" role="alert" hidden></div>
+      </form>
+
+      <p class="link-muted" id="link-registro-wrap"><a href="#" id="link-registro">¿No tenés cuenta? Crear cuenta de estudiante</a></p>
+      <p class="link-muted hidden" id="link-login-wrap"><a href="#" id="link-volver-login">¿Ya tenés cuenta? Iniciar sesión</a></p>
+      <p class="link-muted" id="link-olvide-wrap"><a href="#" id="link-olvide">Olvidé mi contraseña</a></p>
     </div>
   </div>
 
@@ -708,7 +571,7 @@ unicode: "eb47"
       <div class="flex-between"><h3 id="modal-entregas-title">\uD83D\uDC41 Entregas</h3><button class="modal-close" id="modal-entregas-close" aria-label="Cerrar">&times;</button></div>
       <div id="modal-entregas-body" style="margin:1rem 0;overflow-y:auto;flex:1;"></div>
       <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem;">
-        <button class="btn btn-primary" id="btn-modal-calif-guardar">\uD83D\uDCBE Guardar calificaciones</button>
+        <button class="btn btn-primary" data-perm="editar" id="btn-modal-calif-guardar">\uD83D\uDCBE Guardar calificaciones</button>
       </div>
     </div>
   </div>
@@ -1330,7 +1193,7 @@ unicode: "eb6d"
   <path d="M13 20l7 -7" />
   <path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" />
 </svg>
- Próximas actividades</h3><button class="btn btn-primary btn-sm" id="btn-act-add">+ Nueva</button></div>
+ Próximas actividades</h3><button class="btn btn-primary btn-sm" id="btn-act-add" data-perm="crear">+ Nueva</button></div>
           <div id="act-lista"><div class="empty-msg">No hay actividades registradas.</div></div>
         </div>
       </div>
@@ -1381,7 +1244,7 @@ unicode: "eafd"
   <path d="M8 12l4 0" />
   <path d="M8 16l4 0" />
 </svg>
- Foros activos</h3><button class="btn btn-primary btn-sm" id="btn-foro-add">+ Nuevo foro</button></div>
+ Foros activos</h3><button class="btn btn-primary btn-sm" id="btn-foro-add" data-perm="crear">+ Nuevo foro</button></div>
           <div id="foro-lista"><div class="empty-msg">No hay foros activos.</div></div>
         </div>
       </div>
@@ -1438,7 +1301,7 @@ unicode: "eaa2"
   <path d="M9 13l6 0" />
   <path d="M9 17l6 0" />
 </svg>
- Agenda del día</h3><button class="btn btn-primary btn-sm" id="btn-agenda-add">+ Agregar</button></div>
+ Agenda del día</h3><button class="btn btn-primary btn-sm" id="btn-agenda-add" data-perm="crear">+ Agregar</button></div>
           <div id="agenda-lista"><div class="empty-msg">Sin eventos para hoy.</div></div>
         </div>
       </div>
@@ -1496,7 +1359,7 @@ unicode: "ea53"
   <path d="M11 15h1" />
   <path d="M12 15v3" />
 </svg>
- Eventos próximos</h3><button class="btn btn-primary btn-sm" id="btn-cal-add">+ Evento</button></div>
+ Eventos próximos</h3><button class="btn btn-primary btn-sm" id="btn-cal-add" data-perm="crear">+ Evento</button></div>
           <div id="cal-lista"><div class="empty-msg">No hay eventos registrados.</div></div>
         </div>
       </div>
@@ -1549,7 +1412,7 @@ unicode: "ea39"
   <path d="M12 6l0 13" />
   <path d="M21 6l0 13" />
 </svg>
- Horario semanal</h3><button class="btn btn-primary btn-sm" id="btn-horario-add">+ Agregar fila</button></div>
+ Horario semanal</h3><button class="btn btn-primary btn-sm" id="btn-horario-add" data-perm="crear">+ Agregar fila</button></div>
           <div id="horario-tabla-wrap" style="overflow-x:auto;margin-top:.75rem;"></div>
           <div id="horario-edit-panel" class="hidden" style="margin-top:.75rem;padding:.75rem;background:var(--gray-50);border-radius:10px;">
             <h4 style="margin-bottom:.5rem;font-size:.9rem;" id="horario-edit-title"><!--
@@ -1660,7 +1523,7 @@ unicode: "eaf0"
   <path d="M8 21l8 0" />
   <path d="M12 17l0 4" />
 </svg>
- Próximas clases</h3><button class="btn btn-primary btn-sm" id="btn-clase-add">+ Agregar</button></div>
+ Próximas clases</h3><button class="btn btn-primary btn-sm" id="btn-clase-add" data-perm="crear">+ Agregar</button></div>
           <div id="clase-lista"><div class="empty-msg">No hay clases programadas.</div></div>
         </div>
       </div>
@@ -1710,7 +1573,7 @@ unicode: "eae5"
   <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10" />
   <path d="M3 7l9 6l9 -6" />
 </svg>
- Bandeja de entrada</h3><button class="btn btn-primary btn-sm" id="btn-msg-add">+ Nuevo mensaje</button></div>
+ Bandeja de entrada</h3><button class="btn btn-primary btn-sm" id="btn-msg-add" data-perm="crear">+ Nuevo mensaje</button></div>
           <div id="msg-lista"><div class="empty-msg">Bandeja vacía.</div></div>
         </div>
       </div>
@@ -1766,7 +1629,7 @@ category: System
   <path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
   <path d="M3 13v-1a2 2 0 0 1 2 -2h2" />
 </svg>
- Grupos activos</h3><button class="btn btn-primary btn-sm" id="btn-grupo-add">+ Nuevo grupo</button></div>
+ Grupos activos</h3><button class="btn btn-primary btn-sm" id="btn-grupo-add" data-perm="crear">+ Nuevo grupo</button></div>
           <div id="grupo-lista"><div class="empty-msg">No hay grupos activos.</div></div>
         </div>
       </div>
@@ -1818,7 +1681,7 @@ unicode: "ed07"
   <path d="M21 6.727a11.05 11.05 0 0 0 -2.794 -3.727" />
   <path d="M3 6.727a11.05 11.05 0 0 1 2.792 -3.727" />
 </svg>
- Seguridad</h3><button class="btn btn-primary btn-sm" id="btn-prot-add">+ Reportar</button></div>
+ Seguridad</h3><button class="btn btn-primary btn-sm" id="btn-prot-add" data-perm="crear">+ Reportar</button></div>
           <div id="prot-lista"><div class="empty-msg">Sin incidentes reportados.</div></div>
         </div>
       </div>
@@ -1850,7 +1713,7 @@ unicode: "eb6d"
         <p class="section-sub">Los docentes crean tareas y los estudiantes las entregan.</p>
 
         <div class="tab-bar" style="max-width:300px;margin:0 auto 1rem;">
-          <button class="active" data-tarea-tab="docente"><!--
+          <button class="active" data-tarea-tab="docente" data-perm="crear"><!--
 tags: [education, learning, reading, school, library, books, file, paper, text, record]
 category: Document
 version: "1.52"
@@ -1897,7 +1760,7 @@ unicode: "ea6f"
  Estudiante</button>
         </div>
 
-        <div id="tarea-tab-docente">
+        <div id="tarea-tab-docente" data-perm="crear">
           <div class="card">
             <div class="flex-between"><h3><!--
 tags: [checkbox, brief, record, write, message, note, file, paper, text, information]
@@ -1945,7 +1808,7 @@ unicode: "eb6d"
               </div>
               <div class="form-group" style="flex:1;min-width:120px;"><label>Fecha límite</label><input type="date" id="tarea-fecha" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
             </div>
-            <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-tarea-crear">+ Crear tarea</button></div>
+            <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-tarea-crear" data-perm="crear">+ Crear tarea</button></div>
           </div>
 
           <div class="card" style="margin-top:1rem;">
@@ -2321,10 +2184,12 @@ unicode: "eae2"
             <select id="auth-rol-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
               <option value="todos">Todos los roles</option>
               <option value="director">Director</option>
+              <option value="subdirector">Subdirector</option>
               <option value="coordinador">Coordinador</option>
               <option value="docente">Docente</option>
               <option value="estudiante">Estudiante</option>
-              <option value="padre">Padre</option>
+              <option value="padres">Padre de familia</option>
+              <option value="admin">Administrador</option>
             </select>
             <select id="auth-semestre-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
               <option value="todos">Todos los semestres</option>
@@ -2407,7 +2272,7 @@ unicode: "eb6d"
         <p class="section-sub">Crea exámenes como profesor o simúlalos como estudiante.</p>
 
         <div class="tab-bar" style="max-width:450px;margin:0 auto 1.5rem;">
-          <button class="active" data-exam-tab="profesor"><!--
+          <button class="active" data-exam-tab="profesor" data-perm="crear"><!--
 category: Map
 tags: [students, class, teachers, professors, doctors, hall, classroom, subject, science, break, lesson]
 version: "1.22"
@@ -2476,7 +2341,7 @@ unicode: "ea59"
         </div>
 
         <!-- ===== TAB PROFESOR: CREADOR ===== -->
-        <div id="exam-tab-profesor">
+        <div id="exam-tab-profesor" data-perm="crear">
           <div class="card exam-creator">
             <h3><!--
 tags: [pencil, change, update, edit, modify, creative, artistic, revise, adjust, visual]
@@ -2936,7 +2801,7 @@ unicode: "ecf7"
         <p class="section-sub">Gestión de espacios educativos del Cherry-Bomb.</p>
 
         <div class="tab-bar" style="margin-bottom:1rem;">
-          <button class="active" data-aula-tab="gestion"><!--
+          <button class="active" data-aula-tab="gestion" data-perm="crear"><!--
 tags: [directory, dir, clone, copy, folders, file, paper, text, record, information]
 category: Document
 version: "1.0"
@@ -2998,7 +2863,7 @@ unicode: "ea6f"
   <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" />
 </svg>
  Tareas</button>
-          <button data-aula-tab="inscripcion">
+          <button data-aula-tab="inscripcion" data-perm="crear">
             <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -3015,7 +2880,7 @@ unicode: "ea6f"
         </div>
 
         <!-- ===== TAB GESTIÓN ===== -->
-        <div id="aula-tab-gestion">
+        <div id="aula-tab-gestion" data-perm="crear">
           <div class="grid-2" style="grid-template-columns:1fr 1.8fr;">
             <div class="card">
               <h3><!--
@@ -3054,7 +2919,7 @@ unicode: "eb6d"
               </div>
               <div class="form-group"><label>Descripci&oacute;n</label><textarea id="aula-desc" placeholder="Caracter&iacute;sticas adicionales..." rows="2"></textarea></div>
               <div style="display:flex;gap:.5rem;margin-top:.5rem;">
-                <button class="btn btn-primary" id="btn-aula-crear">+ Crear aula</button>
+                <button class="btn btn-primary" id="btn-aula-crear" data-perm="crear">+ Crear aula</button>
                 <button class="btn btn-outline" id="btn-aula-limpiar">Limpiar</button>
               </div>
             </div>
@@ -3097,7 +2962,7 @@ unicode: "eb6d"
                   <option value="capacidad-asc">Menor capacidad</option>
                   <option value="tipo">Por tipo</option>
                 </select>
-                <button class="btn btn-sm btn-outline" id="btn-aula-csv" style="font-size:.78rem;">\uD83D\uDCC4 CSV</button>
+                <button class="btn btn-sm btn-outline" id="btn-aula-csv" style="font-size:.78rem;" data-perm="crear">\uD83D\uDCC4 CSV</button>
               </div>
               <div id="aulas-grid"><div class="empty-msg">No hay aulas registradas. Crea la primera desde el formulario.</div></div>
               <div id="aulas-total" style="margin-top:.75rem;font-size:.82rem;color:var(--gray-500);"></div>
@@ -3232,7 +3097,7 @@ unicode: "ea6a"
 
         <!-- ===== TAB TAREAS ===== -->
         <div id="aula-tab-tareas" class="hidden">
-          <div id="aula-tarea-docente">
+          <div id="aula-tarea-docente" data-perm="crear">
             <div class="card">
               <div class="flex-between"><h3><!--
 tags: [checkbox, brief, record, write, message, note, file, paper, text, information]
@@ -3285,7 +3150,7 @@ unicode: "eb6d"
                   <option value="">-- Seleccionar aula --</option>
                 </select>
               </div>
-              <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-aula-tarea-crear">+ Asignar tarea</button></div>
+              <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-aula-tarea-crear" data-perm="crear">+ Asignar tarea</button></div>
             </div>
             <div class="card" style="margin-top:1rem;">
               <div class="flex-between"><h3><!--
@@ -3361,7 +3226,7 @@ unicode: "ea5e"
         </div>
 
         <!-- ===== TAB INSCRIPCIÓN ===== -->
-        <div id="aula-tab-inscripcion" class="hidden">
+        <div id="aula-tab-inscripcion" class="hidden" data-perm="crear">
           <div class="card">
             <h3>&#x1F465; Inscripci&oacute;n de Estudiantes en Aulas</h3>
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin:.75rem 0;">
@@ -3374,7 +3239,7 @@ unicode: "ea5e"
                 <select id="insc-estudiante" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
               </div>
               <div style="display:flex;align-items:flex-end;">
-                <button class="btn btn-primary" id="btn-insc-agregar">+ Inscribir</button>
+                <button class="btn btn-primary" id="btn-insc-agregar" data-perm="crear">+ Inscribir</button>
               </div>
             </div>
           </div>
@@ -3477,7 +3342,7 @@ unicode: "ea6f"
  Planificación Docente</h2>
         <p class="section-sub">Jornalización y planificación didáctica para docentes.</p>
 
-        <div id="planif-docente" style="display:none;">
+        <div id="planif-docente" style="display:none;" data-perm="crear">
           <div class="card">
             <div class="flex-between"><h3><!--
 tags: [checkbox, brief, record, write, message, note, file, paper, text, information]
@@ -3517,7 +3382,7 @@ unicode: "eb6d"
             <div class="form-group"><label>Recursos</label><input type="text" id="planif-recursos" placeholder="Ej: Libro de texto, proyector, láminas" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
             <div class="form-group"><label>Evaluación</label><input type="text" id="planif-evaluacion" placeholder="Ej: Prueba escrita, exposición" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
             <div style="display:flex;gap:.5rem;margin-top:.5rem;">
-              <button class="btn btn-primary" id="btn-planif-crear">+ Agregar planificación</button>
+              <button class="btn btn-primary" id="btn-planif-crear" data-perm="crear">+ Agregar planificación</button>
               <button class="btn btn-outline" id="btn-planif-limpiar">Limpiar</button>
             </div>
           </div>
@@ -3669,7 +3534,7 @@ unicode: "eb47"
           </div>
         </div>
 
-        <div id="matricula-admin" style="display:none;">
+        <div id="matricula-admin" style="display:none;" data-perm="crear">
           <div class="card" style="margin-top:1rem;">
             <div class="flex-between"><h3><!--
 category: System

@@ -8,9 +8,103 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('cherrybombSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','auth'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth'];
       function $(id) { return document.getElementById(id); }
+
+      /* ===================================================================
+         CUENTAS — el rango (rol) vive en la cuenta, NO en el login.
+
+         * Registrarse SIEMPRE crea un ESTUDIANTE.
+         * Los rangos altos (docente, coordinador, director, admin) los da
+           un administrador desde el menú "Usuarios".
+         * Al iniciar sesión el rango sale de acá: por eso un alumno no
+           puede autoasignarse docente ni ver nada de docente.
+         =================================================================== */
+      var LS_CUENTAS = 'cherrybombCuentas';
+      var ROLES_VALIDOS = ['estudiante', 'docente', 'coordinador', 'director', 'subdirector', 'padres', 'admin'];
+      var ROL_REGISTRO = 'estudiante'; // rango fijo de todo el que se registra
+
+      function normalizaEmail(e) { return String(e || '').trim().toLowerCase(); }
+
+      function leerCuentas() {
+        try {
+          var db = JSON.parse(localStorage.getItem(LS_CUENTAS) || 'null');
+          if (db && typeof db === 'object') return db;
+        } catch (e) { /* JSON ilegible: se vuelve a crear */ }
+        return null;
+      }
+      function guardarCuentas(db) {
+        try { localStorage.setItem(LS_CUENTAS, JSON.stringify(db)); } catch (e) { /* sin storage */ }
+      }
+      function obtenerCuenta(email) {
+        var db = leerCuentas();
+        return (db && db[normalizaEmail(email)]) || null;
+      }
+      function cuentaActiva(cuenta) { return !!cuenta && cuenta.activo !== false; }
+
+      function crearCuenta(email, nombre, rol) {
+        var key = normalizaEmail(email);
+        if (!key) return { ok: false, msg: 'Falta el correo.' };
+        var db = leerCuentas() || {};
+        if (db[key]) return { ok: false, msg: 'Ese correo ya está registrado. Iniciá sesión.' };
+        var rango = ROLES_VALIDOS.indexOf(rol) !== -1 ? rol : ROL_REGISTRO;
+        db[key] = {
+          nombre: String(nombre || key.split('@')[0]).trim(),
+          email: key,
+          rol: rango,
+          semestre: rango === ROL_REGISTRO ? '1' : '',
+          activo: true,
+          creado: new Date().toISOString(),
+        };
+        guardarCuentas(db);
+        return { ok: true, cuenta: db[key] };
+      }
+
+      function cambiarRangoCuenta(email, rol) {
+        var db = leerCuentas() || {};
+        var key = normalizaEmail(email);
+        if (!db[key]) return { ok: false, msg: 'No existe esa cuenta.' };
+        if (ROLES_VALIDOS.indexOf(rol) === -1) return { ok: false, msg: 'Rango desconocido.' };
+        db[key].rol = rol;
+        if (rol !== ROL_REGISTRO) db[key].semestre = '';
+        guardarCuentas(db);
+        // Si es la sesión abierta ahora mismo, el cambio se aplica al instante
+        if (usuarioActual && normalizaEmail(usuarioActual.email) === key) {
+          usuarioActual.rol = rol;
+          localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
+          window.usuarioActual = usuarioActual;
+          actualizarPermisosUI();
+        }
+        return { ok: true, cuenta: db[key] };
+      }
+
+      /* Primer arranque: siembra la cuenta de administrador y conserva el
+         rango de la sesión abierta en versiones anteriores de la app. */
+      function prepararCuentas() {
+        var db = leerCuentas();
+        var cambia = false;
+        if (!db) { db = {}; cambia = true; }
+        if (!db['admin@bachillerato.edu']) {
+          db['admin@bachillerato.edu'] = {
+            nombre: 'Administrador', email: 'admin@bachillerato.edu', rol: 'admin',
+            semestre: '', activo: true, creado: new Date().toISOString(), semilla: true,
+          };
+          cambia = true;
+        }
+        if (savedSession && savedSession.email && !db[normalizaEmail(savedSession.email)]) {
+          db[normalizaEmail(savedSession.email)] = {
+            nombre: savedSession.nombre || normalizaEmail(savedSession.email).split('@')[0],
+            email: normalizaEmail(savedSession.email),
+            rol: ROLES_VALIDOS.indexOf(savedSession.rol) !== -1 ? savedSession.rol : ROL_REGISTRO,
+            semestre: '', activo: true, creado: new Date().toISOString(),
+          };
+          cambia = true;
+        }
+        if (cambia) guardarCuentas(db);
+        return db;
+      }
+      prepararCuentas();
 
       var toastEl = $('toast');
       var toastTimeout;
@@ -379,6 +473,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           mostrarToast('Inicia sesión para acceder.', 'error');
           return;
         }
+        // Usuarios es un área de administración: nadie más entra
+        if (app === 'auth' && !esAdmin()) {
+          mostrarToast('Solo los administradores gestionan usuarios.', 'error');
+          app = 'inicio';
+        }
         apps.forEach(function (a) {
           var el = $('app-' + a);
           if (el) el.classList.toggle('hidden', a !== (app || 'inicio'));
@@ -396,6 +495,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         _mostrarApp(app);
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
+        if (app === 'auth') { renderAuth(); }
         if (app === 'aulas' && window.CherryBombNotifications) {
           window.CherryBombNotifications.showPermissionBanner();
         }
@@ -433,15 +533,42 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       $('modal-temas-close').addEventListener('click', cerrarTemas);
       modalTemas.addEventListener('click', function (e) { if (e.target === modalTemas) cerrarTemas(); });
 
+      /* ---- Modo del modal: iniciar sesión / crear cuenta ---- */
+      function mostrarModoRegistro(si) {
+        $('form-login').classList.toggle('hidden', si);
+        $('form-registro').classList.toggle('hidden', !si);
+        $('link-registro-wrap').classList.toggle('hidden', si);
+        $('link-login-wrap').classList.toggle('hidden', !si);
+        $('link-olvide-wrap').classList.toggle('hidden', si);
+        $('login-title').textContent = si ? 'Crear cuenta' : 'Iniciar sesión';
+        $('login-error').hidden = true;
+        $('reg-error').hidden = true;
+      }
+      $('link-registro').addEventListener('click', function (e) { e.preventDefault(); mostrarModoRegistro(true); $('reg-nombre').focus(); });
+      $('link-volver-login').addEventListener('click', function (e) { e.preventDefault(); mostrarModoRegistro(false); $('login-email').focus(); });
+
       $('form-login').addEventListener('submit', function (e) {
         e.preventDefault();
-        var rol = $('login-rol').value;
         var email = $('login-email').value.trim();
         var pass = $('login-pass').value.trim();
         if (!email || pass.length < 6) {
           $('login-error').hidden = false; mostrarToast('Ingresa un correo y contraseña válidos (mín. 6 caracteres).', 'error'); return;
         }
         $('login-error').hidden = true;
+
+        /* ---- El rango SALE DE LA CUENTA: ya no hay desplegable de rol ---- */
+        var cuenta = obtenerCuenta(email);
+        if (!cuenta) {
+          mostrarToast('Ese correo no está registrado. Creá tu cuenta de estudiante.', 'error');
+          mostrarModoRegistro(true);
+          $('reg-email').value = email;
+          $('reg-nombre').focus();
+          return;
+        }
+        if (!cuentaActiva(cuenta)) {
+          mostrarToast('Tu cuenta está desactivada. Consultá al administrador.', 'error');
+          return;
+        }
 
         /* ---- Fallback localStorage ---- */
         cryptoDeriveKey(pass, email);
@@ -454,14 +581,41 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (!storedHash) {
           localStorage.setItem('passHash_' + btoa(email), passHash);
         }
-        loginSuccess(email, rol);
+        loginSuccess(email, cuenta.rol, cuenta.nombre);
       });
 
-      function loginSuccess(email, rol) {
+      /* ---- Registro: siempre rango ESTUDIANTE ---- */
+      $('form-registro').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var err = $('reg-error');
+        function fallo(msg) { err.textContent = msg; err.hidden = false; mostrarToast(msg, 'error'); }
+        var nom = $('reg-nombre').value.trim();
+        var email = $('reg-email').value.trim();
+        var p1 = $('reg-pass').value;
+        var p2 = $('reg-pass2').value;
+        if (!nom) return fallo('Poné tu nombre completo.');
+        if (!email || p1.length < 6) return fallo('Correo y contraseña válidos (mín. 6 caracteres).');
+        if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
+        if (obtenerCuenta(email)) return fallo('Ese correo ya está registrado. Iniciá sesión.');
+        var r = crearCuenta(email, nom, ROL_REGISTRO);
+        if (!r.ok) return fallo(r.msg);
+        localStorage.setItem('passHash_' + btoa(email), hashPassword(p1));
+        err.hidden = true;
+        $('form-registro').reset();
+        mostrarModoRegistro(false);
+        loginSuccess(email, r.cuenta.rol, r.cuenta.nombre);
+        mostrarToast('Cuenta creada con rango Estudiante.', 'success');
+      });
+
+      function loginSuccess(email, rol, nombre) {
+        // Rangos desconocidos degradados a estudiante (defensa extra)
+        if (ROLES_VALIDOS.indexOf(rol) === -1) rol = ROL_REGISTRO;
         logueado = true;
-        usuarioActual = { email: email, rol: rol, nombre: email.split('@')[0] };
+        usuarioActual = { email: email, rol: rol, nombre: nombre || email.split('@')[0] };
         localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
+        window.usuarioActual = usuarioActual; // notifications.js lo lee
         modalLogin.classList.remove('open');
+        mostrarModoRegistro(false);
         $('btn-login').style.display = 'none';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = 'none';
         var ui = $('user-info');
@@ -481,6 +635,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       $('btn-logout').addEventListener('click', function () {
         logueado = false;
         usuarioActual = null;
+        window.usuarioActual = null;
         cryptoKey = null; cryptoKeyStr = '';
         localStorage.removeItem('cherrybombSession');
         /* Logout local — sesión en localStorage */
@@ -488,6 +643,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = '';
         var ui = $('user-info'); ui.style.display = 'none'; ui.classList.add('hidden');
         var sui = $('sidebar-user-info'); sui.style.display = 'none'; sui.classList.add('hidden');
+        // Sin sesión no queda ningún rango: se oculta todo lo docente
+        actualizarPermisosUI();
         closeSidebar();
         mostrarApp('inicio');
         mostrarToast('Sesión cerrada.', 'success');
@@ -550,16 +707,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function esEstudiante() { return usuarioActual && usuarioActual.rol === 'estudiante'; }
       function esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
 
-      function actualizarPermisosUI() {
-        var esDocenteOrAdmin = esDocente() || esAdmin();
-        var esCoord = usuarioActual && usuarioActual.rol === 'coordinador';
-
-        // Botones de CRUD: mostrar solo si tiene permisos
-        document.querySelectorAll('.btn-crear, .btn-add, .btn-editar, .btn-eliminar').forEach(function (btn) {
-          btn.style.display = esDocenteOrAdmin || esCoord ? '' : 'none';
-        });
-      }
-
       var rolesPermisos = {
         admin: { ver: true, crear: true, editar: true, eliminar: true },
         director: { ver: true, crear: true, editar: true, eliminar: true },
@@ -570,10 +717,87 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         padres: { ver: true, crear: false, editar: false, eliminar: false }
       };
 
+      function permisosDelRol(rol) {
+        return rolesPermisos[rol] || { ver: false, crear: false, editar: false, eliminar: false };
+      }
+
       function tienePermiso(accion) {
         if (!usuarioActual) return false;
         var p = rolesPermisos[usuarioActual.rol];
-        return p ? p[accion] : false;
+        return p ? !!p[accion] : false;
+      }
+
+      /* Corta una acción si el rango no la tiene. Se usa en los
+         manejadores: aunque alguien consiga disparar el evento (o el
+         botón se pinte por otro lado), la acción no se ejecuta. */
+      function exigirPermiso(accion) {
+        if (tienePermiso(accion)) return true;
+        var rango = usuarioActual ? usuarioActual.rol : 'sin sesión';
+        mostrarToast('Tu rango (' + rango + ') no tiene permiso para ' + accion + ' aquí.', 'error');
+        return false;
+      }
+
+      /* Las pestañas de docente quedan ocultas por CSS para quien no
+         puede crear; hay que activar la pestaña del alumno para que la
+         vista no quede en blanco. */
+      function aplicarTabsPorRol() {
+        if (!usuarioActual) return;
+        var puedeCrear = tienePermiso('crear');
+        var pares = [
+          ['data-tarea-tab="docente"', 'data-tarea-tab="estudiante"'],
+          ['data-exam-tab="profesor"', 'data-exam-tab="estudiante"'],
+          ['data-aula-tab="gestion"', 'data-aula-tab="estudiantes"'],
+        ];
+        pares.forEach(function (par) {
+          var docente = document.querySelector('[' + par[0] + ']');
+          var propio = document.querySelector('[' + par[1] + ']');
+          if (!docente || !propio) return;
+          // quien crea vuelve a su pestaña; quien no crea se va de ella
+          if (puedeCrear) {
+            if (!docente.classList.contains('active')) docente.click();
+          } else if (!propio.classList.contains('active')) {
+            propio.click();
+          }
+        });
+      }
+
+      /* Red de seguridad: un clic sobre cualquier elemento marcado con un
+         rango que este usuario no tiene no llega nunca al manejador
+         (también cubre los botones pintados después, dinámicamente). */
+      document.addEventListener('click', function (e) {
+        var el = e.target && e.target.closest ? e.target.closest('[data-perm]') : null;
+        // OJO: <body> también lleva data-perm (lo usa el CSS). Si el clic
+        // no cae en ningún elemento marcado, closest devuelve <body> y no
+        // hay que filtrarlo: sería cortar todos los clics de la página.
+        if (!el || el === document.body) return;
+        var permitido = (el.getAttribute('data-perm') || '').split(/\s+/).some(function (a) {
+          return a && tienePermiso(a);
+        });
+        if (permitido) return;
+        e.preventDefault();
+        e.stopPropagation();
+        mostrarToast('Tu rango no tiene permiso para eso.', 'error');
+      }, true);
+
+      function actualizarPermisosUI() {
+        var p = usuarioActual ? permisosDelRol(usuarioActual.rol) : permisosDelRol(null);
+        // El <body> publica las acciones permitidas: el CSS de
+        // styles.css oculta todo lo que el rango no tiene (también lo
+        // que se pinte después, porque mira el atributo, no el nodo).
+        document.body.setAttribute('data-perm', Object.keys(p).filter(function (k) { return p[k]; }).join(' '));
+
+        // Legado: botones con clases genéricas
+        document.querySelectorAll('.btn-crear, .btn-add').forEach(function (b) { b.style.display = p.crear ? '' : 'none'; });
+        document.querySelectorAll('.btn-editar').forEach(function (b) { b.style.display = p.editar ? '' : 'none'; });
+        document.querySelectorAll('.btn-eliminar').forEach(function (b) { b.style.display = p.eliminar ? '' : 'none'; });
+
+        // La gestión de usuarios es exclusiva de administradores
+        var navAuth = $('nav-auth');
+        if (navAuth) navAuth.classList.toggle('hidden', !esAdmin());
+        var appAuth = $('app-auth');
+        if (appAuth && !appAuth.classList.contains('hidden') && !esAdmin()) mostrarApp('inicio');
+
+        aplicarTabsPorRol();
       }
 
       /* ===================================================================
@@ -754,48 +978,94 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          AUTH — Bachillerato
          =================================================================== */
-      var usuarios = [
-        { user: 'agarcia', nombre: 'Ana García', email: 'ana@bachillerato.edu', rol: 'estudiante', semestre: '1', activo: true },
-        { user: 'cmendoza', nombre: 'Carlos Mendoza', email: 'carlos@bachillerato.edu', rol: 'estudiante', semestre: '1', activo: true },
-        { user: 'mtorres', nombre: 'María Torres', email: 'maria@bachillerato.edu', rol: 'estudiante', semestre: '2', activo: true },
-        { user: 'lfernandez', nombre: 'Luis Fernández', email: 'luis@bachillerato.edu', rol: 'estudiante', semestre: '3', activo: false },
-        { user: 'profgarcia', nombre: 'Prof. Roberto García', email: 'rgarcia@bachillerato.edu', rol: 'docente', semestre: '', activo: true },
-        { user: 'coordlopez', nombre: 'Mtra. Elena López', email: 'elopez@bachillerato.edu', rol: 'coordinador', semestre: '', activo: true },
-      ];
+      /* ===================================================================
+         USUARIOS — panel de administración de cuentas y rangos
+         Solo un administrador entra acá (menú "Usuarios"). Desde acá se
+         dan de alta las cuentas de docente/director/coordinador; quien
+         se registra por su cuenta siempre queda como ESTUDIANTE.
+         =================================================================== */
+      var ROLES_LABEL = {
+        admin: 'Administrador', director: 'Director', subdirector: 'Subdirector',
+        coordinador: 'Coordinador', docente: 'Docente', estudiante: 'Estudiante', padres: 'Padre de familia'
+      };
+      var ORDEN_ROLES = ['admin', 'director', 'subdirector', 'coordinador', 'docente', 'estudiante', 'padres'];
+      var ROLES_BADGE = { admin: 'badge-red', director: 'badge-red', subdirector: 'badge-red', coordinador: 'badge-orange', docente: 'badge-blue', estudiante: 'badge-green', padres: 'badge-amber' };
+
+      function listaUsuarios() {
+        var db = leerCuentas() || {};
+        return Object.keys(db).map(function (k) { return db[k]; }).sort(function (a, b) {
+          var d = ORDEN_ROLES.indexOf(a.rol) - ORDEN_ROLES.indexOf(b.rol);
+          return d !== 0 ? d : String(a.email).localeCompare(String(b.email));
+        });
+      }
 
       function renderAuth() {
-        var busq = $('auth-buscar').value.toLowerCase().trim();
+        var tabla = $('auth-tabla');
+        if (!tabla) return;
+        var vacio = $('auth-empty');
+        var total = $('auth-total');
+        // Sin permiso de administración no se lista ni una cuenta
+        if (!esAdmin()) {
+          tabla.innerHTML = '';
+          if (vacio) vacio.classList.add('hidden');
+          if (total) total.innerHTML = '0 usuarios';
+          return;
+        }
+        var busq = ($('auth-buscar').value || '').toLowerCase().trim();
         var rf = $('auth-rol-filtro').value;
         var sf = $('auth-semestre-filtro').value;
-        var items = usuarios.filter(function (u) {
+        var lista = listaUsuarios().filter(function (u) {
           var matchRol = rf === 'todos' || u.rol === rf;
           var matchSem = sf === 'todos' || u.semestre === sf;
-          var matchBusq = busq === '' || u.user.indexOf(busq) !== -1 || u.email.indexOf(busq) !== -1 || u.nombre.toLowerCase().indexOf(busq) !== -1;
+          var matchBusq = busq === '' ||
+            String(u.email).indexOf(busq) !== -1 ||
+            String(u.nombre || '').toLowerCase().indexOf(busq) !== -1;
           return matchRol && matchSem && matchBusq;
         });
-        var tbody = $('auth-tabla');
-        var empty = $('auth-empty');
-        var total = $('auth-total');
-        if (items.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); total.innerHTML = '0 usuarios'; return; }
-        empty.classList.add('hidden');
-        var rolesBadge = { director: 'badge-red', coordinador: 'badge-orange', docente: 'badge-blue', estudiante: 'badge-green', padre: 'badge-amber' };
-        tbody.innerHTML = items.map(function (u, i) {
-          var idx = usuarios.indexOf(u);
+        if (lista.length === 0) {
+          tabla.innerHTML = '';
+          if (vacio) vacio.classList.remove('hidden');
+          if (total) total.innerHTML = '0 usuarios';
+          return;
+        }
+        if (vacio) vacio.classList.add('hidden');
+        var soyYo = usuarioActual ? normalizaEmail(usuarioActual.email) : '';
+        tabla.innerHTML = lista.map(function (u) {
+          var key = normalizaEmail(u.email);
+          var propio = key === soyYo; // no podés degradarte a vos mismo
+          var opciones = ORDEN_ROLES.map(function (r) {
+            return '<option value="' + r + '"' + (u.rol === r ? ' selected' : '') + '>' + (ROLES_LABEL[r] || r) + '</option>';
+          }).join('');
           return '<tr>' +
-            '<th scope="row">' + escapeHtml(u.user) + '</th>' +
-            '<td>' + escapeHtml(u.nombre) + '</td>' +
-            '<td><span class="badge ' + (rolesBadge[u.rol] || 'badge-blue') + '">' + u.rol + '</span></td>' +
-            '<td>' + (u.semestre ? u.semestre + '° Semestre' : '—') + '</td>' +
+            '<th scope="row">' + escapeHtml(key) + '</th>' +
+            '<td>' + escapeHtml(u.nombre || '') + '</td>' +
+            '<td>' + (propio
+              ? '<span class="badge ' + (ROLES_BADGE[u.rol] || 'badge-blue') + '">' + (ROLES_LABEL[u.rol] || u.rol) + '</span>'
+              : '<select class="auth-rol" data-email="' + escapeHtml(key) + '" aria-label="Rango de ' + escapeHtml(key) + '" style="padding:.3rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.8rem;">' + opciones + '</select>') + '</td>' +
+            '<td>' + (u.semestre ? u.semestre + '&deg; Semestre' : '&mdash;') + '</td>' +
             '<td><span class="badge ' + (u.activo ? 'badge-green' : 'badge-amber') + '">' + (u.activo ? 'Activo' : 'Inactivo') + '</span></td>' +
-            '<td><button class="btn btn-outline btn-sm auth-toggle" data-idx="' + idx + '">' + (u.activo ? 'Desactivar' : 'Activar') + '</button></td></tr>';
+            '<td style="white-space:nowrap;"><button class="btn btn-outline btn-sm auth-toggle" data-email="' + escapeHtml(key) + '">' + (u.activo ? 'Desactivar' : 'Activar') + '</button></td></tr>';
         }).join('');
-        total.innerHTML = items.length + ' usuario' + (items.length !== 1 ? 's' : '');
-        tbody.querySelectorAll('.auth-toggle').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var idx = parseInt(this.dataset.idx);
-            usuarios[idx].activo = !usuarios[idx].activo;
+        total.innerHTML = lista.length + ' usuario' + (lista.length !== 1 ? 's' : '');
+
+        tabla.querySelectorAll('.auth-rol').forEach(function (sel) {
+          sel.addEventListener('change', function () {
+            var email = this.dataset.email;
+            var r = cambiarRangoCuenta(email, this.value);
+            if (!r.ok) { mostrarToast(r.msg, 'error'); renderAuth(); return; }
+            mostrarToast('Rango de ' + email + ': ' + (ROLES_LABEL[r.cuenta.rol] || r.cuenta.rol) + '.', 'success');
             renderAuth();
-            mostrarToast('Estado de usuario actualizado.', 'success');
+          });
+        });
+        tabla.querySelectorAll('.auth-toggle').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var email = this.dataset.email;
+            var db = leerCuentas() || {};
+            if (!db[email]) return;
+            db[email].activo = !db[email].activo;
+            guardarCuentas(db);
+            renderAuth();
+            mostrarToast('Cuenta ' + (db[email].activo ? 'activada' : 'desactivada') + '.', 'success');
           });
         });
       }
@@ -805,14 +1075,22 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       $('auth-semestre-filtro').addEventListener('change', renderAuth);
 
       $('btn-auth-add').addEventListener('click', function () {
+        if (!esAdmin()) { mostrarToast('Solo los administradores crean cuentas.', 'error'); return; }
+        if (!exigirPermiso('crear')) return;
         var nom = prompt('Nombre completo:');
         if (!nom || !nom.trim()) return;
-        var email = prompt('Correo institucional:');
+        var email = prompt('Correo institucional:', '@bachillerato.edu');
         if (!email || !email.trim()) return;
-        var user = email.split('@')[0];
-        usuarios.push({ user: user, nombre: nom.trim(), email: email.trim(), rol: 'estudiante', semestre: '1', activo: true });
+        var rango = prompt('Rango de la cuenta:\nestudiante, docente, coordinador, director, subdirector, padres o admin', 'estudiante');
+        if (rango === null) return;
+        rango = String(rango).trim().toLowerCase();
+        if (rango === 'profesor') rango = 'docente';
+        if (rango === 'padre' || rango === 'padres de familia') rango = 'padres';
+        if (ROLES_VALIDOS.indexOf(rango) === -1) { mostrarToast('Rango desconocido: ' + rango, 'error'); return; }
+        var r = crearCuenta(email.trim(), nom.trim(), rango);
+        if (!r.ok) { mostrarToast(r.msg, 'error'); return; }
         renderAuth();
-        mostrarToast('Usuario ' + nom.trim() + ' creado.', 'success');
+        mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[rango] || rango) + '. El usuario elige su contraseña al entrar.', 'success');
       });
 
       renderAuth();
@@ -888,11 +1166,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var preg = e.preguntas ? e.preguntas.length : 0;
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong style="font-size:.9rem;">' + escapeHtml(e.titulo) + '</strong><br><span style="font-size:.78rem;color:var(--gray-500);">' + preg + ' preg · ' + e.tiempo + ' min</span></div>' +
-              '<button class="btn btn-sm btn-outline" onclick="examEliminar(' + idx + ')"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
+              '<button class="btn btn-sm btn-outline" data-perm="eliminar" onclick="examEliminar(' + idx + ')"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
           }).join('') + '</div>';
       }
 
       window.examEliminar = function(idx) {
+        if (!exigirPermiso('eliminar')) return;
         if (!confirm('¿Eliminar este examen?')) return;
         examenes.splice(idx, 1);
         examGuardarStorage();
@@ -1347,8 +1626,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       });
 
       // Event listeners
-      $('btn-exam-add-q').addEventListener('click', examAddPregunta);
-      $('btn-exam-guardar').addEventListener('click', examGuardar);
+      $('btn-exam-add-q').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examAddPregunta(); });
+      $('btn-exam-guardar').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examGuardar(); });
       $('btn-exam-start').addEventListener('click', examComenzar);
       $('btn-exam-enviar').addEventListener('click', function () {
         if (confirm('¿Enviar examen? No podrás cambiar respuestas.')) examEnviar();
@@ -1555,7 +1834,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               '<span style="font-size:.78rem;color:var(--gray-500);">' + escapeHtml(t.desc) + ' · ' +
               '<span class="badge badge-' + mc + '">' + t.materia + '</span> ' +
               '<span class="semestre-badge">' + t.grupo + '</span> · Límite: ' + t.fecha + '</span></div>' +
-              '<button class="btn btn-sm btn-outline tarea-del" data-idx="' + i + '" style="color:var(--red);"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
+              '<button class="btn btn-sm btn-outline tarea-del" data-perm="eliminar" data-idx="' + i + '" style="color:var(--red);"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
           }).join('') + '</div>';
 
         container.querySelectorAll('.tarea-del').forEach(function (btn) {
@@ -1622,6 +1901,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function tareaInit() {
         $('btn-tarea-crear').addEventListener('click', function () {
+          if (!exigirPermiso('crear')) return;
           var titulo = $('tarea-titulo').value.trim();
           var desc = $('tarea-desc').value.trim();
           var materia = $('tarea-materia').value;
@@ -1736,8 +2016,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               '</div>' +
               '<div style="font-size:.78rem;color:var(--gray-500);margin-bottom:.5rem;">' + (equipLabels[a.equipamiento] || equipLabels.basico) + '</div>' +
               '<div style="display:flex;gap:.5rem;margin-top:.4rem;">' +
-              '<button class="btn btn-sm btn-outline aula-editar" data-idx="' + realIdx + '" style="flex:1;">\u270F\uFE0F Editar</button>' +
-              '<button class="btn btn-sm aula-eliminar" data-idx="' + realIdx + '" style="background:var(--red);color:#fff;flex:1;">\uD83D\uDDD1\uFE0F Eliminar</button></div>' +
+              '<button class="btn btn-sm btn-outline aula-editar" data-perm="editar" data-idx="' + realIdx + '" style="flex:1;">\u270F\uFE0F Editar</button>' +
+              '<button class="btn btn-sm aula-eliminar" data-perm="eliminar" data-idx="' + realIdx + '" style="background:var(--red);color:#fff;flex:1;">\uD83D\uDDD1\uFE0F Eliminar</button></div>' +
               '</div>';
           }).join('') + '</div>';
         total.textContent = items.length + ' aula' + (items.length !== 1 ? 's' : '') + ' (de ' + aulas.length + ' totales)';
@@ -1821,6 +2101,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function aulasInit() {
         $('btn-aula-crear').addEventListener('click', function () {
+          if (!exigirPermiso('crear')) return;
           var nombre = $('aula-nombre').value.trim();
           var capacidad = parseInt($('aula-capacidad').value, 10);
           var ubicacion = $('aula-ubicacion').value.trim();
@@ -2098,7 +2379,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           actividades.map(function (a, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(a.titulo) + '</strong>' + (a.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(a.desc) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-seccion="actividades" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="actividades" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2111,6 +2392,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-act-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo de la actividad:', 'Nueva actividad').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
@@ -2130,7 +2412,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           foros.map(function (f, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(f.titulo) + '</strong>' + (f.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(f.desc) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-seccion="foros" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="foros" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2142,6 +2424,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-foro-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo del foro:', 'Nuevo foro').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
@@ -2161,7 +2444,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           agendaItems.map(function (a, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(a.titulo) + '</strong>' + (a.hora ? '<br><span style="font-size:.82rem;color:var(--gray-500);">\uD83D\uDD52 ' + escapeHtml(a.hora) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-seccion="agendaItems" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="agendaItems" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2173,6 +2456,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-agenda-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo del evento:', 'Agregar a agenda').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Hora (opcional, ej: 10:30):', 'Hora').then(function (hora) {
@@ -2192,7 +2476,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           calEventos.map(function (e, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(e.titulo) + '</strong>' + (e.fecha ? '<br><span style="font-size:.82rem;color:var(--gray-500);">\uD83D\uDCC5 ' + escapeHtml(e.fecha) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2204,6 +2488,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-cal-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo del evento:', 'Nuevo evento').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Fecha (ej: 2026-07-20):', 'Fecha').then(function (fecha) {
@@ -2236,7 +2521,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             else { display = contenido.replace(/\n/g, '<br>'); }
             html += '<td class="' + cssClass + '" data-idx="' + idx + '" data-dia="' + dia + '">' + display + '</td>';
           });
-          html += '<td style="padding:0;width:30px;"><button class="btn btn-sm horario-del" data-idx="' + idx + '" style="background:var(--red);color:#fff;padding:.15rem .35rem;font-size:.65rem;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxMnB4O2hlaWdodDoxMnB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0zIDEyYTkgOSAwIDEgMCAxOCAwYTkgOSAwIDEgMCAtMTggMCIgLz4KICA8cGF0aCBkPSJNMTAgMTBsNCA0bTAgLTRsLTQgNCIgLz4KPC9zdmc+" width="20" height="20" style="width:12px;height:12px;display:block" alt=""> </button></td>';
+          html += '<td style="padding:0;width:30px;"><button class="btn btn-sm horario-del" data-perm="eliminar" data-idx="' + idx + '" style="background:var(--red);color:#fff;padding:.15rem .35rem;font-size:.65rem;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxMnB4O2hlaWdodDoxMnB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0zIDEyYTkgOSAwIDEgMCAxOCAwYTkgOSAwIDEgMCAtMTggMCIgLz4KICA8cGF0aCBkPSJNMTAgMTBsNCA0bTAgLTRsLTQgNCIgLz4KPC9zdmc+" width="20" height="20" style="width:12px;height:12px;display:block" alt=""> </button></td>';
           html += '</tr>';
         });
         html += '</tbody></table>';
@@ -2314,6 +2599,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       });
 
       $('btn-horario-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         editandoIdx = -1;
         editandoDia = '';
         $('he-hora').value = '';
@@ -2335,7 +2621,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(c.titulo) + '</strong><br>' +
               (c.enlace ? '<a href="' + escapeHtml(c.enlace) + '" target="_blank" style="font-size:.82rem;">' + escapeHtml(c.enlace) + '</a>' : '<span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(c.hora || '') + '</span>') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2347,6 +2633,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-clase-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo de la clase:', 'Nueva clase').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Enlace (opcional):', 'Enlace de clase').then(function (enlace) {
@@ -2368,7 +2655,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           mensajesItems.map(function (m, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(m.asunto) + '</strong><br><span style="font-size:.82rem;color:var(--gray-500);">De: ' + escapeHtml(m.remitente || 'An\u00F3nimo') + '</span></div>' +
-              '<button class="btn btn-sm seccion-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2380,6 +2667,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-msg-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('Asunto:', 'Nuevo mensaje').then(function (asunto) {
           if (!asunto) return;
           dialogPrompt('Mensaje:', 'Contenido').then(function (contenido) {
@@ -2399,7 +2687,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           gruposItems.map(function (g, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(g.nombre) + '</strong>' + (g.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(g.desc) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2411,6 +2699,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-grupo-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('Nombre del grupo:', 'Nuevo grupo').then(function (nombre) {
           if (!nombre) return;
           dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
@@ -2430,7 +2719,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           protegidoItems.map(function (p, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong>' + escapeHtml(p.tipo) + '</strong><br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(p.desc) + '</span></div>' +
-              '<button class="btn btn-sm seccion-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2442,6 +2731,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-prot-add').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         dialogPrompt('Tipo de incidente (ej: Acoso, Robo, Emergencia):', 'Reportar incidente').then(function (tipo) {
           if (!tipo) return;
           dialogPrompt('Describe lo sucedido:', 'Descripci\u00F3n').then(function (desc) {
@@ -2498,7 +2788,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var name = est ? escapeHtml(est.nombre) : '(desconocido)';
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<span>' + name + '</span>' +
-              '<button class="btn btn-sm btn-outline insc-remover" data-est="' + insc.estudianteId + '" data-aula="' + aulaId + '" style="color:var(--red);font-size:.78rem;">\u274C Quitar</button></div>';
+              '<button class="btn btn-sm btn-outline insc-remover" data-perm="eliminar" data-est="' + insc.estudianteId + '" data-aula="' + aulaId + '" style="color:var(--red);font-size:.78rem;">\u274C Quitar</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.insc-remover').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -2514,6 +2804,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       if ($('btn-insc-agregar')) {
         $('btn-insc-agregar').addEventListener('click', function () {
+          if (!exigirPermiso('crear')) return;
           var aulaId = parseInt($('insc-aula').value, 10);
           var estId = parseInt($('insc-estudiante').value, 10);
           if (!aulaId || !estId) { mostrarToast('Selecciona un aula y un estudiante.', 'error'); return; }
@@ -2605,7 +2896,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
                 '<span class="semestre-badge">' + entregadas + ' entrega' + (entregadas !== 1 ? 's' : '') + '</span>' +
                 (calCount > 0 ? '<span class="semestre-badge" style="background:#d4edda;color:#155724;">' + calCount + ' calificada' + (calCount !== 1 ? 's' : '') + '</span>' : '') +
                 '<button class="btn btn-sm btn-primary aula-tarea-ver-entregas" data-idx="' + i + '" style="font-size:.78rem;">\uD83D\uDC41 Ver entregas</button>' +
-                '<button class="btn btn-sm aula-tarea-del" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div></div></div>';
+                '<button class="btn btn-sm aula-tarea-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div></div></div>';
             }).join('') + '</div>';
           creadasEl.querySelectorAll('.aula-tarea-del').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -2787,6 +3078,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       });
 
       $('btn-aula-tarea-crear').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         var titulo = $('aula-tarea-titulo').value.trim();
         var desc = $('aula-tarea-desc').value.trim();
         var materia = $('aula-tarea-materia').value;
@@ -2891,6 +3183,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       $('modal-entregas-close').addEventListener('click', closeEntregasModal);
       $('modal-entregas').addEventListener('click', function (e) { if (e.target === this) closeEntregasModal(); });
       $('btn-modal-calif-guardar').addEventListener('click', function () {
+        if (!exigirPermiso('editar')) return;
         closeEntregasModal();
         mostrarToast('Calificaciones guardadas.', 'success');
       });
@@ -3097,6 +3390,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
       $('btn-planif-crear').addEventListener('click', function () {
+        if (!exigirPermiso('crear')) return;
         var semana = $('planif-semana').value.trim();
         var materia = $('planif-materia').value;
         var tema = $('planif-tema').value.trim();
@@ -3178,9 +3472,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
       function matActualizarUI() {
-        var esAdmin = esAdmin() || esDocente();
-        $('matricula-form-wrap').style.display = esAdmin ? 'none' : '';
-        $('matricula-admin').style.display = esAdmin ? '' : 'none';
+        // OJO: antes decía `var esAdmin = esAdmin()`, lo que sombreaba la
+        // función y reventaba con TypeError al abrir Matrícula (y con eso
+        // se caían también los renders siguientes del wrapper de apps).
+        var puedeGestionar = esAdmin() || esDocente();
+        $('matricula-form-wrap').style.display = puedeGestionar ? 'none' : '';
+        $('matricula-admin').style.display = puedeGestionar ? '' : 'none';
       }
 
       $('btn-mat-enviar').addEventListener('click', function () {
@@ -3221,6 +3518,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (sui) { sui.style.display = 'flex'; sui.classList.remove('hidden'); }
         var sidebarEmail = $('sidebar-user-email');
         if (sidebarEmail) sidebarEmail.textContent = usuarioActual.email + ' (' + rolDisplay + ')';
+        window.usuarioActual = usuarioActual; // notifications.js lo lee
         actualizarPermisosUI();
       }
 

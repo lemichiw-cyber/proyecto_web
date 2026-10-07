@@ -977,3 +977,15 @@
       .est-table th,.est-table td { padding:.4rem .5rem; }
       .est-select { font-size:.8rem;padding:.45rem; }
     }
+/* ===================================================================
+   PERMISOS POR RANGO — el <body> lleva data-perm con las acciones
+   permitidas del rol ("ver crear editar eliminar"). Cualquier elemento
+   con data-perm="crear" (o editar/eliminar) se oculta si el rol no la
+   tiene. Así un estudiante no ve ni puede usar nada de docente, aunque
+   el botón se pinte después: el CSS actúa sobre el atributo.
+   =================================================================== */
+body:not([data-perm~="crear"])   [data-perm~="crear"],
+body:not([data-perm~="editar"])  [data-perm~="editar"],
+body:not([data-perm~="eliminar"])[data-perm~="eliminar"] {
+  display: none !important;
+}
