@@ -48,7 +48,7 @@ export function toast(message, type = 'info') {
 }
 
 /* ---------------- diálogos ---------------- */
-export function dialog({ title, body, actions }) {
+export function dialog({ title, body, actions, onDismiss }) {
   const overlay = document.createElement('div');
   overlay.className = 'sp-dialog-overlay';
   const box = document.createElement('div');
@@ -62,22 +62,25 @@ export function dialog({ title, body, actions }) {
 
   const footer = document.createElement('div');
   footer.style.cssText = 'display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;';
-  (actions || [{ label: 'Cerrar', value: null }]).forEach((a) => {
+  (actions || [{ label: 'Cerrar' }]).forEach((a) => {
     const btn = document.createElement('button');
     btn.className = 'sp-btn' + (a.primary ? ' sp-btn-primary' : '');
     btn.textContent = a.label;
     btn.addEventListener('click', () => {
+      // onClick(content) lee el contenido y su resultado llega a value(v)
       const value = a.onClick ? a.onClick(content) : undefined;
       if (a.keepOpen) return;
       overlay.remove();
-      if (a.value !== undefined) a.value(value);
+      if (typeof a.value === 'function') a.value(value);
     });
     footer.appendChild(btn);
   });
   box.appendChild(footer);
   overlay.appendChild(box);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  box.querySelector('[data-close]').addEventListener('click', () => overlay.remove());
+  // Cerrar con ✕ o el fondo resuelve la promesa (si no, los await cuelgan)
+  const close = () => { overlay.remove(); if (typeof onDismiss === 'function') onDismiss(); };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  box.querySelector('[data-close]').addEventListener('click', close);
   document.body.appendChild(overlay);
   const first = box.querySelector('input,select,textarea');
   if (first) first.focus();
@@ -93,6 +96,7 @@ export function confirmDialog(message, title = 'Confirmar') {
         { label: 'Cancelar', value: () => resolve(false) },
         { label: 'Eliminar', primary: true, value: () => resolve(true) },
       ],
+      onDismiss: () => resolve(false),
     });
   });
 }
@@ -104,8 +108,11 @@ export function promptDialog(title, placeholder = '', defaultValue = '') {
       body: '<input class="sp-input" style="width:100%;" placeholder="' + escapeHtml(placeholder) + '" value="' + escapeHtml(defaultValue) + '">',
       actions: [
         { label: 'Cancelar', value: () => resolve(null) },
-        { label: 'Guardar', primary: true, value: (c) => { const i = c.querySelector('input'); return i ? i.value.trim() : null; } },
+        { label: 'Guardar', primary: true,
+          onClick: (c) => { const i = c.querySelector('input'); return i ? i.value.trim() : null; },
+          value: (v) => resolve(v || null) },
       ],
+      onDismiss: () => resolve(null),
     });
   });
 }
@@ -160,7 +167,8 @@ export function coverHtml(track, size = '56px') {
 
 export function trackRow(track, { index, actions } = {}) {
   const fav = track.fav ? ' fav' : '';
-  return '<div class="sp-queue-item' + fav + '" data-track-id="' + track.id + '">' +
+  return '<div class="sp-queue-item' + fav + '" data-track-id="' + escapeHtml(String(track.id)) + '"' +
+    (index !== undefined ? ' data-index="' + index + '"' : '') + '>' +
     (index !== undefined ? '<span style="font-size:.72rem;color:var(--player-text-secondary);min-width:1.4rem;text-align:right;">' + (index + 1) + '</span>' : '') +
     coverHtml(track, '40px') +
     '<div class="sp-track-info" style="flex:1;min-width:0;">' +
@@ -175,6 +183,16 @@ export function trackRow(track, { index, actions } = {}) {
 export function escapeHtml(s) {
   if (s === null || s === undefined) return '';
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* Fisher–Yates: shuffle justo (sort(() => Math.random()-.5) sesga) */
+export function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 export function emptyState(iconName, title, hint) {

@@ -110,6 +110,14 @@ export class MixerView {
     });
     this._syncEqSliders();
     applyMixer(player, this.state);
+    // Niveles en vivo: tick() existía pero nadie lo llamaba nunca (#26)
+    this._onTime = () => this.tick();
+    player.on('time', this._onTime);
+  }
+
+  destroy() {
+    if (this._onTime) player.off('time', this._onTime);
+    this._onTime = null;
   }
 
   _detectPreset() {

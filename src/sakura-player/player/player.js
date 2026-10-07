@@ -43,15 +43,25 @@ export class Player {
     this.audio.crossOrigin = 'anonymous';
     this.audio.preload = 'auto';
 
-    this.queue = load(LS.queue, []);
-    this.index = load(LS.index, -1);
-    this.favorites = new Set(load(LS.favorites, []));
-    this.history = load(LS.history, []);
-    this.volume = load(LS.volume, 0.8);
-    this.muted = load(LS.muted, false);
-    this.shuffle = load(LS.shuffle, false);
-    this.repeat = load(LS.repeat, REPEAT.OFF);
-    this.rate = load(LS.rate, 1);
+    // Persistencia validada: un valor corrupto en localStorage no debe
+    // reventar el módulo al importar (new Set({}) rompía toda la app)
+    const rawQueue = load(LS.queue, []);
+    const rawIndex = load(LS.index, -1);
+    const rawFav = load(LS.favorites, []);
+    const rawHistory = load(LS.history, []);
+    const rawVolume = load(LS.volume, 0.8);
+    const rawRate = load(LS.rate, 1);
+    const rawRepeat = load(LS.repeat, REPEAT.OFF);
+    this.queue = Array.isArray(rawQueue) ? rawQueue : [];
+    this.index = Number.isInteger(rawIndex) ? Math.max(-1, Math.min(rawIndex, this.queue.length - 1)) : (this.queue.length ? 0 : -1);
+    this.favorites = new Set(Array.isArray(rawFav) ? rawFav : []);
+    this.history = Array.isArray(rawHistory) ? rawHistory : [];
+    this.volume = Number.isFinite(rawVolume) ? rawVolume : 0.8;
+    this.muted = load(LS.muted, false) === true;
+    this.shuffle = load(LS.shuffle, false) === true;
+    this.repeat = [REPEAT.OFF, REPEAT.ALL, REPEAT.ONE].includes(rawRepeat) ? rawRepeat : REPEAT.OFF;
+    this.rate = Number.isFinite(rawRate) ? rawRate : 1;
+    this._playedShuffle = new Set();
 
     this.listeners = {};
     this.context = null;
@@ -129,6 +139,9 @@ export class Player {
 
     this.context = ctx;
     this.nodes = { src, bands, bass, treble, musicGain, masterGain, panner, analyser };
+    // Aplica los ajustes guardados: antes se perdían porque al hacer mount
+    // this.nodes era null y setEqGains/setMixer salían sin hacer nada.
+    this.applySettings();
   }
 
   resumeContext() {
@@ -164,7 +177,8 @@ export class Player {
   /* ---------------- cola ---------------- */
   setQueue(tracks, startIndex = 0) {
     this.queue = tracks.slice();
-    this.index = Math.max(0, Math.min(startIndex, this.queue.length - 1));
+    this.index = this.queue.length ? Math.max(0, Math.min(startIndex, this.queue.length - 1)) : -1;
+    this._playedShuffle = new Set(this.index >= 0 ? [this.index] : []);
     save(LS.queue, this.queue);
     save(LS.index, this.index);
     this._loadCurrent(true);
@@ -173,6 +187,19 @@ export class Player {
   playTracks(tracks, startIndex = 0) {
     this.setQueue(tracks, startIndex);
     this.play();
+  }
+
+  /* Reordena la cola (p. ej. shuffle) SIN recargar la pista actual:
+     setQueue recarga y cambiaba la canción que se estaba escuchando. */
+  reorderQueue(tracks) {
+    const cur = this.current();
+    this.queue = tracks.slice();
+    const ni = cur ? this.queue.indexOf(cur) : -1;
+    this.index = ni >= 0 ? ni : Math.max(-1, Math.min(this.index, this.queue.length - 1));
+    save(LS.queue, this.queue);
+    save(LS.index, this.index);
+    this.emit('queue', this.queue);
+    this.emit('time', this.status());
   }
 
   addToQueue(track) {
@@ -184,20 +211,37 @@ export class Player {
 
   removeFromQueue(i) {
     if (i < 0 || i >= this.queue.length) return;
+    const wasCurrent = i === this.index;
+    const wasPlaying = !this.audio.paused;
     this.queue.splice(i, 1);
     if (i < this.index) this.index--;
-    else if (i === this.index) this.index = Math.min(this.index, this.queue.length - 1);
+    else if (wasCurrent) this.index = Math.min(this.index, this.queue.length - 1);
     save(LS.queue, this.queue);
     save(LS.index, this.index);
     this.emit('queue', this.queue);
+    if (wasCurrent) {
+      // Se borró la pista que sonaba: cargar la nueva actual o detenerse
+      if (this.queue.length && this.index >= 0) this._loadCurrent(wasPlaying);
+      else { this._stopPlayback(); this.emit('trackchange', this.status()); }
+    }
   }
 
   clearQueue() {
+    const wasPlaying = !this.audio.paused;
     this.queue = [];
     this.index = -1;
+    this._playedShuffle = new Set();
     save(LS.queue, this.queue);
     save(LS.index, this.index);
+    if (wasPlaying) this._stopPlayback();
     this.emit('queue', this.queue);
+    this.emit('trackchange', this.status());
+  }
+
+  _stopPlayback() {
+    this.audio.pause();
+    this.audio.removeAttribute('src');
+    try { this.audio.load(); } catch (e) { /* noop */ }
   }
 
   moveInQueue(from, to) {
@@ -216,7 +260,17 @@ export class Player {
   async play() {
     this.resumeContext();
     if (!this.current()) return;
-    try { await this.audio.play(); } catch (e) { /* autoplay bloqueado */ }
+    try {
+      await this.audio.play();
+    } catch (e) {
+      // No tragar el error: si el navegador bloquea el autoplay el usuario
+      // veía "Reproduciendo:" sin sonido y sin explicación.
+      if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+        this.emit('blocked', e);
+      } else if (e && e.name !== 'AbortError') {
+        this.emit('error', { message: 'No se pudo iniciar la reproducción' });
+      }
+    }
   }
 
   pause() { this.audio.pause(); }
@@ -246,14 +300,40 @@ export class Player {
   next() {
     if (!this.queue.length) return;
     if (this.shuffle) {
-      let i = this.index;
-      while (this.queue.length > 1 && i === this.index) i = Math.floor(Math.random() * this.queue.length);
-      this.index = i;
+      if (!this._playedShuffle) this._playedShuffle = new Set();
+      const notPlayed = () => {
+        const pool = [];
+        for (let i = 0; i < this.queue.length; i++) {
+          if (i !== this.index && !this._playedShuffle.has(i)) pool.push(i);
+        }
+        return pool;
+      };
+      let pool = notPlayed();
+      if (!pool.length && this.repeat === REPEAT.ALL) {
+        // Segunda vuelta: olvidar lo jugado salvo la actual
+        this._playedShuffle = new Set(this.index >= 0 ? [this.index] : []);
+        pool = notPlayed();
+      }
+      if (!pool.length) {
+        // Se acabaron las pistas con repeat off: parar (antes el shuffle
+        // elegía al azar para siempre y la cola nunca terminaba)
+        this._playedShuffle = new Set();
+        this.audio.pause();
+        this.emit('time', this.status());
+        return;
+      }
+      if (this.index >= 0) this._playedShuffle.add(this.index);
+      this.index = pool[Math.floor(Math.random() * pool.length)];
     } else {
       this.index = this.index + 1;
       if (this.index >= this.queue.length) {
         if (this.repeat === REPEAT.ALL) this.index = 0;
-        else { this.index = this.queue.length - 1; this.audio.pause(); return; }
+        else {
+          this.index = this.queue.length - 1;
+          this.audio.pause();
+          this.emit('time', this.status());
+          return;
+        }
       }
     }
     this._loadCurrent(true);
@@ -373,21 +453,33 @@ export class Player {
 
   /* ---------------- persistencia de ajustes ---------------- */
   getSettings() {
+    // theme/themeMode/animations los escribe themeManager como string CRUDO
+    // (localStorage.setItem directo): con JSON.parse tiraban excepción y la
+    // UI de Ajustes siempre mostraba los valores por defecto.
+    let theme = null; let themeMode = 'auto'; let animations = null;
+    try {
+      theme = localStorage.getItem(LS.theme);
+      themeMode = localStorage.getItem(LS.themeMode) || 'auto';
+      animations = localStorage.getItem(LS.animations);
+    } catch (e) { /* sin storage */ }
     return {
       eq: load(LS.eq, null),
       mixer: load(LS.mixer, null),
-      theme: load(LS.theme, null),
-      themeMode: load(LS.themeMode, 'auto'),
-      animations: load(LS.animations, null),
+      theme,
+      themeMode,
+      animations,
     };
   }
 
   saveSettings(patch) {
     if (patch.eq !== undefined) save(LS.eq, patch.eq);
     if (patch.mixer !== undefined) save(LS.mixer, patch.mixer);
-    if (patch.theme !== undefined) save(LS.theme, patch.theme);
-    if (patch.themeMode !== undefined) save(LS.themeMode, patch.themeMode);
-    if (patch.animations !== undefined) save(LS.animations, patch.animations);
+    // Mismo criterio crudo que getSettings para no romper el lector de themeManager
+    try {
+      if (patch.theme !== undefined) localStorage.setItem(LS.theme, patch.theme);
+      if (patch.themeMode !== undefined) localStorage.setItem(LS.themeMode, patch.themeMode);
+      if (patch.animations !== undefined) localStorage.setItem(LS.animations, patch.animations);
+    } catch (e) { /* sin storage */ }
   }
 
   applySettings() {

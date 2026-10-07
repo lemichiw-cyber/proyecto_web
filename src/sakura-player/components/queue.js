@@ -3,7 +3,7 @@
    =================================================================== */
 
 import { player } from '../player/player.js';
-import { icon, emptyState, escapeHtml } from './ui.js';
+import { icon, emptyState, escapeHtml, shuffleArray } from './ui.js';
 
 export class QueueView {
   constructor(root, ctx) {
@@ -29,8 +29,9 @@ export class QueueView {
       this._render();
     });
     this.root.querySelector('#sp-q-shuffle').addEventListener('click', () => {
-      const q = player.queue.slice().sort(() => Math.random() - 0.5);
-      player.setQueue(q, player.index);
+      // reorderQueue reordena sin recargar: setQueue reiniciaba la pista
+      // actual y cambiaba la canción en pleno playback
+      player.reorderQueue(shuffleArray(player.queue));
       this._render();
     });
     this._onQueue = () => this._render();
@@ -39,6 +40,8 @@ export class QueueView {
     player.on('trackchange', this._onTrack);
     this._render();
   }
+
+  destroy() { this._unbind(); }
 
   _unbind() {
     if (this._onQueue) player.off('queue', this._onQueue);
@@ -49,17 +52,19 @@ export class QueueView {
 
   _render() {
     const list = this.root.querySelector('#sp-q-list');
+    const count = this.root.querySelector('#sp-q-count');
+    if (!list || !count) return; // la vista ya se navegó fuera
     const q = player.queue;
-    this.root.querySelector('#sp-q-count').textContent = q.length + ' en cola';
+    count.textContent = q.length + ' en cola';
     if (!q.length) {
       list.innerHTML = emptyState('queue', 'La cola está vacía', 'Reproducí una canción o agregá desde la búsqueda.');
       return;
     }
     list.innerHTML = '<div style="display:flex;flex-direction:column;gap:.3rem;">' +
-      q.map((t, i) => '<div class="sp-queue-item' + (i === player.index ? ' current' : '') + '" data-id="' + t.id + '" data-index="' + i + '">' +
+      q.map((t, i) => '<div class="sp-queue-item' + (i === player.index ? ' current' : '') + '" data-id="' + escapeHtml(String(t.id)) + '" data-index="' + i + '">' +
         '<span style="font-size:.72rem;color:var(--player-text-secondary);min-width:1.4rem;text-align:right;">' + (i + 1) + '</span>' +
         '<div class="sp-cover" style="width:36px;height:36px;flex:none;">' +
-          (t.thumb ? '<img src="' + t.thumb + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
+          (t.thumb ? '<img src="' + escapeHtml(t.thumb) + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
                    : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--player-text-secondary);">' + icon('note') + '</div>') +
         '</div>' +
         '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(t.title) + '</div>' +

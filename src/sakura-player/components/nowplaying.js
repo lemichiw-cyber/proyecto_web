@@ -147,10 +147,12 @@ export class NowPlayingView {
       if (m) m.innerHTML = icon(player.muted ? 'mute' : 'volume');
     });
     q('#np-speed').addEventListener('click', (e) => {
-      const i = SPEEDS.findIndex((v) => Math.abs(v - player.rate) < 0.01);
-      const next = SPEEDS[(i + 1) % SPEEDS.length];
+      // Cicla hacia la preset superior: con un rate custom (p. ej. 1.05)
+      // findIndex daba -1 y el botón saltaba a 0.5x
+      const i = SPEEDS.findIndex((v) => v > player.rate + 0.01);
+      const next = i === -1 ? SPEEDS[0] : SPEEDS[i];
       player.setRate(next);
-      e.currentTarget.textContent = String(next).replace(/\.00$/, '.0') + 'x';
+      e.currentTarget.textContent = Number(next.toFixed(2)) + 'x';
       toast('Velocidad ' + next + 'x', 'success');
     });
 

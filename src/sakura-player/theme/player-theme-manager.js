@@ -338,7 +338,6 @@ class PlayerThemeManager {
 
     // Tokens (base + específicos del tema + ajustes del mapa automático)
     const tokens = Object.assign({}, BASE_TOKENS, cfg.tokens, auto && auto.tokens);
-    const visualizer = (auto && auto.visualizer) || cfg.visualizer;
     const effects = Object.assign({}, cfg.effects, auto && auto.effects);
 
     // Raíz + todo .sakura-player que viva fuera de ella (mini reproductor):
@@ -361,22 +360,34 @@ class PlayerThemeManager {
     const anim = this.animationsEnabled();
     root.classList.toggle('sp-anim-off', anim === 'off');
 
-    // Visualizador
-    root.dispatchEvent(new CustomEvent('sp:theme', {
-      detail: {
-        name, label: cfg.label,
-        intensity: anim === 'off' ? 'none' : cfg.intensity,
-        visualizer,
-        colors: {
-          primary: cfg.tokens['--player-primary'],
-          secondary: cfg.tokens['--player-secondary'],
-          accent: cfg.tokens['--player-accent'],
-        },
-      },
-    }));
-
-    this._listeners.forEach((fn) => fn(this.current));
+    // Visualizador + listeners: mismo payload calculado con los overrides
+    // del mapa automático. Antes los colores salían de cfg.tokens (sin mlp/
+    // dreamcore) y los listeners recibían {name,cfg}, con lo que el
+    // visualizador quedaba forzado a sus valores por defecto.
+    const info = this.visualizerInfo();
+    root.dispatchEvent(new CustomEvent('sp:theme', { detail: info }));
+    this._listeners.forEach((fn) => fn(info));
     return this.current;
+  }
+
+  /* Payload único del visualizador/colores del tema activo */
+  visualizerInfo() {
+    const name = this.resolveConfig();
+    const cfg = CONFIGS[name] || CONFIGS.sakura;
+    const auto = this._autoEntry();
+    const tokens = Object.assign({}, BASE_TOKENS, cfg.tokens, auto && auto.tokens);
+    const anim = this.animationsEnabled();
+    return {
+      name,
+      label: cfg.label,
+      intensity: anim === 'off' ? 'none' : cfg.intensity,
+      visualizer: (auto && auto.visualizer) || cfg.visualizer,
+      colors: {
+        primary: tokens['--player-primary'],
+        secondary: tokens['--player-secondary'],
+        accent: tokens['--player-accent'],
+      },
+    };
   }
 
   /* Observa cambios de tema de proyecto_web (sin recargar) */

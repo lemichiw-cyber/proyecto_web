@@ -22,6 +22,11 @@ export class Visualizer {
 
   setAnalyser(analyser) { this.analyser = analyser; }
 
+  destroy() {
+    this.stop();
+    window.removeEventListener('resize', this._resize);
+  }
+
   configure({ style, intensity, colors }) {
     if (style && STYLES.includes(style)) this.style = style;
     if (intensity) this.intensity = intensity;

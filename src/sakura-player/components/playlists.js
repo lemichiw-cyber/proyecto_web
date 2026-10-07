@@ -6,7 +6,7 @@
 import { player } from '../player/player.js';
 import { library } from '../library/library.js';
 import { api, friendlyError } from '../api/client.js';
-import { icon, coverHtml, trackRow, emptyState, spinner, toast, escapeHtml, confirmDialog, promptDialog } from './ui.js';
+import { icon, coverHtml, trackRow, emptyState, spinner, toast, escapeHtml, confirmDialog, promptDialog, shuffleArray } from './ui.js';
 
 export class PlaylistView {
   constructor(root, ctx) {
@@ -64,7 +64,7 @@ export class PlaylistView {
         const pl = library.getPlaylist(id);
         if (pl && pl.tracks.length) {
           player.shuffle = true;
-          this.ctx.playTracks(pl.tracks.slice().sort(() => Math.random() - 0.5), 0);
+          this.ctx.playTracks(shuffleArray(pl.tracks), 0);
         }
       });
       card.querySelector('[data-edit]').addEventListener('click', () => this._edit(id));
@@ -77,7 +77,8 @@ export class PlaylistView {
     const content = this.root.querySelector('#sp-pl-content');
     const pl = library.getPlaylist(id);
     if (!pl) { this._listPlaylists(); return; }
-    const rows = pl.tracks.map((t, i) => trackRow(t, { index: i, actions:
+    const tracks = Array.isArray(pl.tracks) ? pl.tracks : [];
+    const rows = tracks.map((t, i) => trackRow(t, { index: i, actions:
       '<button class="sp-btn sp-btn-icon" data-up title="Subir">' + '↑' + '</button>' +
       '<button class="sp-btn sp-btn-icon" data-down title="Bajar">' + '↓' + '</button>' +
       '<button class="sp-btn sp-btn-icon" data-rm title="Quitar">' + icon('trash') + '</button>'
@@ -85,22 +86,23 @@ export class PlaylistView {
     content.innerHTML =
       '<button class="sp-btn" id="sp-pl-back" style="margin-bottom:.6rem;">← Volver</button>' +
       '<div class="sp-panel" style="padding:1rem;display:flex;gap:1rem;align-items:center;margin-bottom:.8rem;">' +
-        coverHtml(pl.tracks && pl.tracks[0] ? pl.tracks[0] : { thumb: '' }, '72px') +
+        coverHtml(tracks[0] ? tracks[0] : { thumb: '' }, '72px') +
         '<div><div style="font-weight:800;font-size:1.05rem;">' + escapeHtml(pl.name) + '</div>' +
-        '<div style="font-size:.78rem;color:var(--player-text-secondary);">' + pl.tracks.length + ' canciones' +
+        '<div style="font-size:.78rem;color:var(--player-text-secondary);">' + tracks.length + ' canciones' +
         (pl.description ? ' · ' + escapeHtml(pl.description) : '') + '</div></div>' +
         '<div style="margin-left:auto;display:flex;gap:.4rem;">' +
           '<button class="sp-btn sp-btn-primary" id="sp-pl-play">' + icon('play') + ' Reproducir</button>' +
           '<button class="sp-btn" id="sp-pl-shuffle">' + icon('shuffle') + '</button>' +
         '</div></div>' +
-      (pl.tracks.length ? '<div style="display:flex;flex-direction:column;gap:.3rem;">' + rows + '</div>'
+      (tracks.length ? '<div style="display:flex;flex-direction:column;gap:.3rem;">' + rows + '</div>'
         : emptyState('list', 'Playlist vacía', 'Buscá canciones y agregalas con el menú ⋯'));
 
     content.querySelector('#sp-pl-back').addEventListener('click', () => this._listPlaylists());
-    content.querySelector('#sp-pl-play').addEventListener('click', () => this.ctx.playTracks(pl.tracks, 0));
+    content.querySelector('#sp-pl-play').addEventListener('click', () => { if (tracks.length) this.ctx.playTracks(tracks, 0); });
     content.querySelector('#sp-pl-shuffle').addEventListener('click', () => {
+      if (!tracks.length) return;
       player.shuffle = true;
-      this.ctx.playTracks(pl.tracks.slice().sort(() => Math.random() - 0.5), 0);
+      this.ctx.playTracks(shuffleArray(tracks), 0);
     });
     content.querySelectorAll('[data-up]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -117,7 +119,8 @@ export class PlaylistView {
     content.querySelectorAll('[data-rm]').forEach((b) =>
       b.addEventListener('click', () => {
         const i = +b.closest('[data-track-id]').dataset.index;
-        library.removeFromPlaylist(id, pl.tracks[i].id);
+        if (!Number.isInteger(i) || !tracks[i]) return;
+        library.removeFromPlaylist(id, tracks[i].id);
         this.open(id);
       }));
   }

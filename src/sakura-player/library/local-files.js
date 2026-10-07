@@ -20,12 +20,20 @@ export function readDuration(file) {
     const url = URL.createObjectURL(file);
     const audio = new Audio();
     audio.preload = 'metadata';
+    // Sin timeout, un archivo ilegible dejaba la promesa colgada y la
+    // subida se quedaba en "Leyendo metadatos..." para siempre
+    const timer = setTimeout(() => {
+      URL.revokeObjectURL(url);
+      resolve(0);
+    }, 15000);
     audio.onloadedmetadata = () => {
       const d = isFinite(audio.duration) ? audio.duration : 0;
+      clearTimeout(timer);
       URL.revokeObjectURL(url);
       resolve(d);
     };
     audio.onerror = () => {
+      clearTimeout(timer);
       URL.revokeObjectURL(url);
       resolve(0);
     };
@@ -98,12 +106,11 @@ function parseId3(buf) {
 function decodeText(bytes, encoding) {
   try {
     if (encoding === 1 || encoding === 2) {
-      // UTF-16 con BOM
-      const bom = bytes.length > 1 ? (bytes[0] << 8) | bytes[1] : 0;
-      const u8 = new Uint8Array(bytes.length + 1);
-      u8[0] = 0;
-      u8.set(bytes, 1);
-      return new TextDecoder(bom === 0xfffe ? 'utf-16le' : 'utf-16be').decode(u8).replace(/^\uFEFF/, '');
+      // UTF-16: TextDecoder ya omite el BOM al inicio. La versión anterior
+      // desplazaba los bytes con un 0x00 adelante y decodificaba todo corrido.
+      if (!bytes.length) return '';
+      const isBE = bytes.length > 1 && bytes[0] === 0xfe && bytes[1] === 0xff;
+      return new TextDecoder(isBE ? 'utf-16be' : 'utf-16le').decode(bytes).replace(/^\uFEFF/, '');
     }
     return new TextDecoder('utf-8').decode(bytes);
   } catch (e) {
@@ -124,7 +131,7 @@ function readMp4Cover(file) {
         resolve('');
       }
     };
-    reader.onerror = () => resolve({});
+    reader.onerror = () => resolve('');
     reader.readAsArrayBuffer(file);
   });
 }
@@ -176,7 +183,7 @@ export async function processLocalFile(file) {
 }
 
 export async function processLocalFiles(files) {
-  const audioFiles = (files || []).filter(isAudioFile);
+  const audioFiles = Array.from(files || []).filter(isAudioFile);
   const tracks = [];
   for (const f of audioFiles) {
     try {

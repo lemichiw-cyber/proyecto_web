@@ -32,8 +32,28 @@ class Library {
   constructor() {
     this.state = load();
     this._listeners = {};
-    // Sincroniza favoritos/historial del motor de audio
-    this.state.favorites = player.favorites.size ? [...player.favorites].map((id) => ({ id })) : this.state.favorites;
+    // Sincroniza con el motor de audio: agrega ids que falten SIN pisar
+    // los metadatos ya guardados (antes reemplazaba tracks completos por {id})
+    if (player.favorites && player.favorites.size) {
+      const ids = new Set((this.state.favorites || []).map((t) => t.id));
+      const extra = [...player.favorites].filter((id) => !ids.has(id)).map((id) => ({ id }));
+      if (extra.length) this.state.favorites = [...extra, ...(this.state.favorites || [])];
+    }
+    // Sincroniza historial: fusiona el historial del motor en state.history
+    // para que la vista de historial no esté siempre vacía
+    if (player.history && Array.isArray(player.history)) {
+      const existingIds = new Set((this.state.history || []).map((t) => t.id));
+      const merged = [...(this.state.history || [])];
+      for (const t of player.history) {
+        if (!existingIds.has(t.id)) {
+          merged.push({ ...t, playedAt: t.playedAt || Date.now() });
+          existingIds.add(t.id);
+        }
+      }
+      this.state.history = merged
+        .sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0))
+        .slice(0, 200);
+    }
   }
 
   on(evt, fn) { (this._listeners[evt] = this._listeners[evt] || []).push(fn); return this; }
@@ -54,7 +74,7 @@ class Library {
   /* ---------------- favoritos ---------------- */
   isFavorite(id) { return this.state.favorites.some((t) => t.id === id); }
 
-  async toggleFavorite(track) {
+  toggleFavorite(track) {
     const isFav = this.isFavorite(track.id);
     if (isFav) {
       this.state.favorites = this.state.favorites.filter((t) => t.id !== track.id);
@@ -141,7 +161,12 @@ class Library {
     this.emit('playlists', this.state.playlists);
   }
 
-  getPlaylist(id) { return this.state.playlists.find((p) => p.id === id) || null; }
+  getPlaylist(id) {
+    const pl = this.state.playlists.find((p) => p.id === id) || null;
+    // Migración defensiva: playlists sincronizadas antes no traían tracks
+    if (pl && !Array.isArray(pl.tracks)) pl.tracks = [];
+    return pl;
+  }
 
   addToPlaylist(id, track) {
     const pl = this.getPlaylist(id);
@@ -165,7 +190,10 @@ class Library {
 
   moveTrackInPlaylist(id, from, to) {
     const pl = this.getPlaylist(id);
-    if (!pl || from === to) return false;
+    if (!pl) return false;
+    // Valida índices: sin esto, to = -1 insertaba al final y NaN afectaba al 0
+    if (!Number.isInteger(from) || !Number.isInteger(to)) return false;
+    if (from === to || from < 0 || from >= pl.tracks.length || to < 0 || to >= pl.tracks.length) return false;
     const [item] = pl.tracks.splice(from, 1);
     pl.tracks.splice(to, 0, item);
     this._commit();
@@ -187,7 +215,19 @@ class Library {
     if (data.albums) this.state.albums = data.albums;
     if (data.playlists) {
       const ids = new Set(this.state.playlists.map((p) => p.id));
-      const fresh = data.playlists.filter((p) => !ids.has(p.id));
+      // Normaliza: las playlists del backend vienen sin tracks (y con title,
+      // no name) — sin esto, abrirlas reventaba con pl.tracks.map
+      const fresh = data.playlists
+        .filter((p) => !ids.has(p.id))
+        .map((p) => ({
+          id: p.id,
+          name: p.name || p.title || 'Playlist',
+          description: p.description || '',
+          tracks: Array.isArray(p.tracks) ? p.tracks : [],
+          createdAt: p.createdAt || Date.now(),
+          source: p.source || 'yt',
+          thumb: p.thumb || '',
+        }));
       this.state.playlists = [...this.state.playlists, ...fresh];
     }
     this._commit();

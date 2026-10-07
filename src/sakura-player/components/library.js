@@ -61,7 +61,10 @@ export class LibraryView {
   }
 
   _load(content) {
+    // La vista pudo navegar mientras cargaba: no tocar DOM desconectado
+    if (!content || !content.isConnected) return;
     const clearBtn = this.root.querySelector('#sp-lib-clear-history');
+    if (!clearBtn) return;
     clearBtn.style.display = this.section === 'history' ? '' : 'none';
     switch (this.section) {
       case 'songs': this._songs(content); break;
@@ -158,6 +161,7 @@ export class LibraryView {
   }
 
   async _loadRemote(content) {
+    if (!content || !content.isConnected) return;
     content.innerHTML = spinner('Conectando con YouTube Music...');
     try {
       const data = await api.library(50);
@@ -165,7 +169,9 @@ export class LibraryView {
       this.remoteLoaded = true;
       toast('Biblioteca de YouTube Music sincronizada', 'success');
     } catch (err) {
-      content.innerHTML = emptyState('search', 'YouTube Music no disponible', friendlyError(err) + '<br><br>Tu biblioteca local sigue disponible.');
+      if (content.isConnected) {
+        content.innerHTML = emptyState('search', 'YouTube Music no disponible', friendlyError(err) + '<br><br>Tu biblioteca local sigue disponible.');
+      }
       return;
     }
     this._load(content);

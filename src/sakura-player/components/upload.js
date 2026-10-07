@@ -6,7 +6,7 @@
 import { processLocalFiles } from '../library/local-files.js';
 import { library } from '../library/library.js';
 import { player } from '../player/player.js';
-import { icon, toast, emptyState, spinner } from './ui.js';
+import { icon, toast, emptyState, spinner, escapeHtml } from './ui.js';
 
 export class UploadView {
   constructor(root, ctx) {
@@ -51,21 +51,23 @@ export class UploadView {
   }
 
   async _handle(files) {
-    const audioFiles = (files || []).filter((f) => f.type.startsWith('audio/') || /\.(mp3|wav|flac|ogg|m4a|aac)$/i.test(f.name));
+    // FileList no tiene .filter(): hay que convertirlo a Array primero.
+    const audioFiles = Array.from(files || []).filter((f) => f.type.startsWith('audio/') || /\.(mp3|wav|flac|ogg|m4a|aac)$/i.test(f.name));
     if (!audioFiles.length) {
       toast('No se encontraron archivos de audio válidos', 'error');
       return;
     }
-    status.innerHTML = spinner('Leyendo metadatos de ' + audioFiles.length + ' archivo(s)...');
+    const status = this.root.querySelector('#sp-upload-status');
+    if (status) status.innerHTML = spinner('Leyendo metadatos de ' + audioFiles.length + ' archivo(s)...');
     try {
       const tracks = await processLocalFiles(audioFiles);
       const added = library.addLocalSongs(tracks);
       tracks.forEach((t) => player.registerLocalTrack(t, t.url));
-      status.innerHTML = '';
+      if (status) status.innerHTML = '';
       toast(added ? added + ' canción(es) agregadas a tu biblioteca' : 'Estas canciones ya estaban en tu biblioteca', added ? 'success' : 'info');
       this._renderLocal();
     } catch (err) {
-      status.innerHTML = emptyState('upload', 'No se pudieron leer los archivos', 'Verificá que sean archivos de audio válidos.');
+      if (status) status.innerHTML = emptyState('upload', 'No se pudieron leer los archivos', 'Verificá que sean archivos de audio válidos.');
     }
   }
 
@@ -77,13 +79,13 @@ export class UploadView {
       return;
     }
     list.innerHTML = '<div style="display:flex;flex-direction:column;gap:.3rem;">' +
-      songs.map((t) => '<div class="sp-queue-item" data-id="' + t.id + '">' +
+      songs.map((t) => '<div class="sp-queue-item" data-id="' + escapeHtml(String(t.id)) + '">' +
         '<div class="sp-cover" style="width:40px;height:40px;flex:none;">' +
-          (t.thumb ? '<img src="' + t.thumb + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
+          (t.thumb ? '<img src="' + escapeHtml(t.thumb) + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
                    : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--player-text-secondary);">' + icon('note') + '</div>') +
         '</div>' +
-        '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (t.title || '') + '</div>' +
-        '<div style="font-size:.72rem;color:var(--player-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (t.artist || '') + '</div></div>' +
+        '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(t.title || '') + '</div>' +
+        '<div style="font-size:.72rem;color:var(--player-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(t.artist || '') + '</div></div>' +
         '<button class="sp-btn sp-btn-icon" data-play title="Reproducir">' + icon('play') + '</button>' +
         '<button class="sp-btn sp-btn-icon" data-del title="Quitar">' + icon('trash') + '</button>' +
       '</div>').join('') + '</div>';

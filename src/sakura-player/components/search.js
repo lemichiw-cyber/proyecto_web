@@ -46,15 +46,19 @@ export class SearchView {
     const run = debounce(async (q) => {
       if (!q || q.trim().length < 2) {
         this.results = { songs: [], artists: [], albums: [], playlists: [] };
+        this._lastQuery = null;
         this._renderResults(results);
         return;
       }
       if (controller) controller.abort();
       controller = new AbortController();
+      this._controller = controller;
       this.loading = true;
       results.innerHTML = spinner('Buscando en YouTube Music...');
       try {
-        this.results = await api.search(q.trim(), 'all', 20, controller.signal);
+        this.results = (await api.search(q.trim(), 'all', 20, controller.signal)) ||
+          { songs: [], artists: [], albums: [], playlists: [] };
+        this._lastQuery = q.trim();
       } catch (err) {
         if (err.code !== 'network' || err.message !== 'La solicitud fue cancelada') {
           results.innerHTML = emptyState('search', 'No se pudo buscar', friendlyError(err));
@@ -65,9 +69,10 @@ export class SearchView {
       }
       this._renderResults(results);
     }, 350);
+    this._run = run;
 
     input.addEventListener('input', (e) => run(e.target.value));
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') run.flush ? run.flush() : run(e.target.value); });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && run.flush) run.flush(); });
 
     tabs.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-tab]');
@@ -80,10 +85,18 @@ export class SearchView {
     this._renderResults(results);
   }
 
+  destroy() {
+    if (this._run) this._run.cancel();
+    if (this._controller) this._controller.abort();
+    this._controller = null;
+  }
+
   _renderResults(container) {
     const items = this.results[this.tab] || [];
     if (!items.length) {
-      container.innerHTML = emptyState('search', 'Sin resultados', 'Escribí al menos 2 caracteres para buscar en YouTube Music.');
+      container.innerHTML = this._lastQuery
+        ? emptyState('search', 'Sin resultados', 'No se encontró nada para «' + escapeHtml(this._lastQuery) + '» en YouTube Music.')
+        : emptyState('search', 'Sin resultados', 'Escribí al menos 2 caracteres para buscar en YouTube Music.');
       return;
     }
     if (this.tab === 'songs') {
@@ -166,16 +179,19 @@ export class SearchView {
         : '<div style="font-size:.78rem;color:var(--player-text-secondary);padding:.4rem .5rem;">No tenés playlists locales.</div>') +
       '<button class="sp-btn" style="width:100%;justify-content:flex-start;margin-top:.3rem;" data-new>＋ Nueva playlist</button>';
     document.body.appendChild(menu);
-    const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); } };
+    // Cierre único: borraba el menú pero dejaba el listener de document
+    // colgado si se elegía una opción (closeMenu quita ambos)
+    const closeMenu = () => { menu.remove(); document.removeEventListener('click', close); };
+    const close = (e) => { if (!menu.contains(e.target)) closeMenu(); };
     setTimeout(() => document.addEventListener('click', close), 0);
     menu.querySelectorAll('[data-pl]').forEach((b) =>
       b.addEventListener('click', () => {
         library.addToPlaylist(b.dataset.pl, track);
         toast('Agregada a la playlist', 'success');
-        menu.remove();
+        closeMenu();
       }));
     menu.querySelector('[data-new]').addEventListener('click', () => {
-      menu.remove();
+      closeMenu();
       this.ctx.promptNewPlaylist(track);
     });
   }
