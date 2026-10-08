@@ -11,7 +11,7 @@
   var timerId = null;
 
   /* ---- Helpers ---- */
-  function $$(id) { return document.getElementById(id); }
+  function $(id) { return document.getElementById(id); }
 
   function isSupported() {
     return 'Notification' in window;
@@ -183,7 +183,7 @@
   function showPermissionBanner() {
     if (!isSupported() || Notification.permission !== 'default') return;
     if (localStorage.getItem(PERMISSION_KEY) === 'dismissed') return;
-    if ($$('.notif-banner')) return;
+    if (document.getElementById('notif-banner')) return;
 
     var banner = document.createElement('div');
     banner.id = 'notif-banner';

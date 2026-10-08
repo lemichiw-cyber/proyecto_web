@@ -40,16 +40,28 @@ DEFAULT_ACCOUNTS: dict = {
 
 
 def _load_accounts() -> dict:
+    data: dict = {}
     if ACCOUNTS_FILE.exists():
         try:
             with open(ACCOUNTS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
                 # Asegurar que las claves sean strings (json str)
-                return {str(k): v for k, v in data.items()}
+                data = {str(k): v for k, v in json.load(f).items()}
         except Exception:
-            pass
-    # Fallback: crear archivo con datos por defecto
-    return dict(DEFAULT_ACCOUNTS)
+            data = {}
+    # La cuenta semilla admin SIEMPRE existe y SIEMPRE es admin, aunque el
+    # archivo se haya quedado vacío (Render limpia el FS en cada deploy)
+    # o una versión anterior la haya guardado con otro rol.
+    seed = data.get("admin@bachillerato.edu")
+    if not isinstance(seed, dict) or seed.get("rol") != "admin":
+        if isinstance(seed, dict):
+            seed = dict(seed)
+            seed["rol"] = "admin"
+            seed.setdefault("nombre", "Administrador")
+            seed.setdefault("activo", True)
+        else:
+            seed = dict(DEFAULT_ACCOUNTS["admin@bachillerato.edu"])
+        data["admin@bachillerato.edu"] = seed
+    return data
 
 
 def _save_accounts(data: dict) -> None:
@@ -59,10 +71,16 @@ def _save_accounts(data: dict) -> None:
 # ------------------------------------------------------------
 # Modelos Pydantic
 # ------------------------------------------------------------
+ROLES_VALIDOS_BACKEND = {
+    "estudiante", "docente", "director", "subdirector",
+    "coordinador", "padres", "admin",
+}
+
+
 class AccountCreate(BaseModel):
     email: str = Field(..., description="Correo electrónico del usuario")
-    password: str = Field(..., min_length=6, description="Contraseña plain (se guarda hash)")
-    rol: str = Field(..., description="Rol: estudiante, docente, director, subdirector, coordinador, padres")
+    password: str | None = Field(None, min_length=6, description="Contraseña plain (se guarda hash). Opcional: la verificación de contraseñas escolares vive en el frontend")
+    rol: str = Field(..., description="Rol: estudiante, docente, director, subdirector, coordinador, padres, admin")
     nombre: str = Field(..., min_length=1, description="Nombre para mostrar")
     semestre: str | None = Field(None, description="Semestre (opcional)")
 
@@ -72,12 +90,8 @@ class AccountCreate(BaseModel):
 
     @validator("rol")
     def rol_valido(cls, v: str) -> str:
-        validos = {
-            "estudiante", "docente", "director", "subdirector",
-            "coordinador", "padres"
-        }
-        if v not in validos:
-            raise ValueError(f"Rol inválido. Use uno de: {', '.join(sorted(validos))}")
+        if v not in ROLES_VALIDOS_BACKEND:
+            raise ValueError(f"Rol inválido. Use uno de: {', '.join(sorted(ROLES_VALIDOS_BACKEND))}")
         return v
 
 
@@ -85,6 +99,7 @@ class AccountUpdate(BaseModel):
     rol: str | None = Field(None, description="Nuevo rol")
     activo: bool | None = Field(None, description="Desactivar/activar cuenta")
     nombre: str | None = Field(None, description="Actualizar nombre")
+    semestre: str | None = Field(None, description="Semestre (opcional)")
 
 
 # ------------------------------------------------------------
@@ -105,12 +120,19 @@ def _account_exists(email: str, accounts: dict) -> bool:
 
 @router.get("/", response_model=dict)
 def list_accounts(role_filter: str | None = None) -> dict:
-    """Listar todas las cuentas, opcionalmente filtradas por rol."""
+    """Listar todas las cuentas, opcionalmente filtradas por rol.
+
+    Nunca expone password_hash (el frontend solo necesita rol/nombre/...).
+    """
     accounts = _load_accounts()
+    public = {
+        k: {kk: vv for kk, vv in v.items() if kk != "password_hash"}
+        for k, v in accounts.items() if isinstance(v, dict)
+    }
     if role_filter:
-        filtered = {k: v for k, v in accounts.items() if v.get("rol") == role_filter}
+        filtered = {k: v for k, v in public.items() if v.get("rol") == role_filter}
         return {"count": len(filtered), "accounts": filtered}
-    return {"count": len(accounts), "accounts": accounts}
+    return {"count": len(public), "accounts": public}
 
 
 @router.post("/", response_model=dict, status_code=201)
@@ -135,7 +157,7 @@ def create_account(payload: AccountCreate, request: Request) -> dict:
     # Si aún no hay admin semilla, el primer usuario creado pasa a ser admin
     is_first = not _account_exists("admin@bachillerato.edu", accounts)
 
-    hashed = _hash_password(payload.password)
+    hashed = _hash_password(payload.password) if payload.password else None
 
     account = {
         "email": email,
@@ -194,20 +216,21 @@ def update_account(
     # Actualizar campos no nulos
     if payload.rol is not None:
         # Validar que el nuevo rol sea válido
-        validos = {"estudiante", "docente", "director", "subdirector", "coordinador", "padres"}
-        if payload.rol not in validos:
+        if payload.rol not in ROLES_VALIDOS_BACKEND:
             raise HTTPException(status_code=400, detail="Rol inválido.")
         accounts[target]["rol"] = payload.rol
     if payload.activo is not None:
         accounts[target]["activo"] = payload.activo
     if payload.nombre is not None:
         accounts[target]["nombre"] = payload.nombre
+    if "semestre" in payload.model_fields_set:
+        accounts[target]["semestre"] = payload.semestre
 
     _save_accounts(accounts)
     return {"ok": True, "account": {k: v for k, v in accounts[target].items() if k != "password_hash"}}
 
 
-@router.delete("/{email}", response_model=dict, status_code=204)
+@router.delete("/{email}", status_code=204)
 def delete_account(email: str, request: Request) -> None:
     """Borrar una cuenta. Solo admin.
 

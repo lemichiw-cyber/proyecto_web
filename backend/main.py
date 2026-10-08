@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import admin, albums, artists, debug, library, playlists, search, songs
+from api import accounts, admin, albums, artists, debug, library, playlists, search, songs
 from api.deps import get_service
 
 load_dotenv()

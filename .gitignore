@@ -33,3 +33,6 @@ pnpm-debug.log*
 
 # Binarios pesados fuera del repo (servir via CDN/LFS si se necesitan)
 *.apk
+
+# Datos locales de cuentas escolares (nunca al repo)
+backend/accounts.json

@@ -21,326 +21,241 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          * Al iniciar sesión el rango sale de acá: por eso un alumno no
            puede autoasignarse docente ni ver nada de docente.
          =================================================================== */
-      var LS_CUENTAS = 'cherrybombCuentas';  // kept for fallback only
+      var LS_CUENTAS = 'cherrybombCuentas';  // fuente canonica local
       var ROLES_VALIDOS = ['estudiante', 'docente', 'coordinador', 'director', 'subdirector', 'padres', 'admin'];
       var ROL_REGISTRO = 'estudiante'; // rango fijo de todo el que se registra
+      var ADMIN_EMAIL = 'admin@bachillerato.edu'; // cuenta semilla: SIEMPRE admin
 
-      /* --------------------------------------------------------------
-         Utilería: intenta obtener las cuentas del backend; si falla,
-         cae back al localStorage.  Se usa un "modo offline" flag.
-         -------------------------------------------------------------- */
-      function fetchBackendAccounts() {
-        // Retorna una Promise que resuelve a objeto de cuentas o null.
-        if (typeof fetch !== 'function') return Promise.resolve(null);
-        return fetch('${window.location.origin}/api/accounts', {
-          credentials: 'same-origin',
-          headers: { 'Accept': 'application/json' }
-        })
-        .then(function (resp) {
-          if (!resp.ok) return null;
-          return resp.json();
-        })
-        .catch(function () { return null; });
-      }
-
-      // Almacenamiento "activo": la fuente verdadera de verdad.
-      // Inicialmente intentamos el backend; si falla, usamos localStorage.
-      var cuentasBackend = null;           // objeto email→{rol,nombre,activo,semestre,creado}
-      var usarLocalStorage = true;       // ^^ empezamos con fallback a LS
-
-      // Carga asíncrona al iniciar: intenta backend, si falla usa LS.
-      (function inicializarCuentas() {
-        fetchBackendAccounts().then(function (remote) {
-          if (remote && typeof remote === 'object') {
-            cuentasBackend = remote;
-            usarLocalStorage = false;
-          } else {
-            // backend no disponible o vacío: usar localStorage tal cual
-            var ls = localStorage.getItem('cherrybombCuentas');
-            if (ls) {
-              try { cuentasBackend = JSON.parse(ls); } catch (e) { /* ignored */ }
-            }
-            usarLocalStorage = true;
-          }
-          // Una vez cargado, aplicar la sesión activa si existe
-          if (typeof window !== 'undefined' && window.usuarioActual) {
-            actualizarUsuarioDesdeCuenta();
-          }
-        });
+      /* URL del backend FastAPI. Permite override con la clave local
+         'cherrybombApiBase' (tilde en desarrollo local). */
+      var API_BASE = (function () {
+        try {
+          var custom = localStorage.getItem('cherrybombApiBase');
+          if (custom) return String(custom).replace(/\/+$/, '');
+        } catch (e) { /* sin storage */ }
+        var host = (typeof location !== 'undefined' && location.hostname) || '';
+        if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://127.0.0.1:8000';
+        return 'https://sakura-backend-indb.onrender.com';
       })();
 
-      // Devuelve el objeto de cuenta para el email dado, sea cual sea la fuente.
-      function obtenerCuenta(email) {
-        var key = normalizaEmail(email);
-        if (!key) return null;
-        var cuenta = (cuentasBackend && cuentasBackend[key]) || null;
-        if (cuenta) return cuenta;
-        // fallback a localStorage
-        try {
-          var db = JSON.parse(localStorage.getItem('cherrybombCuentas') || 'null');
-          return (db && db[key]) || null;
-        } catch (e) { return null; }
-      }
-
-      // Guarda el objeto completo db en la fuente activa (backend o LS).
-      function guardarCuentas(db) {
-        if (!db || typeof db !== 'object') return;
-        if (usarLocalStorage) {
-          try { localStorage.setItem(LS_CUENTAS, JSON.stringify(db)); } catch (e) {/* ignored */ }
-        } else {
-          // Intentamos sincronizar al backend: hacemos un POST con el objeto completo.
-          // Si falla (offline, etc.) guardamos en localStorage como respaldo.
-          fetch('${window.location.origin}/api/accounts', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(db)
-          })
-          .then(function (resp) { if (!resp.ok) throw new Error(); })
-          .catch(function () {
-            // fallback: guardar en localStorage para próxima vez
-            try { localStorage.setItem(LS_CUENTAS, JSON.stringify(db)); } catch (e2) {/* ignored */ }
-          });
-        }
-      }
+      /* --------------------------------------------------------------
+         El mapa de cuentas vive SIEMPRE en localStorage (sincrono,
+         funciona sin red). El backend es un espejo: al cargar se
+         mergea (el rol remoto gana) y lo que falta se sube.
+         -------------------------------------------------------------- */
+      var cuentasBackend = null;   // vista en memoria: email → cuenta
+      var cuentasPush = {};        // email → firma ya sincronizada
 
       function normalizaEmail(e) { return String(e || '').trim().toLowerCase(); }
 
       function cuentaActiva(cuenta) { return !!cuenta && cuenta.activo !== false; }
 
-      // CREAR una nueva cuenta -> POST al backend. Si ya existe, error.
-      function crearCuenta(email, nombre, rol) {
+      function leerCuentas() {
+        try {
+          var db = JSON.parse(localStorage.getItem(LS_CUENTAS) || '{}');
+          return (db && typeof db === 'object') ? db : {};
+        } catch (e) { return {}; }
+      }
+
+      function firmaCuenta(c) {
+        return JSON.stringify([c.rol, c.nombre, c.activo !== false, c.semestre || '']);
+      }
+
+      /* La cuenta semilla de administrador siempre existe y siempre es
+         admin, aunque una version anterior la haya creado como estudiante
+         o la sesion este cacheada sin ella. */
+      function asegurarAdmin(db) {
+        if (!db || typeof db !== 'object') db = {};
+        var a = db[ADMIN_EMAIL];
+        if (!a || typeof a !== 'object') {
+          db[ADMIN_EMAIL] = {
+            email: ADMIN_EMAIL, nombre: 'Administrador', rol: 'admin',
+            semestre: '', activo: true, creado: new Date().toISOString(),
+          };
+        } else if (a.rol !== 'admin') {
+          a.rol = 'admin';
+        }
+        return db;
+      }
+
+      /* GET /api/accounts → mapa plano email→cuenta, o null sin backend. */
+      function fetchBackendAccounts() {
+        if (typeof fetch !== 'function') return Promise.resolve(null);
+        return fetch(API_BASE + '/api/accounts/', { headers: { 'Accept': 'application/json' } })
+          .then(function (resp) { if (!resp.ok) return null; return resp.json(); })
+          .then(function (data) {
+            if (!data || typeof data !== 'object') return null;
+            var map = (data.accounts && typeof data.accounts === 'object') ? data.accounts : data;
+            if (!map || typeof map !== 'object' || Array.isArray(map)) return null;
+            return map;
+          })
+          .catch(function () { return null; });
+      }
+
+      /* Replica una cuenta al backend (best-effort). PUT intenta
+         actualizar; si el backend responde 404 se crea con POST. */
+      function pushCuenta(cuenta, password) {
+        if (!cuenta || !cuenta.email || typeof fetch !== 'function') return;
+        var email = normalizaEmail(cuenta.email);
+        if (email === ADMIN_EMAIL) return; // la siembra la garantiza el backend
+        var firma = firmaCuenta(cuenta);
+        if (cuentasPush[email] === firma) return;
+        cuentasPush[email] = firma;
+        fetch(API_BASE + '/api/accounts/' + encodeURIComponent(email), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rol: cuenta.rol,
+            nombre: cuenta.nombre,
+            activo: cuenta.activo !== false,
+            semestre: cuenta.semestre || null,
+          }),
+        })
+        .then(function (resp) {
+          if (resp.status !== 404) return resp;
+          var body = {
+            email: email,
+            rol: cuenta.rol,
+            nombre: cuenta.nombre || email.split('@')[0],
+            semestre: cuenta.semestre || null,
+          };
+          if (password) body.password = password;
+          return fetch(API_BASE + '/api/accounts/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+        })
+        .catch(function () { delete cuentasPush[email]; }); // reintenta en el proximo guardado
+      }
+
+      /* Guarda el mapa: localStorage primero (sincrono y seguro) y luego
+         replica al backend unicamente lo que cambio. */
+      function guardarCuentas(db) {
+        if (!db || typeof db !== 'object') return;
+        cuentasBackend = asegurarAdmin(db);
+        try { localStorage.setItem(LS_CUENTAS, JSON.stringify(cuentasBackend)); } catch (e) { /* sin storage */ }
+        Object.keys(cuentasBackend).forEach(function (k) { pushCuenta(cuentasBackend[k]); });
+      }
+
+      /* Cuenta de un correo: memoria → localStorage (nunca red). */
+      function obtenerCuenta(email) {
+        var key = normalizaEmail(email);
+        if (!key) return null;
+        var db = cuentasBackend || leerCuentas();
+        return db[key] || null;
+      }
+
+      /* CREAR cuenta — SIEMPRE sincrono: escribe en local y replica al
+         backend. password es opcional (solo el registro la conoce). */
+      function crearCuenta(email, nombre, rol, password) {
         var key = normalizaEmail(email);
         if (!key) return { ok: false, msg: 'Falta el correo.' };
-        // Verificar si ya existe (en la fuente activa)
-        var existe = obtenerCuenta(email);
-        if (existe) return { ok: false, msg: 'Ese correo ya está registrado. Iniciá sesión.' };
+        if (obtenerCuenta(key)) return { ok: false, msg: 'Ese correo ya est\u00e1 registrado. Inici\u00e1 sesi\u00f3n.' };
 
         var rango = ROLES_VALIDOS.indexOf(rol) !== -1 ? rol : ROL_REGISTRO;
-
-        var ahora = new Date();
         var nuevo = {
           email: key,
           nombre: String(nombre || key.split('@')[0]).trim(),
           rol: rango,
-          semestre: rango === ROL_REGISTRO ? '' : '',  // vacío por defecto; el backend puede setearlo
+          semestre: rango === ROL_REGISTRO ? '1' : '',
           activo: true,
-          creado: ahora.toISOString(),
-          // passwordHash se generará en el backend; aquí no lo enviamos.
+          creado: new Date().toISOString(),
         };
-
-        // Guardar en la fuente activa y luego sincronizar
-        if (usarLocalStorage) {
-          // Modo legacy: guardar directo en localStorage
-          var dbLocal = JSON.parse(localStorage.getItem(LS_CUENTAS) || '{}');
-          nuevo.id = nuevo.id || Date.now(); // compat: no usamos id, pero mantener estructura
-          dbLocal[key] = nuevo;
-          localStorage.setItem(LS_CUENTAS, JSON.stringify(dbLocal));
-          guardarCuentas(dbLocal); // recursiva para sincronizar al backend si está activo (será LS así que no hará fetch)
-          // Return the created account
-          nuevo.rol = rango;
-          nuevo.semestre = rango === ROL_REGISTRO ? '1' : '';
-          return { ok: true, cuenta: nuevo };
-        } else {
-          // Modo backend: enviar al servidor
-          fetch('${window.location.origin}/api/accounts', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nuevo)
-          })
-          .then(function (resp) {
-            if (!resp.ok) throw new Error('network');
-            return resp.json();
-          })
-          .then(function (data) {
-            // Actualizar nuestra vista local con lo que venga del backend (puede incluir passwordHash, etc.)
-            if (cuentasBackend) {
-              cuentasBackend[key] = data;
-            }
-            // También actualizar localStorage fallback por si acaso
-            try { localStorage.setItem(LS_CUENTAS, JSON.stringify(cuentasBackend || {})); } catch (e) {/* ignored */ }
-            // Return success con los datos devueltos
-            var cuenta = { ok: true };
-            // Copiar campos relevantes
-            ['email', 'nombre', 'rol', 'semestre', 'activo', 'creado'].forEach(function (k) {
-              if (data[k] !== undefined) cuenta[k] = data[k];
-            });
-            // Asegurar semestre en modo registro
-            if (rango === ROL_REGISTRO) cuenta.semestre = '1';
-            return cuenta;
-          })
-          .catch(function () {
-            // En caso de error de red, caemos modo legacy localStorage
-            usarLocalStorage = true;
-            cuentasBackend = null;
-            // Intentar guardarlo localmente y retornar
-            var dbLocal = JSON.parse(localStorage.getItem(LS_CUENTAS) || '{}');
-            dbLocal[key] = nuevo;
-            localStorage.setItem(LS_CUENTAS, JSON.stringify(dbLocal));
-            nuevo.rol = rango;
-            nuevo.semestre = rango === ROL_REGISTRO ? '1' : '';
-            return { ok: true, cuenta: nuevo };
-          });
-        }
+        var db = leerCuentas();
+        db[key] = nuevo;
+        if (password) pushCuenta(nuevo, password); // con contraseña, antes de marcar firma
+        guardarCuentas(db);
+        return { ok: true, cuenta: nuevo };
       }
 
-      // CAMBIAR el rango de una cuenta existente -> PUT al backend.
-      // Solo puede hacerlo quien tenga rol admin (la llamada venía del panel de usuarios).
+      /* CAMBIAR rango — SIEMPRE sincrono (el panel de Usuarios espera
+         {ok, cuenta}, no una promesa). */
       function cambiarRangoCuenta(email, rol) {
         var key = normalizaEmail(email);
         if (!key) return { ok: false, msg: 'Falta el correo.' };
         if (ROLES_VALIDOS.indexOf(rol) === -1) return { ok: false, msg: 'Rango desconocido.' };
+        var db = leerCuentas();
+        if (!db[key]) return { ok: false, msg: 'No existe esa cuenta.' };
 
-        var cuenta = obtenerCuenta(key);
-        if (!cuenta) return { ok: false, msg: 'No existe esa cuenta.' };
+        db[key].rol = rol;
+        if (rol !== ROL_REGISTRO) db[key].semestre = '';
+        guardarCuentas(db); // localStorage + PUT/POST al backend
 
-        // Actualizar en la fuente activa
-        if (usarLocalStorage) {
-          var db = JSON.parse(localStorage.getItem(LS_CUENTAS) || '{}');
-          db[key].rol = rol;
-          if (rol !== ROL_REGISTRO) db[key].semestre = '';
-          localStorage.setItem(LS_CUENTAS, JSON.stringify(db));
-          // Aplicar al usuario actual si es el mismo
-          if (usuarioActual && normalizaEmail(usuarioActual.email) === key) {
-            usuarioActual.rol = rol;
-            localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
-            window.usuarioActual = usuarioActual;
-            actualizarPermisosUI();
-          }
-          return { ok: true, cuenta: db[key] };
-        } else {
-          // Modo backend: PUT al endpoint
-          fetch('${window.location.origin}/api/accounts/' + key, {
-            method: 'PUT',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rol: rol })
-          })
-          .then(function (resp) {
-            if (!resp.ok) throw new Error('network');
-            return resp.json();
-          })
-          .then(function (data) {
-            // Sincronizar localCopy y UI
-            if (cuentasBackend) {
-              cuentasBackend[key].rol = data.rol || rol;
-              if (rol !== ROL_REGISTRO) cuentasBackend[key].semestre = '';
-            }
-            // Actualizar sesión si es la misma
-            if (usuarioActual && normalizaEmail(usuarioActual.email) === key) {
-              usuarioActual.rol = data.rol || rol;
-              localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
-              window.usuarioActual = usuarioActual;
-              actualizarPermisosUI();
-            }
-            return { ok: true, cuenta: cuentasBackend[key] };
-          })
-          .catch(function () {
-            // Error de red → fallback localStorage
-            usarLocalStorage = true;
-            cuentasBackend = null;
-            var db = JSON.parse(localStorage.getItem(LS_CUENTAS) || '{}');
-            db[key].rol = rol;
-            if (rol !== ROL_REGISTRO) db[key].semestre = '';
-            localStorage.setItem(LS_CUENTAS, JSON.stringify(db));
-            if (usuarioActual && normalizaEmail(usuarioActual.email) === key) {
-              usuarioActual.rol = rol;
-              localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
-              window.usuarioActual = usuarioActual;
-              actualizarPermisosUI();
-            }
-            return { ok: true, cuenta: db[key] };
-          });
+        // Sesion abierta con esa cuenta: rango nuevo al instante.
+        if (usuarioActual && normalizaEmail(usuarioActual.email) === key) {
+          usuarioActual.rol = rol;
+          try { localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual)); } catch (e) { /* sin storage */ }
+          window.usuarioActual = usuarioActual;
+          if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
         }
+        return { ok: true, cuenta: db[key] };
       }
 
-      /* Primer arranque: siembra la cuenta de administrador y conserva el
-         rango de la sesión abierta en versiones anteriores de la app.
-         Ahora consulta al backend; si no existe, lo crea en localStorage
-         (modo legacy) para no romper el flujo existente. */
+      /* Carga inicial:
+         1) sincrono: cuentas locales + siembra admin + sesion antigua
+            (as\u00ed el login funciona aunque el backend este caido o lento);
+         2) asincrono: merge con el backend (el rol remoto gana) y subida
+            de las cuentas que solo existen en este dispositivo. */
       function prepararCuentas() {
-        return fetchBackendAccounts().then(function (remote) {
-          if (remote && typeof remote === 'object') {
-            // Ya hay datos en el backend; asegurar que admin@bachillerato.edu exista
-            if (!remote['admin@bachillerato.edu']) {
-              // El primer usuario que se registró ya se hizo admin en el backend
-              // (flujos de create-account). Nada que hacer aquí.
-            }
-            // Cargar la sesión activa si existe
-            if (window.usuarioActual) {
-              actualizarUsuarioDesdeCuenta();
-            }
-            return remote;
-          }
-          // Fallback: localStorage (modo legacy)
-          var db = localStorage.getItem('cherrybombCuentas');
-          if (db) {
-            try { cuentasBackend = JSON.parse(db); usarLocalStorage = true; } catch (e) {/* ignored */ }
-          }
-          // Si no hay nada, y hay sesión guardada, migrarla
-          if (savedSession && !cuentasBackend) {
-            var key = normalizaEmail(savedSession.email);
-            cuentasBackend = cuentasBackend || {};
-            cuentasBackend[key] = {
-              nombre: savedSession.nombre || normalizaEmail(savedSession.email).split('@')[0],
-              email: key,
+        var db = leerCuentas();
+        if (savedSession) {
+          var sk = normalizaEmail(savedSession.email);
+          if (sk && !db[sk]) {
+            db[sk] = {
+              email: sk,
+              nombre: savedSession.nombre || sk.split('@')[0],
               rol: ROLES_VALIDOS.indexOf(savedSession.rol) !== -1 ? savedSession.rol : ROL_REGISTRO,
-              semestre: '',
-              activo: true,
-              creado: new Date().toISOString(),
-            };
-            usarLocalStorage = true;
-          }
-          // Asegurar que admin@bachillerato.edu exista (modo legacy)
-          if (!cuentasBackend || !cuentasBackend['admin@bachillerato.edu']) {
-            // Si es el primer run nunca, crear entry mínima
-            if (!cuentasBackend) cuentasBackend = {};
-            cuentasBackend['admin@bachillerato.edu'] = {
-              nombre: 'Administrador', email: 'admin@bachillerato.edu', rol: 'admin',
               semestre: '', activo: true, creado: new Date().toISOString(),
             };
           }
-          // Aplicar sesión
-          if (window.usuarioActual) {
-            actualizarUsuarioDesdeCuenta();
+        }
+        cuentasBackend = asegurarAdmin(db);
+        try { localStorage.setItem(LS_CUENTAS, JSON.stringify(cuentasBackend)); } catch (e) { /* sin storage */ }
+
+        return fetchBackendAccounts().then(function (remote) {
+          if (remote) {
+            var merged = leerCuentas();
+            Object.keys(remote).forEach(function (k) {
+              if (remote[k] && typeof remote[k] === 'object') merged[k] = remote[k];
+            });
+            // lo que el backend ya tiene queda marcado como sincronizado
+            Object.keys(remote).forEach(function (k) {
+              if (merged[k] && typeof merged[k] === 'object') cuentasPush[k] = firmaCuenta(merged[k]);
+            });
+            // lo que solo existe local se sube
+            Object.keys(merged).forEach(function (k) { pushCuenta(merged[k]); });
+            guardarCuentas(merged);
           }
+          if (window.usuarioActual) actualizarUsuarioDesdeCuenta();
+          if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
           return cuentasBackend;
         });
       }
 
-      // Aplica los datos de la cuenta activa a window.usuarioActual
+      /* Aplica los datos de la cuenta activa a window.usuarioActual */
       function actualizarUsuarioDesdeCuenta() {
         if (!window.usuarioActual) return;
         var email = normalizaEmail(window.usuarioActual.email);
         var cuenta = obtenerCuenta(email);
         if (!cuenta) return; // nada que actualizar
-        // Sobrescribir campos del usuario con los de la cuenta db
         window.usuarioActual.rol = cuenta.rol || window.usuarioActual.rol;
         window.usuarioActual.nombre = cuenta.nombre || window.usuarioActual.nombre;
-        // Actualizar localStorage session para compatibilidad con notificaciones, etc.
-        try { localStorage.setItem('cherrybombSession', JSON.stringify(window.usuarioActual)); } catch (e) {/* ignored */ }
-        // force-ref removed: window.usuarioActual already updated above
-        // Notificar a módulos que lean window.usuarioActual (notifications.js, etc.)
-        if (typeof window.actualizarPermisosUI === 'function') {
+        try { localStorage.setItem('cherrybombSession', JSON.stringify(window.usuarioActual)); } catch (e) { /* sin storage */ }
+        // Refresca la UI de permisos (actualizarPermisosUI es local, NO
+        // window.actualizarPermisosUI: esa nunca existio).
+        if (typeof actualizarPermisosUI === 'function') {
           actualizarPermisosUI();
         }
       }
 
       // -----------------------------------------------------------------
-      // Inicialización: al cargar, obtener la fuente de cuentas y aplicar
+      // Inicializacion: base local al instante + merge con backend.
       // -----------------------------------------------------------------
       (function () {
-        prepararCuentas().then(function (db) {
-          // db es el objeto completo email→cuenta
-          // Asegurar que window.usuarioActual refleje el rol correcto
-          if (window.usuarioActual) {
-            actualizarUsuarioDesdeCuenta();
-          }
-          // También asegurar que los controles de permiso iniciales usen el rol correcto
-          if (typeof actualizarPermisosUI === 'function') {
-            actualizarPermisosUI();
-          }
+        prepararCuentas().then(function () {
+          if (window.usuarioActual) actualizarUsuarioDesdeCuenta();
+          if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
         });
       })();
 
@@ -810,14 +725,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         /* ---- Fallback localStorage ---- */
         cryptoDeriveKey(pass, email);
-        var storedHash = localStorage.getItem('passHash_' + btoa(email));
+        var storedHash = localStorage.getItem('passHash_' + btoa(normalizaEmail(email)));
         var passHash = hashPassword(pass);
         if (storedHash && storedHash !== passHash) {
           cryptoKey = null; cryptoKeyStr = '';
           mostrarToast('Contraseña incorrecta.', 'error'); return;
         }
         if (!storedHash) {
-          localStorage.setItem('passHash_' + btoa(email), passHash);
+          localStorage.setItem('passHash_' + btoa(normalizaEmail(email)), passHash);
         }
         loginSuccess(email, cuenta.rol, cuenta.nombre);
       });
@@ -835,9 +750,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (!email || p1.length < 6) return fallo('Correo y contraseña válidos (mín. 6 caracteres).');
         if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
         if (obtenerCuenta(email)) return fallo('Ese correo ya está registrado. Iniciá sesión.');
-        var r = crearCuenta(email, nom, ROL_REGISTRO);
+        var r = crearCuenta(email, nom, ROL_REGISTRO, p1);
         if (!r.ok) return fallo(r.msg);
-        localStorage.setItem('passHash_' + btoa(email), hashPassword(p1));
+        localStorage.setItem('passHash_' + btoa(normalizaEmail(email)), hashPassword(p1));
         err.hidden = true;
         $('form-registro').reset();
         mostrarModoRegistro(false);
