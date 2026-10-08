@@ -80,14 +80,23 @@ backend falla. Causas posibles, en orden de probabilidad:
    asegurate de incluir el origen desde el que servís la app. El backend
    también responde el preflight de *Private Network Access* que Chrome hace
    cuando un sitio público pide a un servicio local.
-3. **El backend está en otro puerto o máquina** — la URL base se guarda en
-   `localStorage` con la clave `sakuraPlayerApiBase` (default
-   `http://127.0.0.1:8000`); se puede cambiar desde `Ajustes → Backend`
-   (campo + «Guardar» y «Probar») o con
-   `localStorage.setItem('sakuraPlayerApiBase','http://127.0.0.1:8000')`.
+3. **La URL guardada en `localStorage` no responde** — la base vive en la
+   clave `sakuraPlayerApiBase` (por defecto
+   `https://sakura-backend-indb.onrender.com`) y se cambia desde
+   `Ajustes → Backend` (campo + «Guardar» y «Probar»). **Auto-sanado**: si
+   esa URL falla a nivel de red (DNS, host muerto, `http://` en página
+   `https://`…), cualquier GET reintenta una vez contra la URL por defecto
+   del sitio, la sesión queda apuntando ahí y aparece un toast avisando —
+   sin pisar lo que guardaste. Solo se sanea la forma (añade `https://` si
+   falta, sube `http://` de hosts no-locales a `https://`, quita barra
+   final); para volver a tu backend, guardalo de nuevo en `Ajustes → Backend`.
    **`127.0.0.1` es la propia máquina**: si abrís el sitio desplegado en otro
    dispositivo (teléfono, otra PC), el backend tiene que correr **en ese
    dispositivo** o hay que apuntar la URL a donde está el backend.
+
+Si el error persiste con el backend sano, el navegador puede estar sirviendo
+un bundle viejo desde la *service worker*: **recargá una vez con
+Ctrl+Shift+R** (Cmd+Shift+R en macOS).
 
 Verificación: `curl http://127.0.0.1:8000/api/music/search?q=test&filter=songs`
 debe devolver JSON con `"songs":[...]`.

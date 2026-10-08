@@ -10,16 +10,62 @@
 // backend de la propia máquina. Ajustes → Backend (localStorage) tiene
 // prioridad sobre ambas.
 const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'https://sakura-backend-indb.onrender.com';
+export { DEFAULT_BASE };
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 const LS_BASE_KEY = 'sakuraPlayerApiBase';
 
+/* Base activa de la sesión. Si la URL guardada en Ajustes falla a nivel
+   de red (DNS, host muerto, mixed content…), `request()` reintenta una
+   vez contra la URL por defecto del sitio y fija esta variable para el
+   resto de la sesión: así el reproductor sigue funcionando sin pisar
+   silenciosamente la configuración del usuario (que puede ser intencional
+   y volver cuando su backend responda). */
+let forcedBase = null;
+
+function baseInUse() {
+  return forcedBase || getApiBase();
+}
+
+/* URL con la que se está hablando de verdad (por defecto la guardada). */
+export function activeApiBase() {
+  return baseInUse();
+}
+
+/* URL guardada en Ajustes → Backend, saneada:
+   - quita espacios y barra final;
+   - sin esquema → se lo añade (si no, el navegador lo toma como ruta
+     relativa del sitio y "responde" el HTML del SPA);
+   - http:// de un host no-local en una página https → https (mixed
+     content lo bloquea y el error se disfraza de "backend apagado").
+   Devuelve null si no hay nada utilizable. */
+function sanitizeBase(raw) {
+  if (raw === null || raw === undefined) return null;
+  let v = String(raw).trim().replace(/\/+$/, '');
+  if (!v) return null;
+  const loopback = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?(\/|$)/i;
+  if (!/^https?:\/\//i.test(v)) v = (loopback.test(v) ? 'http://' : 'https://') + v;
+  let httpsPage = false;
+  try { httpsPage = typeof location !== 'undefined' && location.protocol === 'https:'; } catch (e) { /* sin location */ }
+  if (httpsPage && /^http:\/\//i.test(v)) {
+    const host = v.slice(v.indexOf('://') + 3);
+    if (!loopback.test(host)) v = 'https://' + host;
+  }
+  return v;
+}
+
+function sameBase(a, b) {
+  const norm = (x) => String(x || '').trim().replace(/\/+$/, '');
+  return norm(a) === norm(b);
+}
+
 export function getApiBase() {
-  try { return localStorage.getItem(LS_BASE_KEY) || DEFAULT_BASE; } catch (e) { return DEFAULT_BASE; }
+  try { return sanitizeBase(localStorage.getItem(LS_BASE_KEY)) || DEFAULT_BASE; } catch (e) { return DEFAULT_BASE; }
 }
 
 export function setApiBase(url) {
-  try { localStorage.setItem(LS_BASE_KEY, url || DEFAULT_BASE); } catch (e) { /* sin storage */ }
+  try { localStorage.setItem(LS_BASE_KEY, sanitizeBase(url) || DEFAULT_BASE); } catch (e) { /* sin storage */ }
+  forcedBase = null; // el usuario eligió una URL nueva: le damos una chance
   clearCache();
 }
 
@@ -30,7 +76,7 @@ export class PlayerError extends Error {
   constructor(code, message) {
     super(message);
     this.name = 'PlayerError';
-    this.code = code; // backend_offline | network | not_found | auth | api | playback
+    this.code = code; // backend_offline | upstream | network | not_found | auth | api | playback
   }
 }
 
@@ -55,9 +101,21 @@ function cacheSet(key, value) {
 /* ------------------------------------------------------------------
    Petición base
    ------------------------------------------------------------------ */
-async function request(path, { method = 'GET', body, signal, timeout = 15000, retried = false, headers } = {}) {
+
+/* `backend_offline` causado por la red: fetch rechazó de entrada (DNS,
+   host inexistente, CORS, mixed content), se agotó el timeout o el
+   proxy devolvió un 5xx sin cuerpo JSON. Son los casos en los que la URL
+   guardada en Ajustes puede ser la culpable y conviene probar la
+   por defecto del sitio. Un 5xx con detalle JSON en cambio significa que
+   el backend contestó: el fallo es aguas arriba (YouTube Music) y se
+   reporta con el código `upstream`. */
+function isNetLevel(err) {
+  return err instanceof PlayerError && err.code === 'backend_offline' && err.netLevel === true;
+}
+
+async function requestOnce(base, path, { method = 'GET', body, signal, timeout = 15000, retried = false, headers } = {}) {
   // Normaliza barra final: una base con "/" producía "//api/..." (404)
-  const url = getApiBase().replace(/\/+$/, '') + path;
+  const url = base.replace(/\/+$/, '') + path;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   // Si el llamador pasa su propio signal, lo respetamos
@@ -84,11 +142,17 @@ async function request(path, { method = 'GET', body, signal, timeout = 15000, re
       // (cold start del plan gratuito) tarda ~50 s. Los GET se reintantan
       // una vez con más tiempo antes de dar por perdido el backend.
       if (method === 'GET' && !retried) {
-        return request(path, { method, body, signal, timeout: 60000, retried: true });
+        return requestOnce(base, path, { method, body, signal, timeout: 60000, retried: true, headers });
       }
-      throw new PlayerError('backend_offline', 'El backend tardó demasiado en responder');
+      const timeoutErr = new PlayerError('backend_offline', 'El backend tardó demasiado en responder');
+      timeoutErr.netLevel = true;
+      throw timeoutErr;
     }
-    throw new PlayerError('backend_offline', 'El backend no está disponible');
+    // Fetch rechazó de entrada (DNS, CORS, mixed content, host muerto):
+    // la URL configurada es la sospechosa principal.
+    const netErr = new PlayerError('backend_offline', 'El backend no está disponible');
+    netErr.netLevel = true;
+    throw netErr;
   }
   clearTimeout(timer);
 
@@ -108,10 +172,55 @@ async function request(path, { method = 'GET', body, signal, timeout = 15000, re
     if (res.status === 404) throw new PlayerError('not_found', detail);
     if (res.status === 401 || res.status === 403) throw new PlayerError('auth', detail);
     if (res.status === 400) throw new PlayerError('api', detail);
-    if (res.status >= 500) throw new PlayerError('backend_offline', detail);
+    if (res.status >= 500) {
+      // ¿Contestó nuestro backend con detalle estructurado? Entonces está
+      // vivo y el fallo es aguas arriba (YouTube Music), no "backend apagado".
+      if (data && typeof data.detail === 'string' && data.detail) {
+        throw new PlayerError('upstream', data.detail);
+      }
+      // 5xx sin cuerpo (proxy/edge de Render, cold start): red.
+      const srvErr = new PlayerError('backend_offline', detail);
+      srvErr.netLevel = true;
+      throw srvErr;
+    }
     throw new PlayerError('api', detail);
   }
   return data;
+}
+
+/* Ejecuta contra la base activa y, si esa base falla a nivel de red y
+   no es la por defecto del sitio, reintenta una vez contra la por
+   defecto (auto-sanado de una URL vieja o mal tipeada en Ajustes).
+   Solo para GET: nunca se reenvía una petición con efectos. */
+async function request(path, opts = {}) {
+  const base = baseInUse();
+  try {
+    return await requestOnce(base, path, opts);
+  } catch (err) {
+    if (!isNetLevel(err) || sameBase(base, DEFAULT_BASE)) throw err;
+    if ((opts.method || 'GET') !== 'GET') throw err;
+    if (opts.signal && opts.signal.aborted) throw err;
+    let data;
+    try {
+      data = await requestOnce(DEFAULT_BASE, path, opts);
+    } catch (e2) {
+      // Si también falla la por defecto, informamos el error original
+      // (la URL configurada) salvo que el caller haya cancelado.
+      if (e2 instanceof PlayerError && e2.code === 'network') throw e2;
+      throw err;
+    }
+    forcedBase = DEFAULT_BASE;
+    // Avisamos una sola vez por sesión: el usuario debe saber que su URL
+    // configurada no respondía y que se está usando la del sitio.
+    try {
+      if (typeof document !== 'undefined' && typeof CustomEvent === 'function') {
+        document.dispatchEvent(new CustomEvent('sp:api-base-fallback', {
+          detail: { from: base, to: DEFAULT_BASE },
+        }));
+      }
+    } catch (e) { /* sin DOM (tests) */ }
+    return data;
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -130,7 +239,7 @@ export const api = {
 
   song: (id) => request(`/api/music/song/${encodeURIComponent(id)}`),
 
-  streamUrl: (id) => `${getApiBase().replace(/\/+$/, '')}/api/music/stream/${encodeURIComponent(id)}`,
+  streamUrl: (id) => `${baseInUse().replace(/\/+$/, '')}/api/music/stream/${encodeURIComponent(id)}`,
 
   artist: (id) => request(`/api/music/artist/${encodeURIComponent(id)}`),
 
@@ -213,9 +322,9 @@ function servedRemotely() {
   } catch (e) { return false; }
 }
 
-/* ¿La API apunta a la propia máquina del navegador? */
+/* ¿La API activa apunta a la propia máquina del navegador? */
 function apiPointsLocal() {
-  return /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(getApiBase());
+  return /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(baseInUse());
 }
 
 export function friendlyError(err) {
@@ -227,6 +336,9 @@ export function friendlyError(err) {
         return (servedRemotely() && apiPointsLocal())
           ? 'Este sitio apunta a 127.0.0.1, que en este dispositivo no existe: configurá el backend en Ajustes → Backend'
           : 'Backend apagado o sin conexión';
+      case 'upstream':
+        // El backend contestó: falló YouTube Music (aguas arriba).
+        return err.message || 'YouTube Music no está disponible ahora mismo';
       case 'network': return 'Sin conexión con el servidor';
       case 'not_found': return 'No se encontró el contenido';
       case 'auth': return 'Sesión de YouTube Music no disponible';

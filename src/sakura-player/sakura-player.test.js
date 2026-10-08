@@ -355,3 +355,164 @@ describe('Reintentos del cliente', () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------
+   Auto-sanado de la URL del backend guardada en Ajustes
+   (una URL vieja/mal tipeada no debe dejar al reproductor sin música)
+   ------------------------------------------------------------------ */
+describe('Auto-sanado de la URL del backend', () => {
+  it('sanea la URL guardada: añade esquema, quita barra final y sube http a https en páginas https', async () => {
+    const restoreStore = stubLocalStorage();
+    const { setApiBase, getApiBase, DEFAULT_BASE } = await import('./api/client.js');
+    const prevLoc = globalThis.location;
+    try {
+      globalThis.location = { protocol: 'https:', hostname: 'proyecto-web-2-bygl.onrender.com' };
+      setApiBase('sakura-backend-indb.onrender.com/');
+      expect(getApiBase()).toBe('https://sakura-backend-indb.onrender.com');
+      setApiBase('http://sakura-backend-indb.onrender.com'); // mixed content
+      expect(getApiBase()).toBe('https://sakura-backend-indb.onrender.com');
+      setApiBase('  http://127.0.0.1:8000/  '); // loopback conserva http
+      expect(getApiBase()).toBe('http://127.0.0.1:8000');
+      setApiBase('');
+      expect(getApiBase()).toBe(DEFAULT_BASE);
+    } finally {
+      if (prevLoc === undefined) delete globalThis.location;
+      else globalThis.location = prevLoc;
+      restoreStore();
+    }
+  });
+
+  it('si la URL guardada falla a nivel de red, GET reintenta contra la del sitio y la sesión queda apuntando ahí', async () => {
+    const restoreStore = stubLocalStorage();
+    const client = await import('./api/client.js');
+    const prevFetch = globalThis.fetch;
+    const prevDoc = Object.prototype.hasOwnProperty.call(globalThis, 'document') ? globalThis.document : undefined;
+    const llamadas = [];
+    let evento = null;
+    globalThis.document = { dispatchEvent: (e) => { evento = e; } };
+    client.setApiBase('https://url-vieja.example.com');
+    globalThis.fetch = async (url) => {
+      llamadas.push(url);
+      if (llamadas.length === 1) throw new TypeError('Failed to fetch');
+      return { ok: true, status: 200, json: async () => ({ ok: true, via: 'por-defecto' }) };
+    };
+    try {
+      const h = await client.api.health();
+      expect(h.via).toBe('por-defecto');
+      expect(llamadas).toHaveLength(2);
+      expect(llamadas[0]).toContain('url-vieja.example.com');
+      expect(llamadas[1]).toBe(client.DEFAULT_BASE + '/api/health');
+      // La sesión queda usando la URL del sitio…
+      expect(client.activeApiBase()).toBe(client.DEFAULT_BASE);
+      // …sin pisar lo que guardó el usuario (él puede volver a probarlo)
+      expect(client.getApiBase()).toBe('https://url-vieja.example.com');
+      // …y se avisa una sola vez con el evento
+      expect(evento).not.toBeNull();
+      expect(evento.detail.from).toBe('https://url-vieja.example.com');
+      expect(evento.detail.to).toBe(client.DEFAULT_BASE);
+      // Las peticiones siguientes ya van directo a la del sitio
+      await client.api.health();
+      expect(llamadas).toHaveLength(3);
+      expect(llamadas[2]).toBe(client.DEFAULT_BASE + '/api/health');
+      expect(evento.type).toBe('sp:api-base-fallback');
+    } finally {
+      globalThis.fetch = prevFetch;
+      if (prevDoc === undefined) delete globalThis.document;
+      else globalThis.document = prevDoc;
+      client.setApiBase(''); // limpia forcedBase y la URL de prueba
+      restoreStore();
+    }
+  });
+
+  it('nunca reintenta una petición con efectos (POST) contra otra URL', async () => {
+    const restoreStore = stubLocalStorage();
+    const client = await import('./api/client.js');
+    const prevFetch = globalThis.fetch;
+    let llamadas = 0;
+    client.setApiBase('https://url-vieja.example.com');
+    globalThis.fetch = async () => {
+      llamadas += 1;
+      throw new TypeError('Failed to fetch');
+    };
+    try {
+      await expect(client.api.adminLogin('a@b.c', 'x')).rejects.toMatchObject({ code: 'backend_offline' });
+      expect(llamadas).toBe(1);
+      expect(client.activeApiBase()).toBe('https://url-vieja.example.com'); // sin cambio
+    } finally {
+      globalThis.fetch = prevFetch;
+      client.setApiBase('');
+      restoreStore();
+    }
+  });
+
+  it('5xx con detalle JSON del backend es "upstream" (YouTube Music caído), no "backend apagado"', async () => {
+    const restoreStore = stubLocalStorage();
+    const { api, friendlyError, setApiBase, activeApiBase, DEFAULT_BASE } = await import('./api/client.js');
+    const prevFetch = globalThis.fetch;
+    let llamadas = 0;
+    setApiBase('');
+    globalThis.fetch = async () => {
+      llamadas += 1;
+      return { ok: false, status: 502, json: async () => ({ detail: 'YouTube Music no está disponible' }) };
+    };
+    try {
+      await expect(api.health()).rejects.toMatchObject({ code: 'upstream' });
+      expect(llamadas).toBe(1); // el backend contestó: no hay fallback de URL
+      expect(activeApiBase()).toBe(DEFAULT_BASE);
+      const { PlayerError } = await import('./api/client.js');
+      expect(friendlyError(new PlayerError('upstream', 'YouTube Music no está disponible')))
+        .toBe('YouTube Music no está disponible');
+    } finally {
+      globalThis.fetch = prevFetch;
+      setApiBase('');
+      restoreStore();
+    }
+  });
+
+  it('5xx sin cuerpo JSON (proxy/edge) cuenta como fallo de red y usa la URL del sitio', async () => {
+    const restoreStore = stubLocalStorage();
+    const client = await import('./api/client.js');
+    const prevFetch = globalThis.fetch;
+    const llamadas = [];
+    client.setApiBase('https://url-vieja.example.com');
+    globalThis.fetch = async (url) => {
+      llamadas.push(url);
+      if (llamadas.length === 1) {
+        return { ok: false, status: 503, json: async () => { throw new Error('no es JSON'); } };
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    };
+    try {
+      const h = await client.api.health();
+      expect(h.ok).toBe(true);
+      expect(llamadas).toHaveLength(2);
+      expect(llamadas[1]).toBe(client.DEFAULT_BASE + '/api/health');
+      expect(client.activeApiBase()).toBe(client.DEFAULT_BASE);
+    } finally {
+      globalThis.fetch = prevFetch;
+      client.setApiBase('');
+      restoreStore();
+    }
+  });
+
+  it('si también falla la URL por defecto, se informa el error original', async () => {
+    const restoreStore = stubLocalStorage();
+    const client = await import('./api/client.js');
+    const prevFetch = globalThis.fetch;
+    let llamadas = 0;
+    client.setApiBase('https://url-vieja.example.com');
+    globalThis.fetch = async () => {
+      llamadas += 1;
+      throw new TypeError('Failed to fetch');
+    };
+    try {
+      await expect(client.api.health()).rejects.toMatchObject({ code: 'backend_offline' });
+      expect(llamadas).toBe(2); // probó la guardada y luego la del sitio
+      expect(client.activeApiBase()).toBe('https://url-vieja.example.com'); // no se cambió
+    } finally {
+      globalThis.fetch = prevFetch;
+      client.setApiBase('');
+      restoreStore();
+    }
+  });
+});

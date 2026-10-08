@@ -5,7 +5,7 @@
    =================================================================== */
 
 import './theme/player-theme.css';
-import { api, friendlyError, getApiBase, setApiBase, clearCache } from './api/client.js';
+import { api, friendlyError, getApiBase, setApiBase, clearCache, activeApiBase } from './api/client.js';
 import { isAdmin, adminEmail, loginAdmin, clearSession, restoreSession, adminStats, adminError } from './api/admin.js';
 import { player } from './player/player.js';
 import { Visualizer } from './player/visualizer.js';
@@ -80,6 +80,21 @@ class SakuraPlayer {
         case 'r': case 'R': player.cycleRepeat(); break;
       }
     };
+
+    // El cliente detectó que la URL guardada en Ajustes → Backend no
+    // respondía y se pasó a la del sitio: avisamos una vez para que el
+    // usuario sepa por qué sus cambios "no se ven" en esa URL.
+    this._onBaseFallback = (e) => {
+      const from = e && e.detail ? e.detail.from : '';
+      toast(
+        'No se pudo conectar con ' + (from || 'la URL guardada') +
+        '. Se usó el backend del sitio; volvé a probar tu URL en Ajustes → Backend.',
+        'info',
+      );
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('sp:api-base-fallback', this._onBaseFallback);
+    }
   }
 
   /* ---------------- montaje ---------------- */
@@ -637,15 +652,23 @@ class SakuraPlayer {
 
   async _checkBackend() {
     const status = this.root && this.root.querySelector('#sp-api-status');
+    const inUse = activeApiBase();
+    const custom = inUse !== getApiBase(); // la URL guardada falló y se forzó la del sitio
     try {
       const h = await api.health();
       if (status) {
         status.innerHTML = '<span style="color:var(--player-success);">● Backend conectado</span>' +
-          (h.authenticated ? ' · YouTube Music autenticado' : ' · YouTube Music en modo invitado');
+          (h.authenticated ? ' · YouTube Music autenticado' : ' · YouTube Music en modo invitado') +
+          (custom ? '<br><span style="color:var(--player-text-secondary);">Usando: ' + escapeHtml(inUse) +
+            ' (tu URL no respondía)</span>' : '');
       }
       if (this._offline) { this._offline = false; this._renderOffline(); }
     } catch (err) {
-      if (status) status.innerHTML = '<span style="color:var(--player-error);">● Backend apagado</span> — andá a Ajustes para ver cómo conectarlo.';
+      if (status) {
+        status.innerHTML = '<span style="color:var(--player-error);">● Backend apagado</span> — ' +
+          escapeHtml(friendlyError(err)) + '<br><span style="color:var(--player-text-secondary);">URL probada: ' +
+          escapeHtml(inUse) + '</span>';
+      }
     }
   }
 }
