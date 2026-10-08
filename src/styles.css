@@ -986,6 +986,7 @@
    =================================================================== */
 body:not([data-perm~="crear"])   [data-perm~="crear"],
 body:not([data-perm~="editar"])  [data-perm~="editar"],
-body:not([data-perm~="eliminar"])[data-perm~="eliminar"] {
+body:not([data-perm~="eliminar"])[data-perm~="eliminar"],
+body:not([data-perm~="participar"]) [data-perm~="participar"] {
   display: none !important;
 }

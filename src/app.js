@@ -862,17 +862,17 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
 
       var rolesPermisos = {
-        admin: { ver: true, crear: true, editar: true, eliminar: true },
-        director: { ver: true, crear: true, editar: true, eliminar: true },
-        subdirector: { ver: true, crear: true, editar: true, eliminar: true },
-        coordinador: { ver: true, crear: true, editar: true, eliminar: false },
-        docente: { ver: true, crear: true, editar: true, eliminar: false },
-        estudiante: { ver: true, crear: false, editar: false, eliminar: false },
-        padres: { ver: true, crear: false, editar: false, eliminar: false }
+        admin: { ver: true, crear: true, editar: true, eliminar: true, participar: true },
+        director: { ver: true, crear: true, editar: true, eliminar: true, participar: true },
+        subdirector: { ver: true, crear: true, editar: true, eliminar: true, participar: true },
+        coordinador: { ver: true, crear: true, editar: true, eliminar: false, participar: true },
+        docente: { ver: true, crear: true, editar: true, eliminar: false, participar: true },
+        estudiante: { ver: true, crear: false, editar: false, eliminar: false, participar: true },
+        padres: { ver: true, crear: false, editar: false, eliminar: false, participar: true }
       };
 
       function permisosDelRol(rol) {
-        return rolesPermisos[rol] || { ver: false, crear: false, editar: false, eliminar: false };
+        return rolesPermisos[rol] || { ver: false, crear: false, editar: false, eliminar: false, participar: false };
       }
 
       function tienePermiso(accion) {
@@ -3125,7 +3125,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function foroGuardar() { guardarSeccion('foros', foros); }
 
       $('btn-foro-add').addEventListener('click', function () {
-        if (!exigirPermiso('crear')) return;
+        if (!exigirPermiso('participar')) return;
         dialogPrompt('T\u00EDtulo del tema:', 'Nuevo tema').then(function (titulo) {
           if (!titulo || !titulo.trim()) return;
           dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
@@ -3612,7 +3612,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-msg-add').addEventListener('click', function () {
-        if (!exigirPermiso('crear')) return;
+        if (!exigirPermiso('participar')) return;
         dialogPrompt('Asunto:', 'Nuevo mensaje').then(function (asunto) {
           if (!asunto) return;
           dialogPrompt('Mensaje:', 'Contenido').then(function (contenido) {
@@ -3676,7 +3676,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         });
       }
       $('btn-prot-add').addEventListener('click', function () {
-        if (!exigirPermiso('crear')) return;
+        if (!exigirPermiso('participar')) return;
         dialogPrompt('Tipo de incidente (ej: Acoso, Robo, Emergencia):', 'Reportar incidente').then(function (tipo) {
           if (!tipo) return;
           dialogPrompt('Describe lo sucedido:', 'Descripci\u00F3n').then(function (desc) {
