@@ -464,7 +464,7 @@
   box-shadow: 0 0 14px var(--player-border-glow);
   color: var(--player-primary);
 }
-.sp-btn-primary {
+.sakura-player .sp-btn-primary {
   background: var(--player-primary);
   border-color: var(--player-primary);
   color: #08040c;
@@ -481,7 +481,7 @@
   padding: 0;
   border-radius: 50%;
 }
-.sp-btn-active {
+.sakura-player .sp-btn-active {
   background: var(--player-primary);
   color: #08040c;
   border-color: var(--player-primary);

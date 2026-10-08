@@ -2235,7 +2235,12 @@ unicode: "eae2"
               <option value="6">6° Semestre</option>
             </select>
           </div>
-          <button class="btn btn-primary btn-sm" id="btn-auth-add">+ Nuevo usuario</button>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-outline btn-sm" id="btn-auth-export" title="Descargar backup JSON de todas las cuentas">⬇ Exportar</button>
+            <button class="btn btn-outline btn-sm" id="btn-auth-import" title="Restaurar cuentas desde un backup JSON (fusiona, no borra)">⬆ Importar</button>
+            <input type="file" id="auth-import-file" accept="application/json,.json" class="hidden" aria-label="Archivo de respaldo de cuentas">
+            <button class="btn btn-primary btn-sm" id="btn-auth-add">+ Nuevo usuario</button>
+          </div>
         </div>
         <div class="table-wrap"><table>
           <thead><tr><th scope="col">Usuario</th><th scope="col">Nombre</th><th scope="col">Rol</th><th scope="col">Semestre</th><th scope="col">Estado</th><th scope="col">Acción</th></tr></thead>
@@ -2457,7 +2462,7 @@ unicode: "eb62"
   <path d="M14 4l0 4l-6 0l0 -4" />
 </svg>
  Guardar examen</button>
-              <span id="exam-guardar-msg" style="margin-left:.75rem;font-size:.85rem;color:var(--green);"></span>
+              <span id="exam-guardar-msg" style="margin-left:.75rem;font-size:.85rem;color:var(--green-ink);"></span>
             </div>
           </div>
 
@@ -2729,9 +2734,9 @@ unicode: "eb62"
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1rem;">
-          <div class="stat-box"><div class="stat-num" id="asist-presentes" style="color:var(--green);">0</div><div class="stat-label">Presentes</div></div>
-          <div class="stat-box"><div class="stat-num" id="asist-ausentes" style="color:var(--red);">0</div><div class="stat-label">Ausentes</div></div>
-          <div class="stat-box"><div class="stat-num" id="asist-justificados" style="color:var(--amber);">0</div><div class="stat-label">Justificados</div></div>
+          <div class="stat-box"><div class="stat-num" id="asist-presentes" style="color:var(--green-ink);">0</div><div class="stat-label">Presentes</div></div>
+          <div class="stat-box"><div class="stat-num" id="asist-ausentes" style="color:var(--red-ink);">0</div><div class="stat-label">Ausentes</div></div>
+          <div class="stat-box"><div class="stat-num" id="asist-justificados" style="color:var(--amber-ink);">0</div><div class="stat-label">Justificados</div></div>
         </div>
 
         <div class="card" style="margin-top:1.25rem;">
@@ -3105,7 +3110,7 @@ unicode: "ea0b"
           <div id="est-table-wrap" class="card" style="margin-top:1rem;overflow-x:auto;">
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;font-size:.82rem;">
               <span id="est-total">Mostrando 0 estudiantes</span>
-              <span id="est-presentes" style="color:var(--green);"><!--
+              <span id="est-presentes" style="color:var(--green-ink);"><!--
 tags: [tick, "yes", confirm, check, control, operation, approve, function, interface, management]
 category: System
 version: "1.0"
@@ -3124,7 +3129,7 @@ unicode: "ea5e"
   <path d="M5 12l5 5l10 -10" />
 </svg>
  0 Presentes</span>
-              <span id="est-ausentes" style="color:var(--red);"><!--
+              <span id="est-ausentes" style="color:var(--red-ink);"><!--
 tags: [cancel, "no", circle, round, circular, geometry, form, figure, pattern, outline]
 category: Shapes
 version: "1.0"
@@ -3393,12 +3398,12 @@ unicode: "ea5e"
             <button class="btn btn-outline" id="btn-pomodoro-pause"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar</button>
             <button class="btn btn-ghost btn-sm" id="btn-pomodoro-reset">Reiniciar</button>
           </div>
-          <div style="margin-top:1.25rem;display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;font-size:.82rem;color:var(--gray-500);">
-            <div style="display:flex;align-items:center;gap:.3rem;background:var(--green-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--green);">25:00</span> Estudio</div>
-            <div style="display:flex;align-items:center;gap:.3rem;background:var(--amber-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--amber);">05:00</span> Descanso corto</div>
-            <div style="display:flex;align-items:center;gap:.3rem;background:var(--purple-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--purple);">15:00</span> Descanso largo</div>
+          <div style="margin-top:1.25rem;display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;font-size:.82rem;color:var(--text);">
+            <div style="display:flex;align-items:center;gap:.3rem;background:var(--green-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--green-ink);">25:00</span> Estudio</div>
+            <div style="display:flex;align-items:center;gap:.3rem;background:var(--amber-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--amber-ink);">05:00</span> Descanso corto</div>
+            <div style="display:flex;align-items:center;gap:.3rem;background:var(--purple-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--purple-ink);">15:00</span> Descanso largo</div>
           </div>
-          <div style="margin-top:1rem;font-size:.78rem;color:var(--gray-400);">Ciclos completados: <span id="pomodoro-cycles" style="font-weight:700;color:var(--primary);">0</span></div>
+          <div style="margin-top:1rem;font-size:.78rem;color:var(--text-secondary);">Ciclos completados: <span id="pomodoro-cycles" style="font-weight:700;color:var(--primary);">0</span></div>
         </div>
       </div>
     </section>

@@ -187,10 +187,10 @@
 
     var banner = document.createElement('div');
     banner.id = 'notif-banner';
-    banner.style.cssText = 'position:fixed;bottom:1rem;right:1rem;z-index:9999;background:var(--gray-800);color:#fff;padding:.75rem 1rem;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:.75rem;max-width:360px;font-size:.85rem;animation:slideUp .3s ease;';
+    banner.style.cssText = 'position:fixed;bottom:1rem;right:1rem;z-index:9999;background:#1f2937;color:#fff;padding:.75rem 1rem;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:.75rem;max-width:360px;font-size:.85rem;animation:slideUp .3s ease;';
     banner.innerHTML = '<div style="flex:1;">Recibí notificaciones de tareas y entregas.</div>' +
-      '<button id="notif-banner-allow" style="background:var(--primary);color:#fff;border:none;padding:.4rem .8rem;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap;">Activar</button>' +
-      '<button id="notif-banner-dismiss" style="background:none;color:var(--gray-400);border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;" title="No mostrar más">&times;</button>';
+      '<button id="notif-banner-allow" style="background:var(--primary);color:var(--on-primary);border:none;padding:.4rem .8rem;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap;">Activar</button>' +
+      '<button id="notif-banner-dismiss" style="background:none;color:#cbd5e1;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;" title="No mostrar más">&times;</button>';
     document.body.appendChild(banner);
 
     $('notif-banner-allow').addEventListener('click', function () {

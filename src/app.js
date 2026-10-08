@@ -1247,6 +1247,77 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[rango] || rango) + '. El usuario elige su contraseña al entrar.', 'success');
       });
 
+      /* ---- Backup de cuentas: exportar / importar JSON (solo admin) ----
+         El backend guarda en un FS efímero (Render borra accounts.json en
+         cada deploy); este par es el seguro: exportar guarda el mapa local
+         en un archivo, importar lo fusiona de vuelta y además lo replica
+         al backend con guardarCuentas(). Las contraseñas (passHash_*) nunca
+         viajan en el archivo: cada equipo define la suya en su primer login. */
+      if ($('btn-auth-export')) $('btn-auth-export').addEventListener('click', function () {
+        if (!esAdmin()) return;
+        var db = leerCuentas();
+        var blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'cherrybomb-cuentas-' + new Date().toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        mostrarToast('Backup exportado con ' + Object.keys(db).length + ' cuentas.', 'success');
+      });
+
+      if ($('btn-auth-import')) $('btn-auth-import').addEventListener('click', function () {
+        if (!esAdmin()) return;
+        $('auth-import-file').click();
+      });
+
+      if ($('auth-import-file')) $('auth-import-file').addEventListener('change', function () {
+        if (!esAdmin()) return;
+        var input = this;
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          input.value = ''; // poder re-elegir el mismo archivo
+          var data;
+          try { data = JSON.parse(reader.result); } catch (e) {
+            mostrarToast('El archivo no es JSON válido.', 'error'); return;
+          }
+          if (!data || typeof data !== 'object' || Array.isArray(data)) {
+            mostrarToast('Formato inválido: se espera un objeto de cuentas.', 'error'); return;
+          }
+          var db = leerCuentas();
+          var ok = 0, omitidas = 0;
+          Object.keys(data).forEach(function (k) {
+            var key = normalizaEmail(k);
+            var c = data[k];
+            if (!key || key.indexOf('@') === -1 || !c || typeof c !== 'object' ||
+                ROLES_VALIDOS.indexOf(c.rol) === -1) { omitidas++; return; }
+            db[key] = {
+              email: key,
+              nombre: String(c.nombre || key.split('@')[0]).trim(),
+              rol: c.rol,
+              semestre: c.semestre ? String(c.semestre) : (c.rol === ROL_REGISTRO ? '1' : ''),
+              activo: c.activo !== false,
+              creado: c.creado || new Date().toISOString(),
+            };
+            ok++;
+          });
+          if (!ok) {
+            mostrarToast('Ninguna cuenta válida en el archivo' + (omitidas ? ' (' + omitidas + ' omitidas)' : '') + '.', 'error');
+            return;
+          }
+          guardarCuentas(db); // localStorage + réplica al backend
+          if (window.usuarioActual) actualizarUsuarioDesdeCuenta();
+          renderAuth();
+          mostrarToast('Importadas ' + ok + ' cuentas' + (omitidas ? ' (' + omitidas + ' omitidas)' : '') + '. Réplica al backend en curso.', 'success');
+        };
+        reader.onerror = function () { mostrarToast('No se pudo leer el archivo.', 'error'); };
+        reader.readAsText(file);
+      });
+
       renderAuth();
 
       /* ===================================================================
@@ -1350,7 +1421,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         box.innerHTML = 'Intentos usados: <strong>' + usados + '/' + max + '</strong>' +
           ' · Nota m&iacute;nima para aprobar: <strong>' + notaMin + '%</strong>' +
           (mejor >= 0 ? ' · Tu mejor nota: <strong style="color:' + (mejor >= notaMin ? 'var(--green)' : 'var(--red)') + ';">' + mejor + '%</strong>' : '') +
-          (usados >= max ? '<br><span style="color:var(--red);font-weight:600;">No te quedan intentos.</span>' : '');
+          (usados >= max ? '<br><span style="color:var(--red-ink);font-weight:600;">No te quedan intentos.</span>' : '');
       }
 
       /* Panel de resultados (pestaña docente) */
@@ -1385,7 +1456,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">' +
             '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Intentos: <strong>' + filas.length + '</strong></div>' +
             '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Promedio: <strong>' + promedio + '%</strong></div>' +
-            '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Aprobados: <strong style="color:var(--green);">' + aprueban + '/' + filas.length + '</strong></div>' +
+            '<div style="padding:.45rem .7rem;background:var(--gray-50);border-radius:8px;font-size:.82rem;">Aprobados: <strong style="color:var(--green-ink);">' + aprueban + '/' + filas.length + '</strong></div>' +
             chipNotaMin +
           '</div>' +
           '<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:.85rem;">' +
@@ -1464,7 +1535,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
                 '<option value="vf">Verdadero/Falso</option>' +
                 '<option value="completar">Completar</option>' +
               '</select>' +
-              '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.2rem;padding:0 4px;">×</button>' +
+              '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red-ink);font-size:1.2rem;padding:0 4px;">×</button>' +
             '</div>' +
           '</div>' +
           '<textarea class="pregunta-textarea" placeholder="Escribe la pregunta..." data-idx="' + examQCount + '"></textarea>' +
@@ -1931,7 +2002,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               return '<div style="padding:.5rem .65rem;border-radius:8px;margin-bottom:.4rem;font-size:.85rem;background:' + (d.ok ? 'rgba(46,204,113,.14)' : 'rgba(231,76,60,.14)') + ';">' +
                 '<strong>' + (d.ok ? '✅' : '❌') + ' ' + (i + 1) + '. ' + escapeHtml(d.q.texto) + '</strong>' +
                 '<div style="color:var(--gray-600);">Tu respuesta: ' + escapeHtml(examTextoRespuesta(d.q, d.dada)) + '</div>' +
-                (d.ok ? '' : '<div style="color:var(--green);">Respuesta correcta: ' + escapeHtml(examTextoCorrecta(d.q)) + '</div>') +
+                (d.ok ? '' : '<div style="color:var(--green-ink);">Respuesta correcta: ' + escapeHtml(examTextoCorrecta(d.q)) + '</div>') +
               '</div>';
             }).join('') +
             '<div style="font-size:.83rem;color:var(--gray-500);margin-top:.5rem;">Intento ' + intento + ' de ' + intentosMax +
@@ -2206,7 +2277,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               '<span style="font-size:.78rem;color:var(--gray-500);">' + escapeHtml(t.desc) + ' · ' +
               '<span class="badge badge-' + mc + '">' + t.materia + '</span> ' +
               '<span class="semestre-badge">' + t.grupo + '</span> · Límite: ' + t.fecha + '</span></div>' +
-              '<button class="btn btn-sm btn-outline tarea-del" data-perm="eliminar" data-idx="' + i + '" style="color:var(--red);"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
+              '<button class="btn btn-sm btn-outline tarea-del" data-perm="eliminar" data-idx="' + i + '" style="color:var(--red-ink);"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
           }).join('') + '</div>';
 
         container.querySelectorAll('.tarea-del').forEach(function (btn) {
@@ -2979,7 +3050,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               '</div>' +
               '<p style="font-size:.85rem;margin:.2rem 0 0;">' + escapeHtml(r.texto) + '</p>' +
               '<div style="display:flex;justify-content:flex-end;gap:.4rem;margin-top:.3rem;">' +
-                (foroPuedeBorrar(r.autor) ? '<button class="btn btn-sm btn-outline foro-del-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red);font-size:.72rem;">Eliminar</button>' : '') +
+                (foroPuedeBorrar(r.autor) ? '<button class="btn btn-sm btn-outline foro-del-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.72rem;">Eliminar</button>' : '') +
               '</div></div>';
           }).join('');
 
@@ -2991,7 +3062,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             '<p style="font-size:.88rem;margin:.35rem 0 .4rem;white-space:pre-wrap;">' + escapeHtml(m.texto) + '</p>' +
             '<div style="display:flex;gap:.5rem;">' +
               (cerrado ? '' : '<button class="btn btn-sm btn-outline foro-responder" data-mid="' + m.id + '" style="font-size:.75rem;">\u21A9 Responder</button>') +
-              (foroPuedeBorrar(m.autor) ? '<button class="btn btn-sm btn-outline foro-del-msg" data-mid="' + m.id + '" style="color:var(--red);font-size:.75rem;">Eliminar</button>' : '') +
+              (foroPuedeBorrar(m.autor) ? '<button class="btn btn-sm btn-outline foro-del-msg" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.75rem;">Eliminar</button>' : '') +
             '</div>' + respuestas + '</div>';
         }).join('');
         if (!f.mensajes.length) {
@@ -3733,7 +3804,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var name = est ? escapeHtml(est.nombre) : '(desconocido)';
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<span>' + name + '</span>' +
-              '<button class="btn btn-sm btn-outline insc-remover" data-perm="eliminar" data-est="' + insc.estudianteId + '" data-aula="' + aulaId + '" style="color:var(--red);font-size:.78rem;">\u274C Quitar</button></div>';
+              '<button class="btn btn-sm btn-outline insc-remover" data-perm="eliminar" data-est="' + insc.estudianteId + '" data-aula="' + aulaId + '" style="color:var(--red-ink);font-size:.78rem;">\u274C Quitar</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.insc-remover').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -4261,8 +4332,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var cont = { presente: 0, ausente: 0, justificado: 0 };
         nombres.forEach(function (n) { cont[estadoDe(n.nombre)]++; });
         statsEl.innerHTML =
-          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Presentes: <strong style="color:var(--green);">' + cont.presente + '</strong></span>' +
-          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Ausentes: <strong style="color:var(--red);">' + cont.ausente + '</strong></span>' +
+          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Presentes: <strong style="color:var(--green-ink);">' + cont.presente + '</strong></span>' +
+          '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Ausentes: <strong style="color:var(--red-ink);">' + cont.ausente + '</strong></span>' +
           '<span style="padding:.3rem .6rem;background:var(--gray-50);border-radius:8px;">Justificados: <strong style="color:#e67e22;">' + cont.justificado + '</strong></span>' +
           (guardados.length
             ? '<span style="padding:.3rem .6rem;background:#d4edda;color:#155724;border-radius:8px;">Guardado \u2713</span>'
@@ -4309,8 +4380,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             return '<tr style="border-top:1px solid var(--gray-100);">' +
               '<td style="padding:.45rem;">' + escapeHtml(r.nombre) + '</td>' +
               '<td style="padding:.45rem;">' + r.s.total + '</td>' +
-              '<td style="padding:.45rem;color:var(--green);">' + r.s.presente + '</td>' +
-              '<td style="padding:.45rem;color:var(--red);">' + r.s.ausente + '</td>' +
+              '<td style="padding:.45rem;color:var(--green-ink);">' + r.s.presente + '</td>' +
+              '<td style="padding:.45rem;color:var(--red-ink);">' + r.s.ausente + '</td>' +
               '<td style="padding:.45rem;color:#e67e22;">' + r.s.justificado + '</td>' +
               '<td style="padding:.45rem;font-weight:700;color:' + color + ';">' + r.pct + '%</td></tr>';
           }).join('') +
@@ -4450,7 +4521,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           }).join('') +
           '</tbody></table></div>' +
           '<div style="font-size:.78rem;color:var(--gray-500);margin-top:.5rem;">' +
-            'Nota: <span style="color:var(--green);font-weight:700;">\u226570 verde</span> \u00B7 <span style="color:#e67e22;font-weight:700;">50\u201369 naranja</span> \u00B7 <span style="color:var(--red);font-weight:700;">&lt;50 rojo</span> \u00B7 \u201C\u2014\u201D sin entregar.' +
+            'Nota: <span style="color:var(--green-ink);font-weight:700;">\u226570 verde</span> \u00B7 <span style="color:var(--orange-ink);font-weight:700;">50\u201369 naranja</span> \u00B7 <span style="color:var(--red-ink);font-weight:700;">&lt;50 rojo</span> \u00B7 \u201C\u2014\u201D sin entregar.' +
           '</div>';
       }
 
@@ -4915,7 +4986,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           if(ph){
             var nombres = { preparacion:'Fase preparatoria', estudio:'⏳ Bloque de estudio', descansoCorto:'☕ Descanso corto (5 min)', descansoLargo:'🌿 Descanso largo (15 min)' };
             ph.textContent = nombres[fase] || fase;
-            ph.style.color = fase==='estudio' ? 'var(--primary)' : fase==='descansoCorto' ? 'var(--amber)' : fase==='descansoLargo' ? 'var(--purple)' : 'var(--gray-500)';
+            ph.style.color = fase==='estudio' ? 'var(--primary)' : fase==='descansoCorto' ? 'var(--amber-ink)' : fase==='descansoLargo' ? 'var(--purple-ink)' : 'var(--gray-500)';
           }
           if(cyc) cyc.textContent = ciclos;
           if(prog) prog.style.width = '0%';
