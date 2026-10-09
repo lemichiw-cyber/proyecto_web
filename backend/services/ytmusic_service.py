@@ -119,15 +119,36 @@ def normalize_playlist(item: Any) -> dict:
 # Servicio
 # ----------------------------------------------------------------------
 
+# Contexto innertube con el que se extrae la URL de audio.
+#
+# ytmusicapi por defecto habla como WEB_REMIX (YouTube Music en el
+# navegador) y ese cliente devuelve `signatureCipher`: formatos con la
+# firma cifrada, inutilizables sin ejecutar el JS de `base.js`. Por eso
+# el respaldo "formatos con URL directa" no encontraba NINGUNO y el
+# stream dependía enteramente de yt-dlp.
+#
+# El cliente IOS responde `playability: OK` con la URL ya resuelta y sin
+# firma — exactamente lo que necesita el proxy de /stream—, y además
+# pasa el bot-check en IP de datacenter, que es lo que rompe yt-dlp en
+# Render. Verificado con /api/debug/streamdiag.
+_CLIENTE_STREAM = {
+    "clientName": "IOS",
+    "clientVersion": "21.10.2",
+    "deviceModel": "iPhone16,2",
+}
+
+
 class YouTubeMusicService:
     """Envuelve todas las llamadas a ytmusicapi con datos normalizados."""
 
     def __init__(self, auth_file: Optional[str] = None, allow_anonymous: bool = True):
         self._client: Optional[YTMusic] = None
+        self._stream_client: Optional[YTMusic] = None
         self._auth_file = auth_file
         self._allow_anonymous = allow_anonymous
         self._available: Optional[bool] = None
-        self._stream_cache: dict = {}  # videoId -> (ts, url)
+        self._stream_cache: dict = {}  # videoId -> (ts, url, headers)
+        self._stream_fail: dict = {}   # videoId -> ts del último fallo
 
     # -- ciclo de vida --------------------------------------------------
 
@@ -140,6 +161,21 @@ class YouTubeMusicService:
             else:
                 raise RuntimeError("YouTube Music no está autenticado")
         return self._client
+
+    def _ensure_stream_client(self) -> YTMusic:
+        """Cliente aparte, en contexto IOS, sólo para extraer URL de audio.
+
+        Va en su propia instancia porque `self._client` lo comparte el
+        resto de la API (búsqueda, álbumes…): cambiarle el contexto en
+        caliente sería una condición de carrera entre requests
+        concurrentes del threadpool de FastAPI. El streaming no necesita
+        `auth.json`, así que este siempre es anónimo.
+        """
+        if self._stream_client is None:
+            cliente = YTMusic()
+            cliente.context["context"]["client"].update(_CLIENTE_STREAM)
+            self._stream_client = cliente
+        return self._stream_client
 
     @property
     def authenticated(self) -> bool:
@@ -241,17 +277,33 @@ class YouTubeMusicService:
         `errors` (opcional) se rellena con el motivo de cada intento
         fallido: la ruta /stream lo expone con ?debug=1.
         """
+        if errors is None:
+            errors = []
         if use_cache:
             hit = self._stream_cache.get(video_id)
             if hit and time.time() - hit[0] < 600:
                 return {"url": hit[1], "headers": hit[2] if len(hit) > 2 else {}}
-        media = self._extract_ytdlp(video_id, errors=errors) or self._extract_ytmusic(
+            # Fallo reciente: se respeta para no repetir yt-dlp (hasta
+            # 20 s de timeouts por intento) en cada salto de pista del
+            # reproductor, que encadena errores cuando nada reproduce.
+            fracaso = self._stream_fail.get(video_id)
+            if fracaso and time.time() - fracaso < 120:
+                errors.append("fallo hace poco: reintento en unos segundos")
+                return None
+
+        # ytmusicapi (contexto IOS) va primero: una sola petición y da URL
+        # directa. yt-dlp queda de respaldo, porque en IP de datacenter
+        # recibe bot-check y antes de llegar ahí consume sus timeouts.
+        media = self._extract_ytmusic(video_id, errors=errors) or self._extract_ytdlp(
             video_id, errors=errors
         )
         if media and use_cache:
             self._stream_cache[video_id] = (time.time(), media["url"], media.get("headers") or {})
+            self._stream_fail.pop(video_id, None)
+        elif not media and use_cache:
+            self._stream_fail[video_id] = time.time()
         if not media:
-            _log(f"stream({video_id}): sin URL tras {len(errors or [])} intento(s)")
+            _log(f"stream({video_id}): sin URL tras {len(errors)} intento(s)")
         return media
 
     def get_stream_url(self, video_id: str, use_cache: bool = True) -> Optional[str]:
@@ -307,23 +359,32 @@ class YouTubeMusicService:
         return None
 
     def _extract_ytmusic(self, video_id: str, errors: Optional[list] = None) -> Optional[dict]:
-        """Respaldo: formatos que ytmusicapi devuelve con URL directa (sin cipher)."""
+        """URL de audio vía ytmusicapi: contexto IOS primero, WEB_REMIX de respaldo.
+
+        Es la ruta que funciona en la nube: yt-dlp recibe bot-check en
+        IPs de datacenter y no devuelve nada; este `player` sí responde
+        `playability: OK` con formatos sin `signatureCipher`.
+        """
         if errors is None:
             errors = []
-        try:
-            client = self._ensure_client()
-            streaming = client.get_song(video_id).get("streamingData") or {}
-            formats = list(streaming.get("formats") or []) + list(streaming.get("adaptiveFormats") or {})
-            audio = [f for f in formats if (f.get("mimeType") or "").startswith("audio") and f.get("url")]
-            if not audio:
-                errors.append("ytmusic: sin formatos de audio con URL directa")
-                return None
-            best = max(audio, key=lambda f: f.get("bitrate") or 0)
-            return {"url": best["url"], "headers": {}}
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"ytmusic: {type(exc).__name__}: {exc}")
-            _log(f"respaldo ytmusic para {video_id} falló: {exc}")
-            return None
+        for etiqueta, obtener_cliente in (
+            ("ios", self._ensure_stream_client),
+            ("web_remix", self._ensure_client),
+        ):
+            try:
+                client = obtener_cliente()
+                streaming = client.get_song(video_id).get("streamingData") or {}
+                formats = list(streaming.get("formats") or []) + list(streaming.get("adaptiveFormats") or {})
+                audio = [f for f in formats if (f.get("mimeType") or "").startswith("audio") and f.get("url")]
+                if not audio:
+                    errors.append(f"ytmusic[{etiqueta}]: sin formatos de audio con URL directa")
+                    continue
+                best = max(audio, key=lambda f: f.get("bitrate") or 0)
+                return {"url": best["url"], "headers": {}}
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"ytmusic[{etiqueta}]: {type(exc).__name__}: {exc}")
+                _log(f"ytmusic[{etiqueta}] para {video_id} falló: {exc}")
+        return None
 
     def get_watch_playlist(self, video_id: str, limit: int = 25) -> list:
         """Cola tipo 'Mix de YouTube' a partir de una canción."""
