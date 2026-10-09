@@ -15,15 +15,18 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          CUENTAS — el rango (rol) vive en la cuenta, NO en el login.
 
-         * Registrarse SIEMPRE crea un ESTUDIANTE.
-         * Los rangos altos (docente, coordinador, director, admin) los da
-           un administrador desde el menú "Usuarios".
-         * Al iniciar sesión el rango sale de acá: por eso un alumno no
-           puede autoasignarse docente ni ver nada de docente.
+         * Al registrarse la persona ELIGE su rol: estudiante, docente,
+           director, subdirector o admin (ROLES_REGISTRO).
+         * El resto de rangos (coordinador, padres) los da un
+           administrador desde el menú "Usuarios".
+         * Al iniciar sesión el rango sale de acá: por eso la sesión
+           siempre refleja el rol guardado en la cuenta.
          =================================================================== */
       var LS_CUENTAS = 'cherrybombCuentas';  // fuente canonica local
       var ROLES_VALIDOS = ['estudiante', 'docente', 'coordinador', 'director', 'subdirector', 'padres', 'admin'];
-      var ROL_REGISTRO = 'estudiante'; // rango fijo de todo el que se registra
+      /* Rangos que cualquiera puede elegir al crear una cuenta. */
+      var ROLES_REGISTRO = ['estudiante', 'docente', 'director', 'subdirector', 'admin'];
+      var ROL_REGISTRO = 'estudiante'; // rol por defecto del formulario de registro
       var ADMIN_EMAIL = 'admin@bachillerato.edu'; // cuenta semilla: SIEMPRE admin
 
       /* URL del backend FastAPI. Permite override con la clave local
@@ -696,6 +699,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         $('login-title').textContent = si ? 'Crear cuenta' : 'Iniciar sesión';
         $('login-error').hidden = true;
         $('reg-error').hidden = true;
+        // el rol elegido vuelve a su valor por defecto al reabrir el formulario
+        if (si && $('reg-rol')) $('reg-rol').value = ROL_REGISTRO;
       }
       $('link-registro').addEventListener('click', function (e) { e.preventDefault(); mostrarModoRegistro(true); $('reg-nombre').focus(); });
       $('link-volver-login').addEventListener('click', function (e) { e.preventDefault(); mostrarModoRegistro(false); $('login-email').focus(); });
@@ -712,7 +717,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         /* ---- El rango SALE DE LA CUENTA: ya no hay desplegable de rol ---- */
         var cuenta = obtenerCuenta(email);
         if (!cuenta) {
-          mostrarToast('Ese correo no está registrado. Creá tu cuenta de estudiante.', 'error');
+          mostrarToast('Ese correo no está registrado. Creá tu cuenta.', 'error');
           mostrarModoRegistro(true);
           $('reg-email').value = email;
           $('reg-nombre').focus();
@@ -737,27 +742,30 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         loginSuccess(email, cuenta.rol, cuenta.nombre);
       });
 
-      /* ---- Registro: siempre rango ESTUDIANTE ---- */
+      /* ---- Registro: la persona ELIGE el rol de su cuenta ---- */
       $('form-registro').addEventListener('submit', function (e) {
         e.preventDefault();
         var err = $('reg-error');
         function fallo(msg) { err.textContent = msg; err.hidden = false; mostrarToast(msg, 'error'); }
         var nom = $('reg-nombre').value.trim();
         var email = $('reg-email').value.trim();
+        var rolSel = $('reg-rol') ? $('reg-rol').value : ROL_REGISTRO;
         var p1 = $('reg-pass').value;
         var p2 = $('reg-pass2').value;
         if (!nom) return fallo('Poné tu nombre completo.');
         if (!email || p1.length < 6) return fallo('Correo y contraseña válidos (mín. 6 caracteres).');
         if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
+        if (ROLES_REGISTRO.indexOf(rolSel) === -1) return fallo('Elegí un rol válido.');
         if (obtenerCuenta(email)) return fallo('Ese correo ya está registrado. Iniciá sesión.');
-        var r = crearCuenta(email, nom, ROL_REGISTRO, p1);
+        var r = crearCuenta(email, nom, rolSel, p1);
         if (!r.ok) return fallo(r.msg);
         localStorage.setItem('passHash_' + btoa(normalizaEmail(email)), hashPassword(p1));
         err.hidden = true;
         $('form-registro').reset();
+        if ($('reg-rol')) $('reg-rol').value = ROL_REGISTRO;
         mostrarModoRegistro(false);
         loginSuccess(email, r.cuenta.rol, r.cuenta.nombre);
-        mostrarToast('Cuenta creada con rango Estudiante.', 'success');
+        mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[r.cuenta.rol] || r.cuenta.rol) + '.', 'success');
       });
 
       function loginSuccess(email, rol, nombre) {
@@ -1134,9 +1142,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          =================================================================== */
       /* ===================================================================
          USUARIOS — panel de administración de cuentas y rangos
-         Solo un administrador entra acá (menú "Usuarios"). Desde acá se
-         dan de alta las cuentas de docente/director/coordinador; quien
-         se registra por su cuenta siempre queda como ESTUDIANTE.
+         Solo un administrador entra acá (menú "Usuarios"). Acá se crean
+         y reasignan todos los rangos; quien se registra por su cuenta
+         elige el suyo (ROLES_REGISTRO).
          =================================================================== */
       var ROLES_LABEL = {
         admin: 'Administrador', director: 'Director', subdirector: 'Subdirector',

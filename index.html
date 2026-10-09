@@ -497,18 +497,27 @@ unicode: "eaf8"
         <div id="login-error" class="alert alert-error" role="alert" hidden>Credenciales inválidas.</div>
       </form>
 
-      <!-- Registro: siempre con rango ESTUDIANTE (el resto de rangos los
-           da un administrador desde Usuarios) -->
+      <!-- Registro: la persona elige el rol de su cuenta entre los
+           disponibles (estudiante, docente, director, subdirector o admin) -->
       <form id="form-registro" class="hidden">
         <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-nombre" placeholder="Ana García" required></div>
         <div class="form-group"><label>Correo institucional</label><input type="email" id="reg-email" placeholder="estudiante@bachillerato.edu" required></div>
+        <div class="form-group"><label for="reg-rol">Rol de la cuenta</label>
+          <select id="reg-rol" required>
+            <option value="estudiante" selected>Estudiante</option>
+            <option value="docente">Docente</option>
+            <option value="director">Director</option>
+            <option value="subdirector">Subdirector</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="••••••" required minlength="6"></div>
         <div class="form-group"><label>Repetí la contraseña</label><input type="password" id="reg-pass2" placeholder="••••••" required minlength="6"></div>
-        <button type="submit" class="btn btn-primary btn-block">Crear cuenta de estudiante</button>
+        <button type="submit" class="btn btn-primary btn-block" id="reg-submit">Crear cuenta</button>
         <div id="reg-error" class="alert alert-error" role="alert" hidden></div>
       </form>
 
-      <p class="link-muted" id="link-registro-wrap"><a href="#" id="link-registro">¿No tenés cuenta? Crear cuenta de estudiante</a></p>
+      <p class="link-muted" id="link-registro-wrap"><a href="#" id="link-registro">¿No tenés cuenta? Crear cuenta</a></p>
       <p class="link-muted hidden" id="link-login-wrap"><a href="#" id="link-volver-login">¿Ya tenés cuenta? Iniciar sesión</a></p>
       <p class="link-muted" id="link-olvide-wrap"><a href="#" id="link-olvide">Olvidé mi contraseña</a></p>
     </div>
