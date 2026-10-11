@@ -8,16 +8,22 @@
 import { datos } from './datos.js';
 
 export async function iniciarExperienciaEstudiante() {
-  var hoy = await import('./hoy.js');
+  var piezas = await Promise.all([import('./hoy.js'), import('./captura-rapida.js')]);
+  var hoy = piezas[0];
+  var captura = piezas[1];
 
   // Pantalla "Hoy" dentro de la sección INICIO (ya visible por defecto)
   hoy.montarHoy();
+
+  // Botón flotante de captura rápida (tarea personal en <10 segundos)
+  captura.montarCapturaRapida();
 
   // Repintar "Hoy" cada vez que se entra a la sección inicio, sin
   // tocar el resto de la navegación existente.
   engancharMostrarApp(hoy.renderHoy);
 
   window.refrescarHoy = hoy.renderHoy;
+  window.abrirCapturaRapida = captura.abrirCapturaRapida;
 
   // El Pomodoro avisa por evento cuánto estudiaste: eso se suma al
   // registro del día (y hoy.js repinta el total).
