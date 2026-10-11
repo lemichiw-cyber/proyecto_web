@@ -620,6 +620,50 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         } else {
           statsEl.style.display = 'none'; statsEl.classList.add('hidden');
         }
+        // Panel Pendientes (recordatorios visibles aunque notificaciones no funcionen)
+        var pendEl = $('inicio-pendientes');
+        if (logueado && pendEl && window.CherryBombNotifications && window.CherryBombNotifications.getPendingItems) {
+          var pend = window.CherryBombNotifications.getPendingItems();
+          var totalPend = pend.tareas.length + pend.entregas.length;
+          if (totalPend > 0) {
+            pendEl.style.display = 'block';
+            pendEl.classList.remove('hidden');
+            pendEl.innerHTML = '<h3 style="margin:0 0 .75rem;font-size:1rem;color:var(--gray-900);display:flex;align-items:center;gap:.5rem;">' +
+              '<img src="icons/alert-triangle.svg" style="width:20px;height:20px" alt=""> Pendientes (' + totalPend + ')' +
+              '</h3>' +
+              '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
+                (pend.tareas.length ? pend.tareas.slice(0, 5).map(function (t) {
+                  return '<div class="pend-item" style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;border-left:4px solid ' + (t.urgente ? 'var(--red)' : 'var(--amber)') + ';">' +
+                    '<div style="flex:1;min-width:0;">' +
+                      '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.titulo + '</div>' +
+                      '<div style="font-size:.78rem;color:var(--gray-500);display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">' +
+                        (t.aula ? '<span class="badge" style="background:' + (t.urgente ? 'var(--red-light)' : 'var(--amber-light)') + ';color:' + (t.urgente ? 'var(--red)' : 'var(--amber)') + ';">' + t.aula + '</span>' : '') +
+                        '<span>' + (t.vencida ? '⚠ Vencida' : t.horas + 'h') + '</span>' +
+                      '</div>' +
+                    '</div>' +
+                    '<button class="btn btn-sm" onclick="mostrarApp(\'tareas\')">Ver</button>' +
+                  '</div>';
+                }).join('') : '') +
+                (pend.entregas.length ? pend.entregas.slice(0, 3).map(function (e) {
+                  return '<div class="pend-item" style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;border-left:4px solid var(--purple);">' +
+                    '<div style="flex:1;min-width:0;">' +
+                      '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + e.titulo + '</div>' +
+                      '<div style="font-size:.78rem;color:var(--gray-500);display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">' +
+                        '<span class="badge badge-purple">' + e.aula + '</span>' +
+                        '<span>' + e.pendientes + ' pendientes</span>' +
+                        '<span>' + e.horas + 'h</span>' +
+                      '</div>' +
+                    '</div>' +
+                    '<button class="btn btn-sm" onclick="mostrarApp(\'aulas\')">Ver</button>' +
+                  '</div>';
+                }).join('') : '') +
+              '</div>' +
+              (totalPend > 8 ? '<div style="margin-top:.5rem;text-align:center;"><button class="btn btn-outline btn-sm" onclick="mostrarApp(\'tareas\')">Ver todos (' + totalPend + ')</button></div>' : '');
+          } else {
+            pendEl.style.display = 'none';
+            pendEl.classList.add('hidden');
+          }
+        }
         // App cards
         var el = $('inicio-apps');
         el.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';

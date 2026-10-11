@@ -18,23 +18,75 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
-      - run: npm install
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - run: npm run verify:build
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist
 
-  deploy:
+  # Prueba de humo con Playwright: build carga, SW se registra,
+  # funciona offline, sin errores en consola
+  smoke-test:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run smoke test
+        run: |
+          npx serve -s dist -l 4173 &
+          SERVER_PID=$!
+          sleep 3
+          node -e "
+            const { chromium } = require('playwright');
+            (async () => {
+              const browser = await chromium.launch();
+              const page = await browser.newPage();
+              const errors = [];
+              page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
+              page.on('pageerror', e => errors.push(e.message));
+              try {
+                await page.goto('http://localhost:4173', { waitUntil: 'networkidle', timeout: 30000 });
+                // SW registrado
+                const swReg = await page.evaluate(() => navigator.serviceWorker.ready.then(r => r.active.scriptURL));
+                if (!swReg) throw new Error('Service Worker no registrado');
+                console.log('SW activo:', swReg);
+                // Sin errores en consola
+                if (errors.length) throw new Error('Errores en consola: ' + errors.join('; '));
+                // Offline: recargar con networkidle (simula cache)
+                await page.goto('http://localhost:4173', { waitUntil: 'networkidle', timeout: 30000 });
+                console.log('OK: build carga, SW registrado, sin errores, offline OK');
+              } catch (e) {
+                console.error('FALLO:', e.message);
+                process.exit(1);
+              } finally {
+                await browser.close();
+              }
+            })();
+          "
+          kill $SERVER_PID
+
+  deploy:
+    needs: [build, smoke-test]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

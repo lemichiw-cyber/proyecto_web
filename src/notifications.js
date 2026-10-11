@@ -166,17 +166,120 @@
     }
   }
 
-  /* ---- Iniciar checker periódico ---- */
+  /* ---- Iniciar checker periódico + visibilitychange ---- */
   function startDeadlineChecker() {
     if (timerId) return;
     // Chequear inmediatamente al iniciar
     checkUpcomingDeadlines();
     // Y cada 30 minutos
     timerId = setInterval(checkUpcomingDeadlines, CHECK_INTERVAL);
+    // También al volver a la pestaña (pestaña estaba oculta/suspendida)
+    document.addEventListener('visibilitychange', onVisibilityChange);
   }
 
   function stopDeadlineChecker() {
     if (timerId) { clearInterval(timerId); timerId = null; }
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  }
+
+  function onVisibilityChange() {
+    if (!document.hidden) {
+      // La pestaña pasó a visible: chequear recordatorios de inmediato
+      checkUpcomingDeadlines();
+    }
+  }
+
+  /* ---- Obtener items pendientes para UI (panel "Pendientes") ---- */
+  function getPendingItems() {
+    if (!window.usuarioActual) return { tareas: [], entregas: [] };
+
+    var tareas = JSON.parse(localStorage.getItem('aula_tareas') || '[]');
+    var entregas = JSON.parse(localStorage.getItem('aula_entregas') || '[]');
+    var aulas = JSON.parse(localStorage.getItem('aulas') || '[]');
+    var inscripciones = JSON.parse(localStorage.getItem('aula_inscripciones') || '[]');
+    var est = getEstudianteActual();
+    var estId = est ? est.id : null;
+    var pendientes = { tareas: [], entregas: [] };
+    var hoy = new Date();
+
+    if (estId) {
+      var misInscripciones = inscripciones.filter(function (i) {
+        return i.estudianteId === estId && i.estado === 'aprobado';
+      });
+      var misAulaIds = misInscripciones.map(function (i) { return i.aulaId; });
+
+      tareas.forEach(function (t) {
+        if (!t.fecha || !t.aulaId) return;
+        if (misAulaIds.indexOf(t.aulaId) === -1) return;
+
+        var yaEntrego = entregas.some(function (e) { return e.tareaIdx === tareas.indexOf(t); });
+        if (yaEntrego) return;
+
+        var fechaTarea = new Date(t.fecha + 'T23:59:59');
+        var diffMs = fechaTarea - hoy;
+        var diffHoras = diffMs / (1000 * 60 * 60);
+        var aulaObj = aulas.find(function (a) { return a.id === t.aulaId; });
+
+        if (diffHoras > 0 && diffHoras <= 48) {
+          pendientes.tareas.push({
+            titulo: t.titulo,
+            aula: aulaObj ? aulaObj.nombre : '',
+            fecha: t.fecha,
+            horas: Math.round(diffHoras),
+            urgente: diffHoras <= 24
+          });
+        } else if (diffHoras <= 0) {
+          pendientes.tareas.push({
+            titulo: t.titulo,
+            aula: aulaObj ? aulaObj.nombre : '',
+            fecha: t.fecha,
+            horas: 0,
+            urgente: true,
+            vencida: true
+          });
+        }
+      });
+    }
+
+    // Docente: entregas pendientes en sus aulas
+    if (window.usuarioActual && (window.usuarioActual.rol === 'docente' || window.usuarioActual.rol === 'admin' || window.usuarioActual.rol === 'director')) {
+      var misAulas = aulas.filter(function (a) {
+        return a.owner_id && a.owner_id === window.usuarioActual.email;
+      });
+      misAulas.forEach(function (aula) {
+        var tareasAula = tareas.filter(function (t) { return t.aulaId === aula.id; });
+        tareasAula.forEach(function (t) {
+          if (!t.fecha) return;
+          var totalInscritos = inscripciones.filter(function (i) { return i.aulaId === aula.id && i.estado === 'aprobado'; }).length;
+          var totalEntregas = entregas.filter(function (e) { return e.tareaIdx === tareas.indexOf(t); }).length;
+          if (totalEntregas < totalInscritos) {
+            var fechaTarea = new Date(t.fecha + 'T23:59:59');
+            var diffMs = fechaTarea - hoy;
+            var diffHoras = diffMs / (1000 * 60 * 60);
+            pendientes.entregas.push({
+              titulo: t.titulo,
+              aula: aula.nombre,
+              fecha: t.fecha,
+              pendientes: totalInscritos - totalEntregas,
+              horas: Math.round(diffHoras),
+              urgente: diffHoras <= 24
+            });
+          }
+        });
+      });
+    }
+
+    // Ordenar: urgentes primero, luego por horas
+    pendientes.tareas.sort(function (a, b) {
+      if (a.urgente !== b.urgente) return a.urgente ? -1 : 1;
+      return a.horas - b.horas;
+    });
+    pendientes.entregas.sort(function (a, b) {
+      if (a.urgente !== b.urgente) return a.urgente ? -1 : 1;
+      return a.horas - b.horas;
+    });
+
+    return pendientes;
   }
 
   /* ---- Mostrar banner de permiso (no invasivo) ---- */
@@ -214,6 +317,7 @@
     showPermissionBanner: showPermissionBanner,
     isSupported: isSupported,
     getPermission: getPermission,
-    getEstudianteActual: getEstudianteActual
+    getEstudianteActual: getEstudianteActual,
+    getPendingItems: getPendingItems
   };
 })();

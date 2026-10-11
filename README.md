@@ -391,6 +391,21 @@ El archivo `netlify.toml` en la raíz configura:
 - Cabeceras de seguridad básicas (`X-Content-Type-Options`, `Referrer-Policy`,
   `X-Frame-Options`, `Content-Security-Policy-Report-Only`)
 
+### Notificaciones y recordatorios (⚠️ solo con app abierta)
+
+El sistema de recordatorios (`src/notifications.js`) usa **Notification API + Service Worker** con polling local (`setInterval` cada 30 min + `visibilitychange`):
+
+| Qué funciona | Qué NO funciona |
+|---|---|
+| ✅ Notificación al crear tarea (`notifyNewTask`) | ❌ Notificación con app cerrada / teléfono bloqueado |
+| ✅ Recordatorio 24h antes si la pestaña está abierta | ❌ Despertar el dispositivo (requiere Push API real + servidor VAPID) |
+| ✅ Chequeo al cargar y al volver a la pestaña (`visibilitychange`) | ❌ Background Sync (solo Chrome, no implementado) |
+| ✅ Panel "Pendientes" en Inicio (siempre visible) | ❌ Alarma exacta a las 24h (polling cada 30 min) |
+
+**No hay Push API real** (no hay servidor push, VAPID keys, ni suscripción). Las notificaciones del sistema **solo llegan si la app está abierta** (pestaña visible o en background reciente). Para recordatorios confiables con app cerrada, haría falta integrar Firebase Cloud Messaging / web-push + backend.
+
+El panel **"Pendientes"** en la pantalla de Inicio muestra tareas por vencer (≤48h) y entregas pendientes (docentes) **siempre**, independientemente del permiso de notificaciones.
+
 ### Verificación local
 
 ```bash
