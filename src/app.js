@@ -3319,7 +3319,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var display = '';
             if (contenido.toUpperCase() === 'RECESO') { cssClass = 'receso'; display = 'RECESO'; }
             else if (contenido.toUpperCase() === 'ALMUERZO') { cssClass = 'almuerzo'; display = 'ALMUERZO'; }
-            else { display = contenido.replace(/\n/g, '<br>'); }
+            else { display = escapeHtml(contenido).replace(/\n/g, '<br>'); }
             html += '<td class="' + cssClass + '" data-idx="' + idx + '" data-dia="' + dia + '">' + display + '</td>';
           });
           html += '<td style="padding:0;width:30px;"><button class="btn btn-sm horario-del" data-perm="eliminar" data-idx="' + idx + '" style="background:var(--red);color:#fff;padding:.15rem .35rem;font-size:.65rem;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxMnB4O2hlaWdodDoxMnB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0zIDEyYTkgOSAwIDEgMCAxOCAwYTkgOSAwIDEgMCAtMTggMCIgLz4KICA8cGF0aCBkPSJNMTAgMTBsNCA0bTAgLTRsLTQgNCIgLz4KPC9zdmc+" width="20" height="20" style="width:12px;height:12px;display:block" alt=""> </button></td>';
