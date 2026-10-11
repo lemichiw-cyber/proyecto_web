@@ -5038,6 +5038,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         function onFaseFinalizada(){
           if(faseActual === 'estudio'){
             ciclos++;
+            // Gancho para «Bienestar»: registra el bloque de estudio terminado.
+            // Es opcional: si esa sección no está cargada, no hace nada.
+            if(window.CherryBombBachillerato && typeof window.CherryBombBachillerato.registrarBloqueEstudio === 'function'){
+              try{ window.CherryBombBachillerato.registrarBloqueEstudio(Math.round(POMO_STUDY/60)); }catch(err){ /* no rompemos el temporizador */ }
+            }
             var esCicloPar = (ciclos % 2) === 0;
             aplicarFase(esCicloPar ? 'descansoLargo' : 'descansoCorto');
             mostrarToast('¡Bloque completado! ' + (esCicloPar ? 'Tiempo de descanso largo.' : 'Tiempo de descanso corto.'), 'success');
