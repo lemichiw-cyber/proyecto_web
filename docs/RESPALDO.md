@@ -141,4 +141,4 @@
 
 Si importás **sin haber creado la cuenta**, los datos se guardarán en localStorage pero **no se vincularán a tu cuenta**. Al recargar o cambiar de dispositivo, se perderán.
 
-Al importar, los datos se escriben en `localStorage` y, si hay sesión activa, también se sincronizan con el backend (si `window.sbReady()` está disponible).
+Al importar, los datos se escriben en `localStorage`. Si hay sesión activa y `window.sbReady()` está disponible, también se intenta sincronizar con el backend (opcional, requiere configuración de Supabase).
