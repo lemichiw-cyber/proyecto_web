@@ -32,12 +32,14 @@ export function activeApiBase() {
   return baseInUse();
 }
 
-/* URL guardada en Ajustes → Backend, saneada:
+/* URL guardada en Ajustes → Backend, saneada y validada:
    - quita espacios y barra final;
    - sin esquema → se lo añade (si no, el navegador lo toma como ruta
      relativa del sitio y "responde" el HTML del SPA);
-   - http:// de un host no-local en una página https → https (mixed
-     content lo bloquea y el error se disfraza de "backend apagado").
+   - **solo se acepta https**, salvo para hosts locales (localhost,
+     127.0.0.1, 0.0.0.0, [::1]), donde se permite http. Un http:// de un
+     host no-local se reescribe a https:// (mixed content lo bloquea y el
+     error se disfraza de "backend apagado").
    Devuelve null si no hay nada utilizable. */
 function sanitizeBase(raw) {
   if (raw === null || raw === undefined) return null;
@@ -45,9 +47,7 @@ function sanitizeBase(raw) {
   if (!v) return null;
   const loopback = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?(\/|$)/i;
   if (!/^https?:\/\//i.test(v)) v = (loopback.test(v) ? 'http://' : 'https://') + v;
-  let httpsPage = false;
-  try { httpsPage = typeof location !== 'undefined' && location.protocol === 'https:'; } catch (e) { /* sin location */ }
-  if (httpsPage && /^http:\/\//i.test(v)) {
+  if (/^http:\/\//i.test(v)) {
     const host = v.slice(v.indexOf('://') + 3);
     if (!loopback.test(host)) v = 'https://' + host;
   }
