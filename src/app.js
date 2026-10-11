@@ -30,15 +30,25 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var ADMIN_EMAIL = 'admin@bachillerato.edu'; // cuenta semilla: SIEMPRE admin
 
       /* URL del backend FastAPI. Permite override con la clave local
-         'cherrybombApiBase' (tilde en desarrollo local). */
+         'cherrybombApiBase' (útil en desarrollo local).
+         En build time se puede fijar con VITE_APP_API_URL (p. ej. el backend
+         desplegado en Render); sin ella se usa el fallback hardcodeado. */
       var API_BASE = (function () {
         try {
           var custom = localStorage.getItem('cherrybombApiBase');
           if (custom) return String(custom).replace(/\/+$/, '');
         } catch (e) { /* sin storage */ }
+        // Build-time default (inyectado por Vite via import.meta.env)
+        // import.meta.env no está disponible aquí (módulo no ESM), así que
+        // usamos una variable global inyectada por Vite en index.html si existe,
+        // o el fallback hardcodeado.
         var host = (typeof location !== 'undefined' && location.hostname) || '';
         if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://127.0.0.1:8000';
-        return 'https://sakura-backend-indb.onrender.com';
+        // Fallback hardcodeado; en producción Netlify inyecta VITE_APP_API_URL
+        // via define en vite.config.ts (ver abajo).
+        return (typeof __APP_API_BASE__ !== 'undefined' && __APP_API_BASE__)
+          ? __APP_API_BASE__
+          : 'https://sakura-backend-indb.onrender.com';
       })();
 
       /* --------------------------------------------------------------
