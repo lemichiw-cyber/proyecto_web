@@ -8,7 +8,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('cherrybombSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','auth'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','respaldos','auth'];
       var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth'];
       function $(id) { return document.getElementById(id); }
 
@@ -596,6 +596,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
         { id:'sakura-player', icon:'headphones', label:'Sakura Player', desc:'Música con YouTube Music', color:'#FF4FD8' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
+        { id:'respaldos', icon:'device-floppy', label:'Respaldos', desc:'Exportar / Importar mis datos', color:'#4ADE80' },
       ];
 
       function renderInicio() {
@@ -703,6 +704,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var _mostrarApp = window.mostrarApp;
       window.mostrarApp = function (app) {
         _mostrarApp(app);
+        if (app === 'respaldos') {
+          import('./backup/backup.js').then(function (mod) {
+            window.BackupModule = mod;
+            renderBackupUI();
+          }).catch(function (e) {
+            console.error('[Backup] Error cargando módulo:', e);
+            mostrarToast('No se pudo cargar el módulo de respaldos.', 'error');
+          });
+        }
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
         if (app === 'auth') { renderAuth(); }
@@ -5115,5 +5125,267 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         window.addEventListener('beforeunload', guardarEstado);
       })();
+
+      /* ===================================================================
+         RESPALDOS — Exportar / Importar datos (UI)
+         =================================================================== */
+      function renderBackupUI() {
+        if (!window.BackupModule) return;
+        var mod = window.BackupModule;
+
+        // --- Vista previa de exportación ---
+        function actualizarExportPreview() {
+          var previewEl = $('backup-export-preview');
+          if (!previewEl) return;
+          var preview = mod.previewImport(JSON.stringify(mod.generateBackupJSON()));
+          if (!preview.ok) { previewEl.textContent = 'No hay datos para exportar.'; return; }
+          var items = [];
+          for (var k in preview.preview) {
+            items.push(preview.preview[k].count + ' ' + k);
+          }
+          previewEl.innerHTML = '<strong>Se exportarán:</strong> ' + items.join(', ') + '.';
+        }
+
+        // --- Exportar ---
+        var btnExport = $('btn-backup-export');
+        if (btnExport) btnExport.addEventListener('click', function () {
+          var backup = mod.generateBackupJSON();
+          var filename = 'respaldo-' + APP_NAME.toLowerCase() + '-' + new Date().toISOString().slice(0, 10) + '.json';
+          mod.downloadBackup(backup, filename);
+          mostrarToast('Respaldo exportado: ' + filename, 'success');
+          actualizarExportPreview();
+        });
+
+        var btnExportShare = $('btn-backup-export-share');
+        if (btnExportShare) btnExportShare.addEventListener('click', async function () {
+          var backup = mod.generateBackupJSON();
+          var filename = 'respaldo-' + APP_NAME.toLowerCase() + '-' + new Date().toISOString().slice(0, 10) + '.json';
+          var ok = await mod.shareBackup(backup, filename);
+          if (!ok) {
+            mod.downloadBackup(backup, filename);
+            mostrarToast('Compartir no disponible, se descargó el archivo.', 'info');
+          } else {
+            mostrarToast('Respaldo compartido.', 'success');
+          }
+        });
+
+        actualizarExportPreview();
+
+        // --- Importar ---
+        var fileInput = $('backup-import-file');
+        var btnPick = $('btn-backup-import-pick');
+        var filenameEl = $('backup-import-filename');
+        var previewEl = $('backup-import-preview');
+        var btnConfirm = $('btn-backup-import-confirm');
+        var btnCancel = $('btn-backup-import-cancel');
+        var statusEl = $('backup-import-status');
+
+        var selectedFile = null;
+
+        if (btnPick && fileInput) {
+          btnPick.addEventListener('click', function () { fileInput.click(); });
+          fileInput.addEventListener('change', function () {
+            var file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            if (!file.name.endsWith('.json')) {
+              statusEl.textContent = 'El archivo debe ser .json';
+              statusEl.style.color = 'var(--red)';
+              fileInput.value = '';
+              return;
+            }
+            selectedFile = file;
+            filenameEl.textContent = file.name;
+            statusEl.textContent = '';
+            btnConfirm.disabled = false;
+            btnCancel.style.display = 'inline-flex';
+
+            var reader = new FileReader();
+            reader.onload = function () {
+              var validation = mod.validateBackup(reader.result);
+              if (!validation.ok) {
+                previewEl.innerHTML = '<span style="color:var(--red);">Archivo inválido: ' + validation.error + '</span>';
+                btnConfirm.disabled = true;
+                return;
+              }
+              var preview = mod.previewImport(reader.result);
+              if (!preview.ok) {
+                previewEl.innerHTML = '<span style="color:var(--red);">' + preview.error + '</span>';
+                btnConfirm.disabled = true;
+                return;
+              }
+              var lines = [];
+              for (var k in preview.preview) {
+                lines.push(preview.preview[k].count + ' ' + k);
+              }
+              previewEl.innerHTML = '<strong>Se importarán:</strong> ' + lines.join(', ') + '.';
+              btnConfirm.disabled = false;
+            };
+            reader.readAsText(file);
+          });
+        }
+
+        // btnCancel ya declarado arriba
+        if (btnCancel) {
+          btnCancel.addEventListener('click', function () {
+            var fileInput = $('backup-import-file');
+            if (fileInput) fileInput.value = '';
+            var filenameEl = $('backup-import-filename');
+            if (filenameEl) filenameEl.textContent = '';
+            var previewEl = $('backup-import-preview');
+            if (previewEl) previewEl.innerHTML = '';
+            var btnConfirm = $('btn-backup-import-confirm');
+            if (btnConfirm) btnConfirm.disabled = true;
+            var statusEl = $('backup-import-status');
+            if (statusEl) statusEl.textContent = '';
+            btnCancel.style.display = 'none';
+          });
+        }
+
+        var btnConfirmEl = $('btn-backup-import-confirm');
+        if (btnConfirm) {
+          btnConfirm.addEventListener('click', function () {
+            var fileInput = $('backup-import-file');
+            if (!selectedFile) return;
+            var mode = document.querySelector('input[name="backup-import-mode"]:checked')?.value || 'merge';
+            var statusEl = $('backup-import-status');
+            if (statusEl) {
+              statusEl.textContent = 'Importando...';
+              statusEl.style.color = 'var(--gray-500)';
+            }
+            btnConfirm.disabled = true;
+
+            var reader = new FileReader();
+            reader.onload = function () {
+              var result = mod.importBackup(JSON.parse(reader.result), mode);
+              var statusEl = $('backup-import-status');
+              if (result.ok) {
+                if (statusEl) {
+                  statusEl.textContent = 'Importación exitosa: ' + result.imported + ' claves. Recargando...';
+                  statusEl.style.color = 'var(--green)';
+                }
+                setTimeout(function () { window.location.reload(); }, 1500);
+              } else {
+                if (statusEl) {
+                  statusEl.textContent = 'Error: ' + result.error;
+                  statusEl.style.color = 'var(--red)';
+                }
+                btnConfirm.disabled = false;
+              }
+            };
+            reader.readAsText(selectedFile);
+          });
+        }
+
+        // --- Migración: detección de dominio legacy / nuevo ---
+        var LEGACY_ORIGINS = (function () {
+          try {
+            var v = import.meta.env.VITE_LEGACY_ORIGINS;
+            return v ? v.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+          } catch (e) { return []; }
+        })();
+        var NEW_APP_URL_unused = (function () {
+          try { return import.meta.env.VITE_NEW_APP_URL || ''; } catch (e) { return ''; }
+        })();
+
+        function checkLegacyMigration() {
+          var legacyBanner = $('legacy-migration-banner');
+          var legacyMessage = $('legacy-message');
+          var newBanner = $('new-site-banner');
+          var legacyDismiss = $('legacy-dismiss-btn');
+          var newDismiss = $('new-site-dismiss-btn');
+
+          if (!legacyBanner || !newBanner) return;
+
+          // Ya mostrado y descartado
+          if (localStorage.getItem('legacyMigrationDismissed') === 'true') return;
+          if (localStorage.getItem('newSiteMigrationDismissed') === 'true') return;
+
+          var isLegacy = mod.isLegacyOrigin(LEGACY_ORIGINS);
+          var hasData = mod.hasLocalData();
+
+          // Sitio antiguo: mostrar aviso para exportar
+          if (isLegacy && hasData && LEGACY_ORIGINS.length > 0) {
+            legacyBanner.classList.remove('hidden');
+            if (legacyMessage && NEW_APP_URL) {
+              legacyMessage.textContent = 'Estás en el sitio antiguo. Exportá tus datos e importalos en: ' + NEW_APP_URL;
+            } else if (legacyMessage) {
+              legacyMessage.textContent = 'Estás en el sitio antiguo. Exportá tus datos para llevarlos al nuevo dominio.';
+            }
+            var legacyDismissBtn = $('legacy-dismiss-btn');
+            if (legacyDismissBtn) {
+              legacyDismissBtn.onclick = function () {
+                localStorage.setItem('legacyMigrationDismissed', 'true');
+                var legacyBanner = $('legacy-migration-banner');
+                if (legacyBanner) legacyBanner.classList.add('hidden');
+              };
+            }
+            var legacyExportBtn = $('legacy-export-btn');
+            if (legacyExportBtn) legacyExportBtn.onclick = function () {
+              var backup = mod.generateBackupJSON();
+              var filename = 'respaldo-' + APP_NAME.toLowerCase() + '-' + new Date().toISOString().slice(0, 10) + '.json';
+              mod.downloadBackup(backup, filename);
+              mostrarToast('Respaldo exportado. Ahora abrí el sitio nuevo e importalo.', 'success');
+            };
+          }
+
+          // Sitio nuevo: mostrar aviso para importar
+          var isNew = !isLegacy && LEGACY_ORIGINS.length > 0 && !mod.hasLocalData();
+          if (isNew) {
+            if (newBanner) newBanner.classList.remove('hidden');
+            var newDismissBtn = $('new-site-dismiss-btn');
+            if (newDismissBtn) {
+              newDismissBtn.onclick = function () {
+                localStorage.setItem('newSiteMigrationDismissed', 'true');
+                var nb = $('new-site-banner');
+                if (nb) nb.classList.add('hidden');
+              };
+            }
+            var newImportBtn = $('new-site-import-btn');
+            if (newImportBtn) newImportBtn.onclick = function () {
+              var fileInput = $('backup-import-file');
+              if (fileInput) fileInput.click();
+              mostrarToast('Seleccioná tu archivo de respaldo.', 'info');
+            };
+          }
+        }
+
+        checkLegacyMigration();
+      }
+
+      /* ---- Banner de migración en Inicio (durante transición) ---- */
+      function renderMigrationBannerInInicio() {
+        var LEGACY_ORIGINS = (function () {
+          try {
+            var v = import.meta.env.VITE_LEGACY_ORIGINS;
+            return v ? v.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+          } catch (e) { return []; }
+        })();
+        var NEW_APP_URL_unused = (function () {
+          try { return import.meta.env.VITE_NEW_APP_URL || ''; } catch (e) { return ''; }
+        })();
+
+        if (LEGACY_ORIGINS.length === 0) return;
+        if (localStorage.getItem('legacyMigrationDismissed') === 'true') return;
+
+        var isLegacy = false;
+        try { isLegacy = window.BackupModule?.isLegacyOrigin(LEGACY_ORIGINS) || false; } catch (e) { /* ignore */ }
+        var hasData = false;
+        try { hasData = window.BackupModule?.hasLocalData() || false; } catch (e) { /* ignore */ }
+
+        if (!isLegacy || !hasData) return;
+
+        var banner = document.createElement('div');
+        banner.id = 'inicio-migration-banner';
+        banner.style.cssText = 'position:fixed;bottom:1rem;left:1rem;right:1rem;max-width:480px;margin:auto;z-index:9999;padding:1rem;background:var(--amber);color:var(--amber-ink);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:.75rem;animation:slideUp .3s ease;';
+        banner.innerHTML = '<div style="display:flex;align-items:flex-start;gap:.75rem;"><svg width="24" height="24" style="flex:none;margin-top:.2rem;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10" /><path d="M12 16a4 4 0 0 1 0-8 4 4 0 0 1 0 8" /><path d="M12 12v-4" /></svg><div style="flex:1;"><strong>Cambiamos de dirección</strong><br><span style="font-size:.85rem;">Este sitio se mudará pronto. Exportá tus datos (Ajustes → Respaldos) para no perderlos.</span></div></div><div style="display:flex;gap:.5rem;"><button class="btn btn-outline" style="flex:1;" onclick="mostrarApp(\'respaldos\')">Ir a Respaldos</button><button class="btn btn-primary" style="flex:1;" onclick="document.getElementById(\'inicio-migration-banner\').remove();localStorage.setItem(\'legacyMigrationDismissed\',\'true\')">Entendido</button></div>';
+        document.body.appendChild(banner);
+      }
+
+      // Ejecutar banner de migración en Inicio si corresponde
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderMigrationBannerInInicio);
+      } else {
+        renderMigrationBannerInInicio();
+      }
 
     })();
