@@ -40,3 +40,12 @@ if ('serviceWorker' in navigator) {
   });
   window.setInterval(pedirActualizacion, 60 * 60 * 1000);
 }
+
+/* ------------------------------------------------------------------
+   Experiencia del estudiante (pantalla "Hoy", captura rápida y
+   tutorial). Se carga en diferido: el arranque de la app no espera a
+   este módulo ni aumenta el JS inicial.
+   ------------------------------------------------------------------ */
+import('./estudiante/index.js')
+  .then((m) => m.iniciarExperienciaEstudiante())
+  .catch(() => { /* si algo falla, la app base sigue funcionando */ });

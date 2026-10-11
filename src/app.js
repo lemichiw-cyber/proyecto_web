@@ -1609,12 +1609,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var notamin = parseInt($('exam-notamin').value, 10);
         var intentos = parseInt($('exam-intentos').value, 10);
         var barajar = $('exam-barajar') ? !!$('exam-barajar').checked : false;
+        // Fecha opcional: alimenta la cuenta regresiva de la pantalla "Hoy"
+        var fecha = $('exam-fecha') && /^\d{4}-\d{2}-\d{2}$/.test($('exam-fecha').value) ? $('exam-fecha').value : '';
         if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(notamin) || notamin < 1 || notamin > 100) { $('exam-guardar-msg').textContent = '⚠️ La nota mínima va de 1 a 100.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var preguntas = examGetPreguntas();
         if (preguntas.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Agrega al menos 1 pregunta.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        examenes.push({ titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, creado: new Date().toISOString() });
+        examenes.push({ titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, fecha: fecha, creado: new Date().toISOString() });
         examGuardarStorage();
         examRenderGuardados();
         examRenderResultados();
@@ -4964,6 +4966,19 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var intervalo = null;
         var ciclos = 0;
         var pausado = false;
+        var checkpointEstudio = Date.now();
+
+        /* Avisa a la experiencia del estudiante cuánto estudiaste en este
+           bloque. El módulo src/estudiante escucha 'cb:estudio' y lo suma
+           al registro del día (lo que ve la pantalla "Hoy"). */
+        function volcarEstudio(){
+          if(faseActual !== 'estudio') return;
+          var min = Math.floor((Date.now() - checkpointEstudio) / 60000);
+          checkpointEstudio = Date.now();
+          if(min > 0){
+            try{ window.dispatchEvent(new CustomEvent('cb:estudio', { detail:{ minutos: min } })); }catch(e){ /* sin CustomEvent */ }
+          }
+        }
 
         function guardarEstado(){
           try{localStorage.setItem(POMO_KEY, JSON.stringify({fase: fase, ciclos: ciclos, pausado: pausado}));}catch(e){ /* ignore */ }
@@ -4984,6 +4999,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var t = TIMER_MAP[fase] || 0;
           tiempo = t;
           tiempoInicio = Date.now();
+          if(nuevaFase === 'estudio') checkpointEstudio = Date.now();
           if(intervalo) clearInterval(intervalo);
           pausado = false;
           var disp = $('pomodoro-timer-display');
@@ -5026,6 +5042,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         function onFaseFinalizada(){
           if(faseActual === 'estudio'){
+            volcarEstudio();
             ciclos++;
             var esCicloPar = (ciclos % 2) === 0;
             aplicarFase(esCicloPar ? 'descansoLargo' : 'descansoCorto');
@@ -5051,15 +5068,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         $('btn-pomodoro-start').addEventListener('click', function () {
           if(faseActual === 'preparacion'){ aplicarFase('estudio'); return; }
-          if(pausado){ pausado = false; tiempoInicio = Date.now() - (TIMER_MAP[faseActual] - tiempo) * 1000; intervalo = setInterval(actualizarTimer, 250); }
+          if(pausado){ pausado = false; checkpointEstudio = Date.now(); tiempoInicio = Date.now() - (TIMER_MAP[faseActual] - tiempo) * 1000; intervalo = setInterval(actualizarTimer, 250); }
         });
         $('btn-pomodoro-pause').addEventListener('click', function () {
+          volcarEstudio();
           pausado = true;
           if(intervalo){ clearInterval(intervalo); intervalo = null; }
         });
-        $('btn-pomodoro-reset').addEventListener('click', function () { aplicarFase('estudio'); });
+        $('btn-pomodoro-reset').addEventListener('click', function () { volcarEstudio(); aplicarFase('estudio'); });
 
-        window.addEventListener('beforeunload', guardarEstado);
+        window.addEventListener('beforeunload', function(){ volcarEstudio(); guardarEstado(); });
       })();
 
     })();

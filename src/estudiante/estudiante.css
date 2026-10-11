@@ -1,0 +1,326 @@
+/* ===================================================================
+   estudiante.css — estilos del módulo del estudiante
+   (pantalla Hoy, captura rápida y tutorial).
+   Reglas: variables del sistema, mobile-first a 360px, objetivos
+   táctiles de 44px, sin scroll horizontal y respeto a
+   prefers-reduced-motion. No se pega ningún color fijo.
+   =================================================================== */
+
+/* ---------- Pantalla "Hoy" ---------- */
+.hoy-panel { margin: 0 0 1.5rem; }
+
+.hoy-saludo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .85rem;
+}
+
+.hoy-fecha {
+  margin: 0;
+  font-size: .78rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.hoy-titulo { margin: .15rem 0 0; font-size: 1.35rem; color: var(--text); }
+
+.hoy-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: .2rem .65rem;
+  border-radius: var(--radius-full, 99px);
+  background: var(--amber-light);
+  color: var(--amber-ink);
+  font-size: .74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hoy-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .7rem;
+}
+
+@media (min-width: 640px) {
+  .hoy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.hoy-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-sm);
+  padding: .9rem .85rem;
+  min-width: 0;              /* nada desborda la columna */
+}
+
+.hoy-card-titulo {
+  margin: 0 0 .55rem;
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary);
+}
+
+.hoy-lista { list-style: none; margin: 0; padding: 0; }
+
+.hoy-fila {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .45rem 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+  min-height: 44px;
+  min-width: 0;
+}
+
+.hoy-fila:last-child { border-bottom: none; }
+.hoy-fila.is-proxima { background: var(--primary-light); border-radius: var(--radius-sm, 10px); padding-left: .5rem; padding-right: .5rem; }
+.hoy-fila.is-hecha .hoy-label { text-decoration: line-through; color: var(--text-secondary); }
+
+.hoy-hora {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: .8rem;
+  color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.hoy-materia { font-weight: 600; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+
+.hoy-label-caja { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.hoy-label { color: var(--text); font-weight: 600; font-size: .92rem; overflow-wrap: anywhere; }
+.hoy-materia-chica { font-size: .74rem; color: var(--text-secondary); }
+
+.hoy-check {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* La casilla lleva un área táctil de 44px sin agrandar el checkbox */
+.hoy-label + .hoy-materia-chica { pointer-events: none; }
+
+.hoy-tag {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: .18rem .5rem;
+  border-radius: var(--radius-full, 99px);
+  background: var(--gray-100);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.hoy-tag.is-hoy { background: var(--red-light); color: var(--red-ink); }
+
+.hoy-chip-chico {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: .15rem .5rem;
+  border-radius: var(--radius-full, 99px);
+  background: var(--gray-100);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.hoy-chip-chico.is-ahora { background: var(--green-light); color: var(--green-ink); }
+
+.hoy-vacio { margin: 0 0 .6rem; color: var(--text-secondary); font-size: .88rem; }
+
+.hoy-pie { margin-top: .65rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+
+.hoy-estudio { text-align: left; }
+.hoy-num { margin: 0; font-size: 1.9rem; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; }
+.hoy-leyenda { margin: 0 0 .6rem; font-size: .8rem; color: var(--text-secondary); }
+
+.hoy-eval { display: flex; flex-direction: column; }
+.hoy-eval-titulo { margin: 0 0 .3rem; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.hoy-eval-fila { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.hoy-eval-cuenta { margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--purple-ink); }
+.hoy-eval-cuenta.is-hoy { color: var(--red-ink); }
+.hoy-eval-meta { margin: 0; font-size: .78rem; color: var(--text-secondary); }
+
+.hoy-aviso {
+  margin: .85rem 0 0;
+  font-size: .76rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* ---------- Botón flotante de captura rápida ---------- */
+.fab-captura {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 150;
+  width: 58px;
+  height: 58px;
+  border-radius: var(--radius-full, 99px);
+  border: none;
+  background: var(--primary-gradient, var(--primary));
+  color: var(--on-primary, #fff);
+  box-shadow: var(--shadow-lg, var(--shadow));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .15s ease;
+}
+
+.fab-captura:active { transform: scale(.94); }
+.fab-captura svg { width: 26px; height: 26px; }
+
+/* ---------- Hoja inferior de captura ---------- */
+.captura-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(0, 0, 0, .45);
+  display: none;
+}
+
+.captura-overlay.open { display: block; }
+
+.captura-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 251;
+  background: var(--bg-card);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: var(--shadow-lg, var(--shadow));
+  padding: .9rem .95rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform .22s ease;
+}
+
+.captura-overlay.open .captura-sheet { transform: translateY(0); }
+
+@media (min-width: 640px) {
+  .captura-sheet { left: auto; right: 24px; bottom: 24px; width: 380px; border-radius: 20px; }
+}
+
+.captura-titulo { margin: 0 0 .7rem; font-size: 1.05rem; color: var(--text); }
+
+.captura-campo { margin-bottom: .7rem; }
+
+.captura-campo label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: .25rem;
+}
+
+.captura-campo input,
+.captura-campo select {
+  width: 100%;
+  min-height: 46px;
+  padding: .5rem .65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 10px);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;              /* evita el zoom automático en iOS */
+}
+
+.captura-campo input:focus-visible,
+.captura-campo select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.captura-fila { display: flex; gap: .6rem; }
+.captura-fila > * { flex: 1 1 0; min-width: 0; }
+
+.captura-acciones { display: flex; gap: .6rem; margin-top: .3rem; }
+.captura-acciones .btn { flex: 1 1 0; min-height: 48px; }
+
+/* ---------- Tutorial de primer uso ---------- */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, .55);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.tutorial-overlay.open { display: flex; }
+
+@media (min-width: 640px) {
+  .tutorial-overlay.open { align-items: center; }
+}
+
+.tutorial-caja {
+  background: var(--bg-card);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 460px;
+  padding: 1.25rem 1.1rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-lg, var(--shadow));
+}
+
+@media (min-width: 640px) {
+  .tutorial-caja { border-radius: 20px; margin: 1rem; }
+}
+
+.tutorial-pasos { display: flex; gap: .35rem; justify-content: center; margin-bottom: .9rem; }
+.tutorial-paso-dot { width: 8px; height: 8px; border-radius: 99px; background: var(--gray-300); }
+.tutorial-paso-dot.is-activo { background: var(--primary); width: 22px; }
+
+.tutorial-icono { font-size: 2rem; line-height: 1; margin-bottom: .4rem; }
+.tutorial-titulo { margin: 0 0 .35rem; font-size: 1.15rem; color: var(--text); }
+.tutorial-texto { margin: 0 0 1rem; color: var(--text-secondary); font-size: .93rem; }
+
+.tutorial-acciones { display: flex; align-items: center; gap: .6rem; }
+.tutorial-acciones .btn { flex: 1 1 auto; min-height: 48px; }
+.tutorial-saltar {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: .85rem;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 .5rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------- Foco visible en todo el módulo ---------- */
+.hoy-panel :focus-visible,
+.captura-sheet :focus-visible,
+.tutorial-caja :focus-visible,
+.fab-captura:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Menos movimiento para quien lo pida ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .fab-captura,
+  .captura-sheet { transition: none; }
+  .fab-captura:active { transform: none; }
+}

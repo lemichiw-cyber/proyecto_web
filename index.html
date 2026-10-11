@@ -1057,6 +1057,8 @@ unicode: "eb2e"
 
       <section class="section" style="padding:2.5rem 0;">
         <div class="container">
+          <!-- Pantalla "Hoy" del estudiante: la lógica vive en src/estudiante/hoy.js -->
+          <div id="inicio-hoy" class="hidden"></div>
           <div id="inicio-stats" class="hidden" style="display:none;margin-bottom:2rem;">
             <div class="stats-grid">
               <div class="stat-card" onclick="mostrarApp('actividades')"><div class="stat-icon"><!--
@@ -2420,6 +2422,9 @@ unicode: "ea98"
               <div class="form-group" style="max-width:150px;"><label>Nota m&iacute;nima (%)</label><input type="number" id="exam-notamin" min="1" max="100" value="60"></div>
               <div class="form-group" style="max-width:150px;"><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
               <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-barajar"> Barajar preguntas</label></div>
+            </div>
+            <div class="form-row" style="margin-top:.25rem;">
+              <div class="form-group" style="max-width:190px;"><label>Fecha del examen (opcional)</label><input type="date" id="exam-fecha"><small style="color:var(--gray-500);display:block;margin-top:.25rem;">Aparece en la cuenta regresiva de "Hoy" de tus estudiantes.</small></div>
             </div>
             <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
             <div class="flex-between" style="margin-bottom:.75rem;">
