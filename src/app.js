@@ -5133,6 +5133,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (!window.BackupModule) return;
         var mod = window.BackupModule;
 
+        // --- Aviso: crear cuenta primero ---
+        var avisoCuenta = $('backup-aviso-cuenta');
+        if (avisoCuenta) {
+          avisoCuenta.innerHTML = '<div style="background:var(--blue-light);color:var(--blue);padding:.75rem;border-radius:8px;margin-bottom:1rem;font-size:.85rem;">' +
+            '<strong>⚠️ Importante:</strong> Primero creá tu cuenta en este sitio nuevo (botón "Iniciar sesión" → "Crear cuenta"). ' +
+            'El respaldo se vincula a tu cuenta (email). Si importás sin cuenta, los datos no se guardarán correctamente.' +
+            '</div>';
+        }
+
         // --- Vista previa de exportación ---
         function actualizarExportPreview() {
           var previewEl = $('backup-export-preview');

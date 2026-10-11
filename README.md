@@ -465,6 +465,8 @@ el estudiante pierde sus tareas, horarios, notas y configuración.
 
 ### Exportar / Importar (manual)
 
+> **⚠️ Importante**: Primero creá tu cuenta en el sitio nuevo (botón "Iniciar sesión" → "Crear cuenta"), **luego** importá el respaldo. El respaldo se vincula a tu cuenta (email). Si importás sin cuenta, los datos no se guardarán correctamente.
+
 1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON*.
    - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.
    - Incluye: tareas, horarios, agenda, notas, exámenes, planificaciones, tema, volumen, biblioteca del reproductor (favoritos, playlists, historial), preferencias.

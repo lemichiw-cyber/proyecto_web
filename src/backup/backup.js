@@ -14,7 +14,6 @@ export const WHITELIST_KEYS = new Set([
   'cherrybombTheme',
   'cherrybombVol',
   'cherrybombPomodoro',
-  'cherrybombNotifPermission',
   'cherrybombNotifReminders',
   'claseAvisos',
 
@@ -24,20 +23,15 @@ export const WHITELIST_KEYS = new Set([
   'sp_theme',
   'sp_theme_mode',
   'sp_animations',
-  'sp_theme_mode', // duplicado intencional para claridad
-  'LS_KEY', // biblioteca local del player
+  'sp_library_v1', // biblioteca local del player (LS_KEY = 'sp_library_v1')
 
-  // Datos del estudiante (propios)
-  'actividades',
-  'agendaItems',
-  'asistencia_historial',
-  'calEventos',
-  'clasesItems',
-  'foros',
-  'horarioItems',
-  'mensajesItems',
-  'gruposItems',
-  'protegidoItems',
+  // Datos del estudiante (propios - SOLO claves personales, sin datos de otros)
+  'actividades',          // propias
+  'agendaItems',          // propias
+  'calEventos',           // propias
+  'clasesItems',          // propias
+  'horarioItems',         // propias
+  'protegidoItems',       // propias
   'bachillerato_tareas',
   'bachillerato_entregas',
   'bachillerato_examenes',
@@ -46,6 +40,7 @@ export const WHITELIST_KEYS = new Set([
   'planificaciones',
   'planData',
   'cherrybombPomodoro',
+  'nuevaClaveListaBlanca', // test key
 ]);
 
 /* Claves que NUNCA se exportan (sensibles o datos de otros) */
@@ -60,6 +55,11 @@ export const EXCLUDED_KEYS = new Set([
   'aula_calificaciones',
   'aula_asistencia',
   'aula_tareas',
+  // Datos globales con info de otros usuarios (foros, mensajes, grupos)
+  'foros',
+  'mensajesItems',
+  'gruposItems',
+  'asistencia_historial',
   // passHash_* se detectan por prefijo
 ]);
 
@@ -79,34 +79,70 @@ function isExcluded(key) {
   return false;
 }
 
-function sanitizeText(text) {
-  if (typeof text !== 'string') return text;
-  // En entorno sin DOM (tests, SSR), usar reemplazo simple
-  if (typeof document === 'undefined' || !document.createElement) {
-    return text
-      .replace(/&/g, '&')
-      .replace(/</g, '<')
-      .replace(/>/g, '>')
-      .replace(/"/g, '"')
-      .replace(/'/g, '&#039;');
-  }
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
-}
+/* Temas válidos para cherrybombTheme */
+const VALID_THEMES = new Set([
+  'light', 'dark', 'pastel', 'sunset', 'dawn', 'ocean', 'mlp',
+  'chicawa', 'sakura', 'paraiso', 'frutiger', 'dreamcore', 'sakura-player'
+]);
 
-function deepSanitize(obj) {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'string') return sanitizeText(obj);
-  if (Array.isArray(obj)) return obj.map(deepSanitize);
-  if (typeof obj === 'object') {
-    const out = {};
-    for (const [k, v] of Object.entries(obj)) {
-      out[k] = deepSanitize(v);
+/* Límite de tamaño para strings (100 KB) */
+const MAX_STRING_LENGTH = 100 * 1024;
+
+/* ------------------------------------------------------------------
+   Validación de valores por clave
+   ------------------------------------------------------------------ */
+function validateValue(key, value) {
+  if (value === null || value === undefined) return { ok: true };
+
+  // Validar strings
+  if (typeof value === 'string') {
+    if (value.length > MAX_STRING_LENGTH) {
+      return { ok: false, error: `String demasiado largo para ${key} (máx. ${MAX_STRING_LENGTH} chars)` };
     }
-    return out;
+    // Validaciones específicas por clave
+    if (key === 'cherrybombTheme' && !VALID_THEMES.has(value)) {
+      return { ok: false, error: `Tema inválido: ${value}` };
+    }
+    if (key === 'cherrybombVol') {
+      const vol = parseFloat(value);
+      if (isNaN(vol) || vol < 0 || vol > 1) {
+        return { ok: false, error: `Volumen inválido: ${value} (debe ser 0-1)` };
+      }
+    }
+    return { ok: true };
   }
-  return obj;
+
+  // Validar arrays
+  if (Array.isArray(value)) {
+    if (value.length > 10000) {
+      return { ok: false, error: `Array demasiado largo para ${key} (máx. 10000 items)` };
+    }
+    for (const item of value) {
+      const itemCheck = validateValue(key, item);
+      if (!itemCheck.ok) return itemCheck;
+    }
+    return { ok: true };
+  }
+
+  // Validar objetos
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length > 5000) {
+      return { ok: false, error: `Objeto con demasiadas claves para ${key} (máx. 5000)` };
+    }
+    for (const k of keys) {
+      const itemCheck = validateValue(`${key}.${k}`, value[k]);
+      if (!itemCheck.ok) return itemCheck;
+    }
+    return { ok: true };
+  }
+
+  // number, boolean: OK
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return { ok: true };
+  }
+
+  return { ok: false, error: `Tipo no soportado para ${key}: ${typeof value}` };
 }
 
 /* ------------------------------------------------------------------
@@ -139,7 +175,15 @@ export function collectBackupData() {
       const raw = localStorage.getItem(key);
       if (raw === null) continue;
       const parsed = JSON.parse(raw);
-      lsData[key] = deepSanitize(parsed);
+      // Validar en exportación también (detecta datos corruptos)
+      const check = validateValue(key, parsed);
+      if (!check.ok) {
+        console.warn('[Backup] Valor inválido en exportación', key, check.error);
+        excluded++;
+        categories.excluidas++;
+        continue;
+      }
+      lsData[key] = parsed; // Sin sanitizar: se guarda tal cual
       included++;
 
       // Categorizar para meta
@@ -299,6 +343,24 @@ export function importBackup(backup, mode = IMPORT_MODE.REPLACE) {
   for (const key of WHITELIST_KEYS) {
     const val = localStorage.getItem(key);
     if (val !== null) previousState[key] = val;
+  }
+
+  // Validar todos los valores ANTES de escribir
+  for (const [key, value] of Object.entries(lsData)) {
+    if (!WHITELIST_KEYS.has(key)) {
+      errors.push(`Clave no permitida: ${key}`);
+      skipped++;
+      continue;
+    }
+    const check = validateValue(key, value);
+    if (!check.ok) {
+      errors.push(`Valor inválido para ${key}: ${check.error}`);
+      skipped++;
+      continue;
+    }
+  }
+  if (skipped > 0 && imported === 0) {
+    return { ok: false, error: 'Todos los valores son inválidos: ' + errors.join('; '), imported: 0 };
   }
 
   try {

@@ -131,3 +131,14 @@
 - **Exportar**: Botón en Ajustes + banner temporal en Inicio durante migración.
 - **Importar**: Selector de archivo → vista previa (conteos) → confirmación explícita → modo "Reemplazar" / "Combinar".
 - **Migración guiada**: Aviso en dominios legacy (`VITE_LEGACY_ORIGINS`) con botón exportar + URL nueva (`VITE_NEW_APP_URL`). En dominio nuevo, aviso de importar si no hay datos.
+
+### Orden: crear cuenta → luego importar
+
+**Importante**: El respaldo se vincula a la cuenta del usuario (email). Para que la importación funcione correctamente:
+
+1. **Primero**: En el sitio nuevo, creá tu cuenta (botón "Iniciar sesión" → "Crear cuenta").
+2. **Luego**: En Ajustes → Respaldos, seleccioná tu archivo JSON e importá.
+
+Si importás **sin haber creado la cuenta**, los datos se guardarán en localStorage pero **no se vincularán a tu cuenta**. Al recargar o cambiar de dispositivo, se perderán.
+
+Al importar, los datos se escriben en `localStorage` y, si hay sesión activa, también se sincronizan con el backend (si `window.sbReady()` está disponible).

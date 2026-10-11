@@ -40,7 +40,6 @@ describe('backup.js — Lista blanca y exclusiones', () => {
     expect(WHITELIST_KEYS.has('cherrybombTheme')).toBe(true);
     expect(WHITELIST_KEYS.has('cherrybombVol')).toBe(true);
     expect(WHITELIST_KEYS.has('cherrybombPomodoro')).toBe(true);
-    expect(WHITELIST_KEYS.has('cherrybombNotifPermission')).toBe(true);
     expect(WHITELIST_KEYS.has('cherrybombNotifReminders')).toBe(true);
     expect(WHITELIST_KEYS.has('claseAvisos')).toBe(true);
   });
@@ -51,7 +50,7 @@ describe('backup.js — Lista blanca y exclusiones', () => {
     expect(WHITELIST_KEYS.has('sp_theme')).toBe(true);
     expect(WHITELIST_KEYS.has('sp_theme_mode')).toBe(true);
     expect(WHITELIST_KEYS.has('sp_animations')).toBe(true);
-    expect(WHITELIST_KEYS.has('LS_KEY')).toBe(true);
+    expect(WHITELIST_KEYS.has('sp_library_v1')).toBe(true);
   });
 
   it('WHITELIST_KEYS contiene claves de datos de estudiante', () => {
@@ -259,6 +258,7 @@ describe('importBackup', () => {
   it('fallo en una clave no rompe la importación (se registra error y continúa)', () => {
     // Simular error en una clave específica
     const originalSetItem = localStorage.setItem;
+    let callCount = 0;
     
     localStorage.setItem = vi.fn((key, value) => {
       callCount++;
