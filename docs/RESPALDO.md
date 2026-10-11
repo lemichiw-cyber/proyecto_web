@@ -134,11 +134,13 @@
 
 ### Orden: crear cuenta → luego importar
 
-**Importante**: El respaldo se vincula a la cuenta del usuario (email). Para que la importación funcione correctamente:
+**Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
 
 1. **Primero**: En el sitio nuevo, creá tu cuenta (botón "Iniciar sesión" → "Crear cuenta").
 2. **Luego**: En Ajustes → Respaldos, seleccioná tu archivo JSON e importá.
 
 Si importás **sin haber creado la cuenta**, los datos se guardarán en localStorage pero **no se vincularán a tu cuenta**. Al recargar o cambiar de dispositivo, se perderán.
 
-Al importar, los datos se escriben en `localStorage`. Si hay sesión activa y `window.sbReady()` está disponible, también se intenta sincronizar con el backend (opcional, requiere configuración de Supabase).
+Al importar, los datos se escriben en `localStorage`. Si hay sesión activa y `window.sbReady()` está disponible, también se **intenta** sincronizar con el backend (opcional, requiere configuración de Supabase).
+
+⚠️ **Advertencia**: En dispositivos compartidos, todos los usuarios ven los mismos datos locales. El respaldo no distingue usuarios; al importar, los datos se mezclan con los del dispositivo.

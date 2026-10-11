@@ -258,7 +258,7 @@ describe('importBackup', () => {
   it('fallo en una clave no rompe la importación (se registra error y continúa)', () => {
     // Simular error en una clave específica
     const originalSetItem = localStorage.setItem;
-    let callCount = 0;
+    
     
     localStorage.setItem = vi.fn((key, value) => {
       callCount++;

@@ -880,7 +880,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         mostrarToast('Te enviamos un enlace de recuperación al correo.', 'success');
       });
 
-      function escapeHtml(s) { if (typeof s !== 'string') return s; var d = document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML; }
+      function escapeHtml(s) { if (s === null || s === undefined) return ''; if (typeof s !== 'string') s = String(s); var d = document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML.replace(/"/g, '"').replace(/'/g, '&#039;'); }
       /* ===== CUSTOM DIALOG ===== */
       var dialogOverlay = $('modal-dialog');
       function dialogAlert(msg, title) {

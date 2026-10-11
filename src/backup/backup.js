@@ -31,7 +31,6 @@ export const WHITELIST_KEYS = new Set([
   'calEventos',           // propias
   'clasesItems',          // propias
   'horarioItems',         // propias
-  'protegidoItems',       // propias
   'bachillerato_tareas',
   'bachillerato_entregas',
   'bachillerato_examenes',

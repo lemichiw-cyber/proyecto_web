@@ -465,16 +465,17 @@ el estudiante pierde sus tareas, horarios, notas y configuración.
 
 ### Exportar / Importar (manual)
 
-> **⚠️ Importante**: Primero creá tu cuenta en el sitio nuevo (botón "Iniciar sesión" → "Crear cuenta"), **luego** importá el respaldo. El respaldo se vincula a tu cuenta (email). Si importás sin cuenta, los datos no se guardarán correctamente.
+> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
 
 1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON*.
    - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.
    - Incluye: tareas, horarios, agenda, notas, exámenes, planificaciones, tema, volumen, biblioteca del reproductor (favoritos, playlists, historial), preferencias.
-   - **NO incluye**: contraseñas, hashes, sesión activa, URL del backend, datos de otros usuarios (alumnos, entregas, calificaciones, aulas de docente).
+   - **NO incluye**: contraseñas, hashes, sesión activa, URL del backend, datos de otros usuarios (alumnos, entregas, calificaciones, aulas de docente, foros, mensajes, grupos, incidentes).
 2. En el sitio **nuevo**: *Ajustes → Respaldos → Importar respaldo*.
    - Seleccioná el archivo JSON → vista previa → elegí **Combinar** (suma, no duplica) o **Reemplazar todo**.
    - Confirmación explícita antes de escribir.
    - Si falla a la mitad, se restaura el estado anterior.
+   - **Primero creá tu cuenta** en el sitio nuevo (botón "Iniciar sesión" → "Crear cuenta"), **luego** importá el respaldo. El respaldo no se vincula a ninguna cuenta.
 
 ### Migración guiada (automática)
 
