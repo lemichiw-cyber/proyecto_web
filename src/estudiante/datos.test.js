@@ -155,9 +155,12 @@ describe('datos · tareas que vencen hoy y mañana', () => {
       [CLAVES.entregas]: JSON.stringify([])
     });
     var lista = capa.tareasDe(LUNES);
-    expect(lista.map(function (t) { return t.titulo; })).toEqual(['Terminar ensayo', 'Ejercicio 12']);
+    // 'Ya hecha' (personal) se queda visible con tachado; las del
+    // docente entregadas y las de más adelante no aparecen.
+    expect(lista.map(function (t) { return t.titulo; })).toEqual(['Terminar ensayo', 'Ya hecha', 'Ejercicio 12']);
     expect(lista[0].personal).toBe(true);
-    expect(lista[1].personal).toBe(false);
+    expect(lista[1].hecha).toBe(true);
+    expect(lista[2].personal).toBe(false);
   });
 
   it('no lista una tarea del docente ya entregada', () => {

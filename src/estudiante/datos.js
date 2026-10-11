@@ -293,7 +293,11 @@ export function crearCapa(adaptador) {
         return { titulo: t.titulo, materia: t.materia, fecha: t.fecha, personal: false, hecha: entregada, id: 'doc' + idx };
       });
       return mias.concat(delDocente).filter(function (t) {
-        if (!t.fecha || t.hecha) return false;
+        if (!t.fecha) return false;
+        // Las entregadas al docente ya no interesan; las personales
+        // hechas se quedan visibles con tachado (se siente mejor que
+        // desaparecer al marcarlas).
+        if (t.hecha && !t.personal) return false;
         var d = diasHasta(t.fecha, base);
         return d === 0 || d === 1;
       }).sort(function (a, b) {
