@@ -5233,7 +5233,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             if (filenameEl) filenameEl.textContent = '';
             var previewEl = $('backup-import-preview');
             if (previewEl) previewEl.innerHTML = '';
-            var btnConfirm = $('btn-backup-import-confirm');
             if (btnConfirm) btnConfirm.disabled = true;
             var statusEl = $('backup-import-status');
             if (statusEl) statusEl.textContent = '';
@@ -5241,10 +5240,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           });
         }
 
-        var btnConfirmEl = $('btn-backup-import-confirm');
         if (btnConfirm) {
           btnConfirm.addEventListener('click', function () {
-            var fileInput = $('backup-import-file');
             if (!selectedFile) return;
             var mode = document.querySelector('input[name="backup-import-mode"]:checked')?.value || 'merge';
             var statusEl = $('backup-import-status');
@@ -5283,16 +5280,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             return v ? v.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
           } catch (e) { return []; }
         })();
-        var NEW_APP_URL_unused = (function () {
-          try { return import.meta.env.VITE_NEW_APP_URL || ''; } catch (e) { return ''; }
-        })();
 
         function checkLegacyMigration() {
           var legacyBanner = $('legacy-migration-banner');
           var legacyMessage = $('legacy-message');
           var newBanner = $('new-site-banner');
-          var legacyDismiss = $('legacy-dismiss-btn');
-          var newDismiss = $('new-site-dismiss-btn');
 
           if (!legacyBanner || !newBanner) return;
 
@@ -5359,9 +5351,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var v = import.meta.env.VITE_LEGACY_ORIGINS;
             return v ? v.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
           } catch (e) { return []; }
-        })();
-        var NEW_APP_URL_unused = (function () {
-          try { return import.meta.env.VITE_NEW_APP_URL || ''; } catch (e) { return ''; }
         })();
 
         if (LEGACY_ORIGINS.length === 0) return;

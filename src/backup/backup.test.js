@@ -259,17 +259,17 @@ describe('importBackup', () => {
   it('fallo en una clave no rompe la importación (se registra error y continúa)', () => {
     // Simular error en una clave específica
     const originalSetItem = localStorage.setItem;
-    let callCount = 0;
+    
     localStorage.setItem = vi.fn((key, value) => {
       callCount++;
-      if (key === 'sp_eq') throw new Error('Storage full');
+      if (key === 'cherrybombTheme') throw new Error('Storage full');
       originalSetItem.call(localStorage, key, value);
     });
 
     const result = importBackup(backup, IMPORT_MODE.REPLACE);
     expect(result.ok).toBe(true); // Importación sigue OK
     expect(result.errors.length).toBeGreaterThan(0); // pero registra error
-    expect(result.errors[0]).toContain('sp_eq');
+    expect(result.errors[0]).toContain('cherrybombTheme');
     expect(result.skipped).toBeGreaterThan(0);
 
     localStorage.setItem = originalSetItem;
