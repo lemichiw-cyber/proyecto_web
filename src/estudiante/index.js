@@ -8,9 +8,14 @@
 import { datos } from './datos.js';
 
 export async function iniciarExperienciaEstudiante() {
-  var piezas = await Promise.all([import('./hoy.js'), import('./captura-rapida.js')]);
+  var piezas = await Promise.all([
+    import('./hoy.js'),
+    import('./captura-rapida.js'),
+    import('./tutorial.js')
+  ]);
   var hoy = piezas[0];
   var captura = piezas[1];
+  var tutorial = piezas[2];
 
   // Pantalla "Hoy" dentro de la sección INICIO (ya visible por defecto)
   hoy.montarHoy();
@@ -24,6 +29,10 @@ export async function iniciarExperienciaEstudiante() {
 
   window.refrescarHoy = hoy.renderHoy;
   window.abrirCapturaRapida = captura.abrirCapturaRapida;
+
+  // Primer uso: tutorial de 3 pasos, una sola vez (vuelve a aparecer
+  // solo desde Ajustes → Ayuda)
+  tutorial.quizasMostrarTutorial();
 
   // El Pomodoro avisa por evento cuánto estudiaste: eso se suma al
   // registro del día (y hoy.js repinta el total).
