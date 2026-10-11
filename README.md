@@ -321,6 +321,56 @@ npm run lint    # eslint
 
 ---
 
+## Experiencia del estudiante
+
+`src/estudiante/` es el módulo de la vista de estudiante de bachillerato:
+pantalla de inicio **"Hoy"**, captura rápida de tareas y tutorial de primer
+uso. Está pensado para un celular con datos limitados y poco tiempo entre
+clases.
+
+- **Modo invitado por defecto**: la app se abre y funciona sin registro.
+  Horario, agenda, calendario, tareas, exámenes y el Pomodoro no piden correo
+  ni contraseña; los datos quedan en el dispositivo. Solo lo que necesita
+  cuenta real (mensajes, foros, aulas, matrícula…) pide iniciar sesión.
+- **Pantalla "Hoy"** (dentro de INICIO): las clases del día según el horario
+  con la que está en curso marcada, las tareas que vencen hoy y mañana (las
+  personales se marcan hechas desde ahí), los minutos estudiados hoy según
+  el Pomodoro y la próxima evaluación con su cuenta regresiva.
+- **Captura rápida**: botón flotante abajo a la derecha → hoja inferior con
+  un solo campo obligatorio. Guarda una tarea personal en
+  `cherrybombMisTareas` (no toca las tareas que crean los docentes).
+- **Tutorial**: 3 pasos, omitible, una sola vez. Vuelve a aparecer solo
+  desde Ajustes → Ayuda.
+
+Todo se pinta con `createElement` + `textContent`: ningún dato del usuario
+pasa por `innerHTML`. Los estilos usan las variables CSS de los 13 temas,
+con objetivos táctiles de 44px, `env(safe-area-inset-bottom)`, foco visible
+y `prefers-reduced-motion`.
+
+### Carga diferida
+
+Los módulos se cargan con `import()` desde `main.ts`, así que **no aumentan
+el JS inicial**: `index.js` (orquestador) 8.56 kB, `hoy.js` 5.72 kB,
+`captura-rapida.js` 4.14 kB, `tutorial.js` 2.62 kB y `estudiante.css` 7 kB
+(≈1.9 kB gzip), todos descargados después de que la app arranca.
+
+### Capa de datos
+
+`src/estudiante/datos.js` es la capa de datos única del módulo: usa las
+mismas claves que ya escribe el resto de la app (`horarioItems`,
+`agendaItems`, `calEventos`, `bachillerato_tareas`, `bachillerato_entregas`,
+`bachillerato_examenes`) y añade `cherrybombMisTareas`,
+`cherrybombEstudioTiempo` y `cherrybombOnboarding`. El adaptador es
+inyectable, así que todo se testea sin navegador; `ui-*.test.js` corren con
+`happy-dom`.
+
+Para que la cuenta regresiva muestre fechas reales, el creador de exámenes
+tiene un campo opcional **"Fecha del examen"**. El Pomodoro avisa los
+minutos estudiados con el evento `cb:estudio` (al terminar un bloque, al
+pausar, al reiniciar y al cerrar la pestaña).
+
+---
+
 ## Despliegue
 
 La app se publica en GitHub Pages y Render. `vite.config.ts` usa
@@ -355,12 +405,13 @@ src/
   notifications.js       notificaciones
   styles.css             temas + tipografía
   assets/                fuente KanjiStyle
+  estudiante/            experiencia del estudiante (Hoy, captura, tutorial)
   sakura-player/         reproductor de música (ver arriba)
 backend/
   main.py                API FastAPI (YouTube Music vía ytmusicapi)
   api/                   endpoints REST
   services/              capa de abstracción ytmusicapi
-index.html               markup (24 secciones app-*)
+index.html               markup (25 secciones app-*)
 ```
 
 ## Seguridad
