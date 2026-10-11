@@ -448,6 +448,13 @@ XOR con clave fija (`CHERRYBOMB_SALT_2026`). Es ofuscación contra alguien que
 mire por encima del hombro, **no cifrado**: no protege contra nadie con acceso
 al `localStorage`. Para datos reales, mové la autenticación al servidor.
 
+> **Nota**: no existe una sección "Migración de dominio" ni funcionalidad
+> integrada de exportar/importar datos en el código actual.
+> La persistencia es 100% `localStorage` por dispositivo; para mover datos
+> entre dominios/dispositivos habría que implementar sincronización con el
+> backend (`/api/accounts`, `/api/music/library`, etc.) o añadir un botón
+> de backup/restore JSON en la UI.
+
 ## Licencia
 
 Proyecto educativo interno.

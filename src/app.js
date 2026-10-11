@@ -31,7 +31,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       /* URL del backend FastAPI. Permite override con la clave local
          'cherrybombApiBase' (útil en desarrollo local).
-         En build time se puede fijar con VITE_APP_API_URL (p. ej. el backend
+         En build time se puede fijar con VITE_API_URL (p. ej. el backend
          desplegado en Render); sin ella se usa el fallback hardcodeado. */
       var API_BASE = (function () {
         try {
@@ -44,8 +44,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         // o el fallback hardcodeado.
         var host = (typeof location !== 'undefined' && location.hostname) || '';
         if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://127.0.0.1:8000';
-        // Fallback hardcodeado; en producción Netlify inyecta VITE_APP_API_URL
-        // via define en vite.config.ts (ver abajo).
+        // Fallback hardcodeado; en producción Netlify inyecta VITE_API_URL
+        // via define en vite.config.ts (ver arriba).
         return (typeof __APP_API_BASE__ !== 'undefined' && __APP_API_BASE__)
           ? __APP_API_BASE__
           : 'https://sakura-backend-indb.onrender.com';

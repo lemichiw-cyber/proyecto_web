@@ -5,6 +5,23 @@ import './app.js';
 import './sakura-player/sakura-player.js';
 
 /* ------------------------------------------------------------------
+   CSP Report-Only: escuchar violations y loggearlas a consola.
+   Útil durante desarrollo/staging antes de pasar a enforce.
+   ------------------------------------------------------------------ */
+if (typeof document !== 'undefined') {
+  document.addEventListener('securitypolicyviolation', (e) => {
+    console.warn('[CSP Violation]', {
+      directive: e.violatedDirective,
+      blocked: e.blockedURI,
+      source: e.sourceFile,
+      line: e.lineNumber,
+      col: e.columnNumber,
+      disposition: e.disposition, // 'report' en Report-Only
+    });
+  });
+}
+
+/* ------------------------------------------------------------------
    PWA: con registerType "autoUpdate" el service worker nuevo se
    activa solo, pero la pestaña abierta sigue corriendo el bundle
    viejo hasta que alguien recargue. Si esta pestaña ya estaba

@@ -1,17 +1,16 @@
-name: Deploy a GitHub Pages
+name: CI
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,12 +27,10 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run verify:build
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        with:
-          path: dist
 
   # Prueba de humo con Playwright: build carga, SW se registra,
-  # funciona offline, sin errores en consola
+  # funciona offline, sin errores en consola.
+  # Simula respuestas del backend para evitar fallos de red en CI.
   smoke-test:
     needs: build
     runs-on: ubuntu-latest
@@ -56,18 +53,39 @@ jobs:
             const { chromium } = require('playwright');
             (async () => {
               const browser = await chromium.launch();
-              const page = await browser.newPage();
+              const context = await browser.newContext();
+              const page = await context.newPage();
+
+              // Interceptar peticiones al backend y responder con mocks
+              // para que el test no dependa de red externa (Render)
+              await page.route('**/api/**', async (route) => {
+                const url = route.request().url();
+                if (url.includes('/api/health')) {
+                  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, ytmusic: { authenticated: false } }) });
+                } else if (url.includes('/api/music/search')) {
+                  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ songs: [] }) });
+                } else if (url.includes('/api/music/stream/')) {
+                  await route.fulfill({ status: 206, headers: { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes' }, body: Buffer.from('') });
+                } else {
+                  await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+                }
+              });
+
               const errors = [];
               page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
               page.on('pageerror', e => errors.push(e.message));
+
               try {
                 await page.goto('http://localhost:4173', { waitUntil: 'networkidle', timeout: 30000 });
+
                 // SW registrado
                 const swReg = await page.evaluate(() => navigator.serviceWorker.ready.then(r => r.active.scriptURL));
                 if (!swReg) throw new Error('Service Worker no registrado');
                 console.log('SW activo:', swReg);
+
                 // Sin errores en consola
                 if (errors.length) throw new Error('Errores en consola: ' + errors.join('; '));
+
                 // Offline: recargar con networkidle (simula cache)
                 await page.goto('http://localhost:4173', { waitUntil: 'networkidle', timeout: 30000 });
                 console.log('OK: build carga, SW registrado, sin errores, offline OK');
@@ -80,13 +98,3 @@ jobs:
             })();
           "
           kill $SERVER_PID
-
-  deploy:
-    needs: [build, smoke-test]
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
