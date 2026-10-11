@@ -20,6 +20,9 @@ from typing import Any, Optional
 
 from ytmusicapi import YTMusic
 
+from core.cache import LRUCache
+from services.provider import ProviderError, ProviderNotFound
+
 
 def _log(msg: str) -> None:
     """Log a stdout: uvicorn lo envía a los Logs del servicio en Render."""
@@ -139,16 +142,36 @@ _CLIENTE_STREAM = {
 
 
 class YouTubeMusicService:
-    """Envuelve todas las llamadas a ytmusicapi con datos normalizados."""
+    """Envuelve todas las llamadas a ytmusicapi con datos normalizados.
 
-    def __init__(self, auth_file: Optional[str] = None, allow_anonymous: bool = True):
+    Cumple la interfaz `MusicProvider` (`services/provider.py`).
+    """
+
+    #: Identificador del proveedor (logs y `source`).
+    name = "ytmusic"
+
+    def __init__(
+        self,
+        auth_file: Optional[str] = None,
+        allow_anonymous: bool = True,
+        *,
+        stream_cache_size: int = 256,
+        stream_cache_ttl: float = 600.0,
+        search_cache_size: int = 128,
+        search_cache_ttl: float = 120.0,
+    ):
         self._client: Optional[YTMusic] = None
         self._stream_client: Optional[YTMusic] = None
         self._auth_file = auth_file
         self._allow_anonymous = allow_anonymous
         self._available: Optional[bool] = None
-        self._stream_cache: dict = {}  # videoId -> (ts, url, headers)
-        self._stream_fail: dict = {}   # videoId -> ts del último fallo
+        # LRU con tamaño máximo y TTL (antes: dict plano que crecía sin
+        # límite y caducaba sólo por un `if` de 10 minutos).
+        self._stream_cache: LRUCache = LRUCache(stream_cache_size, stream_cache_ttl)
+        # Fallos recientes: evita repetir yt-dlp en cada salto de pista.
+        self._stream_fail: LRUCache = LRUCache(max(1, stream_cache_size), 120.0)
+        # Búsquedas frecuentes: TTL corto, sólo para repetir la misma query.
+        self._search_cache: LRUCache = LRUCache(search_cache_size, search_cache_ttl)
 
     # -- ciclo de vida --------------------------------------------------
 
@@ -194,11 +217,21 @@ class YouTubeMusicService:
     # -- búsqueda --------------------------------------------------------
 
     def search(self, query: str, filter_type: Optional[str] = None, limit: int = 20) -> dict:
-        """Búsqueda unificada. filter_type: songs|artists|albums|playlists|None."""
-        client = self._ensure_client()
+        """Búsqueda unificada. filter_type: songs|artists|albums|playlists|None.
+
+        Se cachea un tiempo corto (contrato §5.11): mientras el usuario
+        teclea, la misma consulta se repite muchas veces y cada una era
+        una petición entera a YouTube Music.
+        """
         results: dict = {"songs": [], "artists": [], "albums": [], "playlists": []}
         if not query or not query.strip():
             return results
+
+        client = self._ensure_client()
+        cache_key = f"{filter_type or 'all'}|{limit}|{query.strip().lower()}"
+        hit = self._search_cache.get(cache_key)
+        if hit is not None:
+            return hit
 
         if filter_type and filter_type != "all":
             raw = client.search(query, filter=filter_type, limit=limit)
@@ -207,16 +240,22 @@ class YouTubeMusicService:
             )
             for item in raw or []:
                 results[key].append(self._normalize_any(item, filter_type))
-            return results
+        else:
+            # Búsqueda general: canciones + artistas + álbumes + playlists
+            for ftype, key in (
+                ("songs", "songs"),
+                ("artists", "artists"),
+                ("albums", "albums"),
+                ("playlists", "playlists"),
+            ):
+                try:
+                    raw = client.search(query, filter=ftype, limit=min(limit, 10))
+                except Exception:  # noqa: BLE001
+                    raw = []
+                for item in raw or []:
+                    results[key].append(self._normalize_any(item, ftype))
 
-        # Búsqueda general: canciones + artistas + álbumes + playlists
-        for ftype, key in (("songs", "songs"), ("artists", "artists"), ("albums", "albums"), ("playlists", "playlists")):
-            try:
-                raw = client.search(query, filter=ftype, limit=min(limit, 10))
-            except Exception:  # noqa: BLE001
-                raw = []
-            for item in raw or []:
-                results[key].append(self._normalize_any(item, ftype))
+        self._search_cache.set(cache_key, results)
         return results
 
     def _normalize_any(self, item: Any, ftype: str) -> dict:
@@ -281,13 +320,12 @@ class YouTubeMusicService:
             errors = []
         if use_cache:
             hit = self._stream_cache.get(video_id)
-            if hit and time.time() - hit[0] < 600:
-                return {"url": hit[1], "headers": hit[2] if len(hit) > 2 else {}}
+            if hit is not None:
+                return {"url": hit["url"], "headers": hit.get("headers") or {}}
             # Fallo reciente: se respeta para no repetir yt-dlp (hasta
             # 20 s de timeouts por intento) en cada salto de pista del
             # reproductor, que encadena errores cuando nada reproduce.
-            fracaso = self._stream_fail.get(video_id)
-            if fracaso and time.time() - fracaso < 120:
+            if self._stream_fail.get(video_id) is not None:
                 errors.append("fallo hace poco: reintento en unos segundos")
                 return None
 
@@ -298,13 +336,35 @@ class YouTubeMusicService:
             video_id, errors=errors
         )
         if media and use_cache:
-            self._stream_cache[video_id] = (time.time(), media["url"], media.get("headers") or {})
+            self._stream_cache.set(
+                video_id, {"url": media["url"], "headers": media.get("headers") or {}}
+            )
             self._stream_fail.pop(video_id, None)
         elif not media and use_cache:
-            self._stream_fail[video_id] = time.time()
+            self._stream_fail.set(video_id, time.time())
         if not media:
             _log(f"stream({video_id}): sin URL tras {len(errors)} intento(s)")
         return media
+
+    # -- interfaz MusicProvider ------------------------------------------
+
+    def get_stream(self, video_id: str) -> Optional[dict]:
+        """Versión sin parámetros extra de `get_stream_media` (MusicProvider)."""
+        media = self.get_stream_media(video_id)
+        if not media or not media.get("url"):
+            return None
+        return {"url": media["url"], "headers": media.get("headers") or {}}
+
+    def cache_stats(self) -> dict:
+        """Métricas simples de caché para `/api/health/deep` (contrato §5.8)."""
+        return {
+            "stream": self._stream_cache.stats(),
+            "search": self._search_cache.stats(),
+        }
+
+    def stream_is_cached(self, video_id: str) -> bool:
+        """¿La URL de este id sigue viva en la caché? (no cuenta el acierto)"""
+        return self._stream_cache.peek(video_id) is not None
 
     def get_stream_url(self, video_id: str, use_cache: bool = True) -> Optional[str]:
         media = self.get_stream_media(video_id, use_cache=use_cache)
