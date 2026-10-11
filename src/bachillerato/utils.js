@@ -56,10 +56,19 @@ export function aFecha(fecha) {
   return d;
 }
 
-/** Fecha de hoy a medianoche (se puede inyectar para tests). */
+/**
+ * Fecha de hoy a medianoche (se puede inyectar para tests).
+ * Acepta un 'YYYY-MM-DD'; se parsea a mano porque new Date('AAAA-MM-DD')
+ * lo interpreta como UTC medianoche y en El Salvador eso cae al día
+ * anterior, lo que desfasaba todos los cálculos de vencimiento.
+ */
 export function hoy(deso) {
-  const d = deso ? new Date(deso) : new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const normalizar = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (deso === undefined || deso === null) return normalizar(new Date());
+  const f = aFecha(deso);
+  if (f) return f;
+  const d = new Date(deso);
+  return isNaN(d.getTime()) ? normalizar(new Date()) : normalizar(d);
 }
 
 /** Suma días a una fecha, sin efectos de horario de verano. */
