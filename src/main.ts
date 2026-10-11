@@ -1,6 +1,9 @@
 import './styles.css';
 import './data.js';
 import './notifications.js';
+/* Cargador de las funciones de bachillerato: sólo registra las rutas
+   de los módulos diferidos, pesa muy pocos bytes. */
+import './bachillerato/loader.js';
 import './app.js';
 import './sakura-player/sakura-player.js';
 

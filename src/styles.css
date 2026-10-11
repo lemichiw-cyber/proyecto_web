@@ -1026,3 +1026,40 @@ body:not([data-perm~="eliminar"])[data-perm~="eliminar"],
 body:not([data-perm~="participar"]) [data-perm~="participar"] {
   display: none !important;
 }
+
+    /* ===================================================================
+       Funciones de bachillerato — accesibilidad y modo ahorro
+       =================================================================== */
+
+    /* Foco visible para quien navega con teclado o con lector de pantalla.
+       Antes no había regla global de foco, así que en algunos temas el
+       foco "desaparecía" y no se veía dónde estaba el cursor. */
+    .btn:focus-visible,
+    button:focus-visible,
+    a:focus-visible,
+    [tabindex]:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    /* Modo ahorro: quita transiciones y animaciones para gastar menos
+       batería y renderizar más rápido en teléfonos de gama baja.
+       Se activa desde Configuración o automáticamente cuando el
+       navegador avisa que el estudiante está con datos limitados. */
+    [data-ahorro="on"] *,
+    [data-ahorro="on"] *::before,
+    [data-ahorro="on"] *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+    [data-ahorro="on"] .btn:hover { transform: none; }
+
+    /* Respeta también la preferencia del sistema */
+    @media (prefers-reduced-motion: reduce) {
+      .btn:hover { transform: none; }
+    }
