@@ -384,6 +384,19 @@ contraseña por defecto publicada en el repo; si desplegás el backend, definí
 `SAKURA_ADMIN_EMAIL`, `SAKURA_ADMIN_PASSWORD` y
 `SAKURA_ADMIN_TOKEN_SECRET` como variables de entorno.
 
+## 📦 APK (Android)
+
+Los builds de Android (`*.apk`) **no se guardan en el repo** (están en
+`.gitignore` por peso). Se publican como artefactos en **GitHub Releases**:
+
+```bash
+# Crear una release con los APKs (requiere GitHub CLI autenticado)
+gh release create v2.0 \
+  --title "Cherry-Bomb v2.0" \
+  --notes "Builds Android de Cherry-Bomb" \
+  EduGest-v2.0.apk
+```
+
 ## Licencia
 
 Proyecto educativo interno.
