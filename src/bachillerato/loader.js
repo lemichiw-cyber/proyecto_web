@@ -14,6 +14,7 @@
    no trate de empaquetar módulos que todavía no están. */
 const MODULOS = {
   notas: () => import('./notas/notas-ui.js'),
+  planificador: () => import('./agenda/agenda-ui.js'),
 };
 
 /** Módulos ya cargados, para no volver a descargarlos. */
