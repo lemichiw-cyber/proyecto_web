@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
@@ -44,6 +45,30 @@ _CORS_DEFAULT = ",".join([
     "https://proyecto-web-2-bygl.onrender.com",
 ])
 _CORS = [o.strip() for o in os.getenv("SAKURA_CORS_ORIGINS", _CORS_DEFAULT).split(",") if o.strip()]
+
+
+def _is_valid_origin(origin: str) -> bool:
+    """Valida el formato de un origen CORS: http(s)://host[:puerto], sin
+    ruta/query/fragmento. Rechaza el comodín `*` (nunca debe combinarse con
+    credenciales) y cualquier entrada malformada, para no abrir CORS a la
+    ligera por un `.env` mal escrito."""
+    if not origin or origin == "*":
+        return False
+    try:
+        p = urlparse(origin)
+    except Exception:  # noqa: BLE001
+        return False
+    if p.scheme not in ("http", "https"):
+        return False
+    if not p.netloc or not p.hostname:
+        return False
+    # Un origen no lleva ruta, query ni fragmento.
+    if p.path not in ("", "/") or p.query or p.fragment:
+        return False
+    return True
+
+
+_CORS = [o for o in _CORS if _is_valid_origin(o)]
 
 # Cualquier localhost/puerto local (dev, preview, serve, …)
 _CORS_LOCAL = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$"

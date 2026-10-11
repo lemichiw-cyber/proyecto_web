@@ -349,6 +349,7 @@ scripts/
   verify-build.mjs       regresión de rutas del deploy
 docs/
   supabase-schema.sql    esquema con RLS (10 tablas, 35 políticas)
+  MIGRACION_AUTH.md      plan de migración de auth a Supabase (pendiente)
 src/
   app.js                 lógica principal
   data.js                persistencia en localStorage
@@ -363,12 +364,38 @@ backend/
 index.html               markup (24 secciones app-*)
 ```
 
-## Seguridad
+## ⚠️ Seguridad — lee esto antes de usar con datos reales
 
-`src/app.js` no guarda contraseñas en claro: usa un hash FNV-1a con sal y un
-XOR con clave fija (`CHERRYBOMB_SALT_2026`). Es ofuscación contra alguien que
-mire por encima del hombro, **no cifrado**: no protege contra nadie con acceso
-al `localStorage`. Para datos reales, mové la autenticación al servidor.
+> **La autenticación actual NO es segura.** Las contraseñas se «protegen» en el
+> navegador con un hash FNV-1a/djb2 débil y sin sal por cuenta
+> (`hashPassword`), y algunos datos se «cifran» en `localStorage` con XOR bajo
+> una clave derivada de una sal fija (`CHERRYBOMB_SALT_2026`). **Esto es
+> ofuscación, no cifrado ni autenticación**: cualquiera con acceso al
+> dispositivo (o DevTools) puede recuperar los hashes y los datos. Las cuentas
+> solo existen en ese navegador. **No lo uses con datos reales ni con roles
+> privilegiados.**
+
+El plan para migrar la identidad a **Supabase Auth** (usando
+`docs/supabase-schema.sql`) está en [`docs/MIGRACION_AUTH.md`](docs/MIGRACION_AUTH.md).
+La migración **no está implementada** y requiere aprobación del propietario.
+
+Nota aparte: el panel admin del reproductor (`backend/api/admin.py`) usa una
+contraseña por defecto publicada en el repo; si desplegás el backend, definí
+`SAKURA_ADMIN_EMAIL`, `SAKURA_ADMIN_PASSWORD` y
+`SAKURA_ADMIN_TOKEN_SECRET` como variables de entorno.
+
+## 📦 APK (Android)
+
+Los builds de Android (`*.apk`) **no se guardan en el repo** (están en
+`.gitignore` por peso). Se publican como artefactos en **GitHub Releases**:
+
+```bash
+# Crear una release con los APKs (requiere GitHub CLI autenticado)
+gh release create v2.0 \
+  --title "Cherry-Bomb v2.0" \
+  --notes "Builds Android de Cherry-Bomb" \
+  EduGest-v2.0.apk
+```
 
 ## Licencia
 
