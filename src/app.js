@@ -9,7 +9,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
       var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','auth'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth'];
+      /* MODO INVITADO: la app se abre y funciona sin registro. Solo lo
+         que necesita cuenta real (mensajes, foros, aulas, matrícula…)
+         pide iniciar sesión. El estudiante usa horario, agenda,
+         calendario, tareas, exámenes y el Pomodoro sin correo ni
+         contraseña, y sus datos quedan en el dispositivo. */
+      var appsProtegidas = ['actividades','foros','clases','mensajes','grupales','protegido','aulas','planificacion','matricula','auth'];
       function $(id) { return document.getElementById(id); }
 
       /* ===================================================================
@@ -903,7 +908,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          puede crear; hay que activar la pestaña del alumno para que la
          vista no quede en blanco. */
       function aplicarTabsPorRol() {
-        if (!usuarioActual) return;
         var puedeCrear = tienePermiso('crear');
         var pares = [
           ['data-tarea-tab="docente"', 'data-tarea-tab="estudiante"'],
@@ -914,7 +918,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var docente = document.querySelector('[' + par[0] + ']');
           var propio = document.querySelector('[' + par[1] + ']');
           if (!docente || !propio) return;
-          // quien crea vuelve a su pestaña; quien no crea se va de ella
+          // quien crea vuelve a su pestaña; quien no crea (o está en
+          // modo invitado) se va a la pestaña de estudiante
           if (puedeCrear) {
             if (!docente.classList.contains('active')) docente.click();
           } else if (!propio.classList.contains('active')) {
@@ -4913,6 +4918,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       } else {
         restoreUI();
       }
+
+      /* Modo invitado: aunque no haya sesión, los permisos de la UI se
+         publican en <body data-perm> para que nadie vea pestañas ni
+         botones de docente. Es la vista de estudiante por defecto. */
+      if (!logueado) { actualizarPermisosUI(); }
 
       /* ===================================================================
          INICIO
