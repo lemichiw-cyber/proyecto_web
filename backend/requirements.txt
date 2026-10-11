@@ -1,6 +1,11 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-ytmusicapi>=1.7
-yt-dlp>=2025.1.1
-python-dotenv>=1.0
-requests>=2.31
+# Versiones fijadas para reproducción exacta del entorno del backend.
+# Equivale a lo que hoy instala un `pip install -r requirements.txt` con
+# rangos `>=`, pero bloqueado para que dos despliegues no diverjan.
+# NOTA: yt-dlp se debe repasar de vez en cuando: YouTube cambia a menudo y
+# una versión vieja deja de extraer streams (basta con bump de la fecha).
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+ytmusicapi==1.12.3
+yt-dlp==2026.8.19
+python-dotenv==1.2.4
+requests==2.34.2
