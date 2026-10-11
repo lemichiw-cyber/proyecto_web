@@ -1,48 +1,25 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import fs from 'fs';
-import path from 'path';
-import { createHash } from 'crypto';
 
-// Plugin to handle base64 images in HTML
-function base64ImagesPlugin() {
-  return {
-    name: 'base64-images',
-    transformIndexHtml(html) {
-      // Replace base64 data URLs with placeholder comments
-      // The actual images will be copied to dist/assets and referenced
-      const base64Regex = /<img\s+src="data:image\/([^;]+);base64,([^"]+)"([^>]*)>/g;
-      
-      return html.replace(base64Regex, (match, mimeType, base64Data, rest) => {
-        // Generate a unique filename based on the base64 content hash
-        const hash = createHash('md5').update(base64Data).digest('hex').substring(0, 8);
-        const ext = mimeType.split('/')[1] || 'png';
-        const filename = `base64-img-${hash}.${ext}`;
-        
-        // Save the base64 image to public/base64-images/
-        const publicDir = path.join(process.cwd(), 'public', 'base64-images');
-        if (!fs.existsSync(publicDir)) {
-          fs.mkdirSync(publicDir, { recursive: true });
-        }
-        
-        const buffer = Buffer.from(base64Data, 'base64');
-        fs.writeFileSync(path.join(publicDir, filename), buffer);
-        
-        // Return img tag with reference to the saved file
-        return `<img src="base64-images/${filename}"${rest}>`;
-      });
-    }
-  };
-}
+// Nota: las imágenes que antes iban embebidas en base64 dentro de index.html
+// ya fueron extraídas a `public/base64-images/` (commiteadas) y el HTML
+// referencia ficheros. El plugin `base64ImagesPlugin` — que reescribía
+// index.html y escribía ficheros en `public/` en cada build/dev (efecto
+// secundario) — se eliminó por innecesario. Ver `extract-base64-images.cjs`
+// en el historial: era el paso único de extracción, ya ejecutado.
 
 export default defineConfig({
+  // Rutas relativas a propósito: permite que la misma build funcione en un
+  // subdirectorio (GitHub Pages `/proyecto_web/`) y en la raíz (Render).
   base: './',
   root: '.',
   publicDir: 'public',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
+    // 'hidden': genera sourcemaps sin añadir el comentario `sourceMappingURL`
+    // al final de los bundles (no se exponen al público en producción).
+    sourcemap: 'hidden',
     rollupOptions: {
       input: {
         main: 'index.html',
@@ -54,11 +31,9 @@ export default defineConfig({
     open: true,
   },
   plugins: [
-    base64ImagesPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       cleanupOutdatedCaches: true,
-      includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
         name: 'Cherry-Bomb - Plataforma Educativa',
         short_name: 'Cherry-Bomb',
