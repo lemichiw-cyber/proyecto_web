@@ -150,6 +150,7 @@ export const CLAVES = {
   PAES_HISTORIAL: 'paes.historial',
   PAES_METAS: 'paes.metas',
   PAES_TARJETAS: 'paes.tarjetas',
+  PAES_EN_CURSO: 'paes.simulacro-en-curso',
   SERVICIO_SOCIAL: 'servicio.horas',
   SERVICIO_META: 'servicio.meta',
   PROYECTO_GRADO: 'proyecto.hitos',

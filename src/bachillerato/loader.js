@@ -15,6 +15,7 @@
 const MODULOS = {
   notas: () => import('./notas/notas-ui.js'),
   planificador: () => import('./agenda/agenda-ui.js'),
+  paes: () => import('./paes/paes-ui.js'),
 };
 
 /** Módulos ya cargados, para no volver a descargarlos. */

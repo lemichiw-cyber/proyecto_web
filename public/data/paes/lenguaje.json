@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "materia": "Lenguaje y Literatura",
+  "descripcion": "Banco de ejemplo para practicar. Los textos y las preguntas fueron escritos para esta aplicación.",
+  "aviso": "Estas preguntas NO son preguntas oficiales de la PAES ni de ninguna prueba pública, y los textos no pertenecen a ninguna obra con derechos de autor. Son ejemplos originales para practicar el formato. El banco real lo debe cargar el docente, y antes hay que verificar qué material es de uso permitido.",
+  "preguntas": [
+    {
+      "id": "len-001",
+      "enunciado": "Lee: «La lluvia empezó de madrugada. Mara se asomó a la ventana y vio que el patio se llenaba de charcos brillantes. Aun así, se puso el impermeable y salió.» ¿Qué característica describe mejor a Mara en este fragmento?",
+      "opciones": [
+        { "id": "a", "texto": "Es distraída y olvida lo que hace." },
+        { "id": "b", "texto": "Actúa con decisión a pesar del inconveniente." },
+        { "id": "c", "texto": "Le tiene miedo a la lluvia." },
+        { "id": "d", "texto": "No sabe qué tiempo hacía afuera." }
+      ],
+      "correcta": "b",
+      "explicacion": "Aunque llueve, se pone el impermeable y sale: eso muestra decisión, no distracción ni miedo.",
+      "tema": "Comprensión lectora"
+    },
+    {
+      "id": "len-002",
+      "enunciado": "¿Cuál de estas oraciones está escrita correctamente?",
+      "opciones": [
+        { "id": "a", "texto": "Los alumnos hizo la tarea en el salón." },
+        { "id": "b", "texto": "Los alumnos hicieron la tarea en el salón." },
+        { "id": "c", "texto": "Los alumnos han hizo la tarea en el salón." },
+        { "id": "d", "texto": "Los alumnos hareis la tarea en el salón." }
+      ],
+      "correcta": "b",
+      "explicacion": "El sujeto «los alumnos» es plural, así que el verbo va en plural: «hicieron».",
+      "tema": "Gramática"
+    },
+    {
+      "id": "len-003",
+      "enunciado": "En la oración «El perro del vecino ladró toda la noche», ¿cuál es el sujeto?",
+      "opciones": [
+        { "id": "a", "texto": "El vecino" },
+        { "id": "b", "texto": "toda la noche" },
+        { "id": "c", "texto": "El perro del vecino" },
+        { "id": "d", "texto": "ladró" }
+      ],
+      "correcta": "c",
+      "explicacion": "El sujeto es el ser o la cosa que realiza la acción: «el perro del vecino».",
+      "tema": "Gramática"
+    },
+    {
+      "id": "len-004",
+      "enunciado": "¿Qué recurso literario hay en «el viento susurraba entre los árboles»?",
+      "opciones": [
+        { "id": "a", "texto": "Personificación" },
+        { "id": "b", "texto": "Hipérbole" },
+        { "id": "c", "texto": "Rima asonante" },
+        { "id": "d", "texto": "Interrogación retórica" }
+      ],
+      "correcta": "a",
+      "explicacion": "Se le atribuye una acción humana (susurrar) a algo que no es persona: eso es personificación.",
+      "tema": "Literatura"
+    },
+    {
+      "id": "len-005",
+      "enunciado": "Lee: «Aunque estudió mucho, Joel no aprobó el examen. Sin embargo, decidió volver a intentarlo en la próxima convocatoria.» ¿Cuál es la idea principal del fragmento?",
+      "opciones": [
+        { "id": "a", "texto": "Joel no estudió lo suficiente." },
+        { "id": "b", "texto": "Joel fracasó una vez pero insiste." },
+        { "id": "c", "texto": "El examen era demasiado difícil." },
+        { "id": "d", "texto": "Joel ya no quiere seguir estudiando." }
+      ],
+      "correcta": "b",
+      "explicacion": "El texto cuenta un fracaso y una decisión de seguir adelante: esa es la idea central.",
+      "tema": "Comprensión lectora"
+    },
+    {
+      "id": "len-006",
+      "enunciado": "¿Cuál es el sinónimo más adecuado de «apacible»?",
+      "opciones": [
+        { "id": "a", "texto": "Ruidoso" },
+        { "id": "b", "texto": "Tranquilo" },
+        { "id": "c", "texto": "Alegre" },
+        { "id": "d", "texto": "Rápido" }
+      ],
+      "correcta": "b",
+      "explicacion": "«Apacible» describe algo o alguien tranquilo y sin sobresaltos.",
+      "tema": "Vocabulario"
+    },
+    {
+      "id": "len-007",
+      "enunciado": "¿En qué tipo de texto se expone una postura y se dan razones para defenderla?",
+      "opciones": [
+        { "id": "a", "texto": "Narrativo" },
+        { "id": "b", "texto": "Descriptivo" },
+        { "id": "c", "texto": "Argumentativo" },
+        { "id": "d", "texto": "Poético" }
+      ],
+      "correcta": "c",
+      "explicacion": "El texto argumentativo defiende una postura con razones y pruebas.",
+      "tema": "Producción de texto"
+    },
+    {
+      "id": "len-008",
+      "enunciado": "¿Cuál de estas oraciones usa correctamente el signo de interrogación?",
+      "opciones": [
+        { "id": "a", "texto": "¿Dónde vives? preguntó la maestra." },
+        { "id": "b", "texto": "¿Dónde vives? Preguntó la maestra." },
+        { "id": "c", "texto": "¿Dónde vives preguntó la maestra?" },
+        { "id": "d", "texto": "Dónde vives? preguntó la maestra." }
+      ],
+      "correcta": "b",
+      "explicacion": "La pregunta cerró con «?», así que lo que sigue arranca con mayúscula.",
+      "tema": "Ortografía"
+    },
+    {
+      "id": "len-009",
+      "enunciado": "Lee: «La noticia corrió de boca en boca hasta llegar al otro extremo del pueblo.» ¿Qué recurso se usa en «corrió» aplicado a la noticia?",
+      "opciones": [
+        { "id": "a", "texto": "Metáfora" },
+        { "id": "b", "texto": "Comparación" },
+        { "id": "c", "texto": "Onomatopeya" },
+        { "id": "d", "texto": "Eufemismo" }
+      ],
+      "correcta": "a",
+      "explicacion": "Se dice lo que no es literalmente cierto (una noticia no corre) para expresar algo: es una metáfora.",
+      "tema": "Literatura"
+    },
+    {
+      "id": "len-010",
+      "enunciado": "¿Cuál es el antónimo de «efímero»?",
+      "opciones": [
+        { "id": "a", "texto": "Breve" },
+        { "id": "b", "texto": "Duradero" },
+        { "id": "c", "texto": "Fugaz" },
+        { "id": "d", "texto": "Ligero" }
+      ],
+      "correcta": "b",
+      "explicacion": "«Efímero» es lo que dura poco; su contrario es «duradero».",
+      "tema": "Vocabulario"
+    },
+    {
+      "id": "len-011",
+      "enunciado": "En un texto argumentativo sobre el uso del celular en clase, ¿qué conviene incluir?",
+      "opciones": [
+        { "id": "a", "texto": "Una lista de personajes imaginarios." },
+        { "id": "b", "texto": "Datos o ejemplos que sostengan la postura." },
+        { "id": "c", "texto": "Descripciones detalladas del salón." },
+        { "id": "d", "texto": "Un relato de ficción con diálogo." }
+      ],
+      "correcta": "b",
+      "explicacion": "Lo que sostiene una postura son razones, datos o ejemplos; lo demás no aporta al argumento.",
+      "tema": "Producción de texto"
+    },
+    {
+      "id": "len-012",
+      "enunciado": "¿Cuál es el plural correcto de «régimen»?",
+      "opciones": [
+        { "id": "a", "texto": "regímenes" },
+        { "id": "b", "texto": "regimenes" },
+        { "id": "c", "texto": "régimenes" },
+        { "id": "d", "texto": "régimene" }
+      ],
+      "correcta": "c",
+      "explicacion": "La palabra lleva tilde en la «i» y el plural mantiene esa tilde: «régimenes».",
+      "tema": "Ortografía"
+    }
+  ]
+}

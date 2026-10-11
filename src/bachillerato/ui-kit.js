@@ -239,11 +239,20 @@ export function dialogo(opts) {
     fondo.addEventListener('mousedown', (ev) => { if (ev.target === fondo) cerrar(false); });
     document.addEventListener('keydown', alTeclear, true);
 
-    const pie = el('div', { style: { display: 'flex', gap: '.5rem', justifyContent: 'flex-end', marginTop: '1rem' } });
-    const btnCancelar = boton('Cancelar', 'fantasma', () => cerrar(false));
-    const btnConfirmar = boton(o.textoConfirmar || 'Guardar', 'primario', () => cerrar(true), { 'aria-label': o.textoConfirmar || 'Guardar' });
-    pie.appendChild(btnCancelar);
-    pie.appendChild(btnConfirmar);
+    const pie = el('div', { style: { display: 'flex', gap: '.5rem', justifyContent: 'flex-end', marginTop: '1rem', flexWrap: 'wrap' } });
+    const conAcciones = Array.isArray(o.acciones) && o.acciones.length > 0;
+
+    if (conAcciones) {
+      /* Varias salidas posibles: cada acción cierra el diálogo y
+         devuelve su valor. Se deja una salida libre al final. */
+      o.acciones.forEach((a) => {
+        pie.appendChild(boton(a.texto, a.tono || 'secundario', () => cerrar(a.resultado), { 'aria-label': a.texto }));
+      });
+      pie.appendChild(boton(o.textoCancelar || 'Salir', 'fantasma', () => cerrar(false)));
+    } else {
+      pie.appendChild(boton('Cancelar', 'fantasma', () => cerrar(false)));
+      pie.appendChild(boton(o.textoConfirmar || 'Guardar', 'primario', () => cerrar(true), { 'aria-label': o.textoConfirmar || 'Guardar' }));
+    }
     caja.appendChild(pie);
 
     fondo.appendChild(caja);

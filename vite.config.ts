@@ -52,6 +52,18 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf,otf}'],
         runtimeCaching: [
           {
+            /* Bancos de preguntas PAES: son JSON que el estudiante
+               necesita sin conexión. Se guardan en caché al primer uso
+               y se actualizan en segundo plano. */
+            urlPattern: /\/data\/paes\/[^/?#]+\.json$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'paes-bancos',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
