@@ -134,11 +134,11 @@
 - **Importar**: Selector de archivo → vista previa (conteos) → confirmación explícita → modo "Reemplazar" / "Combinar".
 - **Migración guiada**: Aviso en dominios legacy (`VITE_LEGACY_ORIGINS`) con botón exportar + URL nueva (`VITE_NEW_APP_URL`). En dominio nuevo, aviso de importar si no hay datos.
 
-### Orden: crear cuenta → luego importar
+### Cómo migrar tus datos
 
-**Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
+> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
 
-1. **Primero**: En el sitio nuevo, creá tu cuenta (botón "Iniciar sesión" → "Crear cuenta").
+1. En el sitio **nuevo**, creá tu cuenta (botón "Iniciar sesión" → "Crear cuenta").
 2. **Luego**: En Ajustes → Respaldos, seleccioná tu archivo JSON e importá.
 
 Si importás **sin haber creado la cuenta**, los datos se guardarán en localStorage pero **no se vincularán a tu cuenta**. Al recargar o cambiar de dispositivo, se perderán.
