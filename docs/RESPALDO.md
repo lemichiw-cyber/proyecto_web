@@ -50,9 +50,8 @@
 - `cherrybombTheme` — tema visual activo
 - `cherrybombVol` — volumen global (0-1)
 - `cherrybombPomodoro` — estado del temporizador Pomodoro
-- `cherrybombNotifPermission` — permiso de notificaciones (granted/denied/dismissed)
 - `cherrybombNotifReminders` — recordatorios ya mostrados (para no duplicar)
-- `claseAvisos` — avisos de clases vistos
+- `claseAvisos` — avisos de clases vistos (permite no volver a mostrar avisos ya leídos)
 
 ### Sakura Player
 - `sp_eq` — ganancias del ecualizador (10 bandas)
@@ -60,24 +59,21 @@
 - `sp_theme` — tema manual del reproductor
 - `sp_theme_mode` — modo de tema (auto/manual)
 - `sp_animations` — animaciones on/off
-- `LS_KEY` (library) — biblioteca local: favoritos, historial, playlists, tracks locales
+- `sp_library_v1` — biblioteca local: favoritos, historial, playlists, tracks locales (LS_KEY = 'sp_library_v1')
 
-### Datos del estudiante (propios)
+### Datos del estudiante (propios - SOLO claves personales, sin datos de otros)
 - `actividades` — actividades personales
 - `agendaItems` — eventos de agenda personal
-- `asistencia_historial` — historial de asistencia propio
 - `calEventos` — eventos de calendario
 - `clasesItems` — clases en línea propias
-- `foros` — participaciones en foros
 - `horarioItems` — horario personal
-- `mensajesItems` — mensajes propios
-- `gruposItems` — grupos propios
-- `protegidoItems` — items protegidos
-- `tareas` (bachillerato_tareas) — tareas propias
-- `entregas` (bachillerato_entregas) — entregas propias
-- `examenes` (bachillerato_examenes) — exámenes propios
-- `examResultados` (bachillerato_exam_resultados) — resultados de exámenes
-- `planificaciones` (bachillerato_plan_trabajo) — plan de trabajo docente
+- `bachillerato_tareas` — tareas propias
+- `bachillerato_entregas` — entregas propias
+- `bachillerato_examenes` — exámenes propios
+- `bachillerato_exam_resultados` — resultados de exámenes
+- `bachillerato_plan_trabajo` — plan de trabajo docente
+- `planificaciones` — planificaciones
+- `planData` — plan de materias
 - `planificaciones` — planificaciones
 - `planData` — plan de materias
 - `POMO_KEY` (cherrybombPomodoro) — estado pomodoro
@@ -97,8 +93,14 @@
 | `aula_calificaciones` | Calificaciones — datos de otros |
 | `aula_asistencia` | Asistencias — datos de otros |
 | `aula_tareas` | Tareas de aulas (pueden ser de docentes) |
+| `foros` | Participaciones en foros con mensajes de múltiples usuarios |
+| `mensajesItems` | Mensajes entre usuarios |
+| `gruposItems` | Grupos con múltiples miembros |
+| `asistencia_historial` | Registros de asistencia de otros usuarios |
+| `protegidoItems` | Reportes de incidentes sensibles (acoso, robo, emergencias) |
+| `passHash_*` (prefijo) | Hashes de contraseña |
 
-**Regla:** Si la clave contiene datos identificables de OTROS usuarios (emails, nombres, calificaciones, entregas), se excluye. El respaldo es **personal**.
+**Regla:** Si la clave contiene datos identificables de OTROS usuarios (emails, nombres, calificaciones, entregas, mensajes, incidentes), se excluye. El respaldo es **personal**.
 
 ## Archivos de audio (MP3/FLAC/OGG)
 
@@ -141,6 +143,6 @@
 
 Si importás **sin haber creado la cuenta**, los datos se guardarán en localStorage pero **no se vincularán a tu cuenta**. Al recargar o cambiar de dispositivo, se perderán.
 
-Al importar, los datos se escriben en `localStorage`. Si hay sesión activa y `window.sbReady()` está disponible, también se **intenta** sincronizar con el backend (opcional, requiere configuración de Supabase).
+Al importar, los datos se escriben en `localStorage`. No hay sincronización automática con servidor.
 
 ⚠️ **Advertencia**: En dispositivos compartidos, todos los usuarios ven los mismos datos locales. El respaldo no distingue usuarios; al importar, los datos se mezclan con los del dispositivo.

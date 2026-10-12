@@ -463,15 +463,15 @@ La app guarda todos los datos del estudiante en `localStorage` del navegador.
 `https://lemichiw-cyber.github.io` y luego desde `https://mi-app.netlify.app`,
 el estudiante pierde sus tareas, horarios, notas y configuración.
 
-### Exportar / Importar (manual)
+### Cómo migrar tus datos
 
 > **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
 
-1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON*.
+1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON**.
    - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.
    - Incluye: tareas, horarios, agenda, notas, exámenes, planificaciones, tema, volumen, biblioteca del reproductor (favoritos, playlists, historial), preferencias.
    - **NO incluye**: contraseñas, hashes, sesión activa, URL del backend, datos de otros usuarios (alumnos, entregas, calificaciones, aulas de docente, foros, mensajes, grupos, incidentes).
-2. En el sitio **nuevo**: *Ajustes → Respaldos → Importar respaldo*.
+2. En el sitio **nuevo**: *Ajustes → Respaldos → Importar respaldo**.
    - Seleccioná el archivo JSON → vista previa → elegí **Combinar** (suma, no duplica) o **Reemplazar todo**.
    - Confirmación explícita antes de escribir.
    - Si falla a la mitad, se restaura el estado anterior.

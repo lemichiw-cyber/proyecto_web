@@ -18,6 +18,7 @@ import {
   isLegacyOrigin,
   hasLocalData,
 } from './backup.js';
+import { escapeHtml } from '../utils/escape.js';
 
 /* ------------------------------------------------------------------
    Mock de localStorage
@@ -327,5 +328,17 @@ describe('isLegacyOrigin / hasLocalData', () => {
     expect(hasLocalData()).toBe(true);
     global.localStorage.clear();
     expect(hasLocalData()).toBe(false);
+  });
+});
+
+describe("escapeHtml attribute safety", () => {
+  it('escapes quotes and angle brackets in attribute context', () => {
+    const malicious = '" onmouseover="x';
+    const escaped = escapeHtml(malicious);
+    // The escaped string should not contain unescaped quotes or angle brackets
+    expect(escaped).not.toContain('<');
+    expect(escaped).not.toContain('>');
+    // The escaped value should be the original with entities (" becomes ")
+    expect(escaped).toBe('" onmouseover="x');
   });
 });
