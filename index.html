@@ -3670,18 +3670,72 @@ unicode: "eb1c"
       </div>
     </section>
 
-    <section id="app-configuracion" class="section hidden">
+    <main>
+    <div id="app-respaldos" class="section hidden">
       <div class="container">
-        <h2 class="section-title"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /></svg> Configuración</h2>
-        <p class="section-sub">Personalizá el estilo visual de la plataforma.</p>
+        <h2 class="section-title"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" /><path d="M3 10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" /><path d="M3 3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3" /></svg> Respaldos</h2>
+        <p class="section-sub">Exportá e importá tus datos (tareas, horarios, notas, configuración) para migrar entre dominios o hacer copias de seguridad.</p>
+          <div id="backup-aviso-cuenta" style="margin-bottom:1rem;"></div>
 
-        <div class="card">
-          <h3 style="margin:0 0 .75rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25" /><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg> Personalizar tema</h3>
-          <p style="margin:0 0 1rem;color:var(--gray-500);">Elegí el estilo que más te guste.</p>
-          <div id="theme-options-section" class="theme-grid" style="max-width:420px;"></div>
+        <div class="card" style="margin-bottom:1.5rem;">
+          <h3 style="margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar mis datos</h3>
+          <p style="margin:0 0 1rem;color:var(--gray-500);font-size:.85rem;">Descargá un archivo JSON con tus tareas, horarios, notas, configuración de tema, biblioteca del reproductor y preferencias. <strong>No incluye</strong> contraseñas, sesiones ni datos de otras personas (alumnos, entregas, calificaciones).</p>
+          <div id="backup-export-preview" style="margin-bottom:1rem;font-size:.85rem;color:var(--gray-500);"></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btn-backup-export"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar JSON</button>
+            <button class="btn btn-outline" id="btn-backup-export-share"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.58" y2="10.49" /></svg> Compartir (Web Share)</button>
+          </div>
         </div>
+
+        <div class="card" style="margin-bottom:1.5rem;">
+          <h3 style="margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Importar respaldo</h3>
+          <p style="margin:0 0 1rem;color:var(--gray-500);font-size:.85rem;">Seleccioná un archivo de respaldo JSON. Verás una vista previa de lo que se importará antes de confirmar.</p>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+            <input type="file" id="backup-import-file" accept=".json" style="display:none;" />
+            <button class="btn btn-outline" id="btn-backup-import-pick"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2h12a2 2 0 0 1 2-2V8z" /></svg> Seleccionar archivo JSON</button>
+            <span id="backup-import-filename" style="font-size:.8rem;color:var(--gray-500);"></span>
+          </div>
+          <div id="backup-import-preview" style="margin-bottom:1rem;font-size:.85rem;color:var(--gray-500);"></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
+              <input type="radio" name="backup-import-mode" value="merge" checked> Combinar (suma, no duplica)
+            </label>
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
+              <input type="radio" name="backup-import-mode" value="replace"> Reemplazar todo
+            </label>
+          </div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btn-backup-import-confirm" disabled><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg> Confirmar importación</button>
+            <button class="btn btn-outline" id="btn-backup-import-cancel" style="display:none;"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> Cancelar</button>
+          </div>
+          <p id="backup-import-status" style="margin-top:.75rem;font-size:.8rem;color:var(--gray-500);"></p>
+        </div>
+
+        <div class="card" style="background:var(--gray-50);border:1px solid var(--gray-200);">
+          <h3 style="margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10" /><path d="M12 16a4 4 0 0 1 0-8 4 4 0 0 1 0 8" /><path d="M12 12v-4" /></svg> Migración de dominio</h3>
+          <p style="margin:0 0 1rem;color:var(--gray-500);font-size:.85rem;">¿Cambiaste de dirección (ej. de GitHub Pages a Netlify)? Los datos locales <strong>no se comparten entre dominios</strong>. Usá los botones de arriba para exportar en el sitio viejo e importar en el nuevo.</p>
+          <div id="legacy-migration-banner" class="hidden" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;padding:1rem;background:var(--amber-light);border:1px solid var(--amber);border-radius:8px;">
+            <div style="flex:1;min-width:200px;">
+              <strong>📍 Sitio antiguo detectado</strong><br>
+              <span id="legacy-message" style="font-size:.85rem;"></span>
+            </div>
+            <button class="btn btn-primary" id="legacy-export-btn"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar ahora</button>
+            <button class="btn btn-outline" id="legacy-dismiss-btn">Descartar</button>
+          </div>
+          <div id="new-site-banner" class="hidden" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;padding:1rem;background:var(--green-light);border:1px solid var(--green);border-radius:8px;margin-top:1rem;">
+            <div style="flex:1;min-width:200px;">
+              <strong>🆕 Sitio nuevo detectado</strong><br>
+              <span style="font-size:.85rem;">¿Venís del sitio anterior? Importá tu respaldo para recuperar tus datos.</span>
+            </div>
+            <button class="btn btn-primary" id="new-site-import-btn"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Importar respaldo</button>
+            <button class="btn btn-outline" id="new-site-dismiss-btn">Después</button>
+          </div>
+        </div>
+
       </div>
     </section>
+
+    <section id="app-configuracion" class="section hidden">
 
   </main>
 

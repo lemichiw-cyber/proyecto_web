@@ -448,12 +448,59 @@ XOR con clave fija (`CHERRYBOMB_SALT_2026`). Es ofuscación contra alguien que
 mire por encima del hombro, **no cifrado**: no protege contra nadie con acceso
 al `localStorage`. Para datos reales, mové la autenticación al servidor.
 
+<<<<<<< HEAD
 > **Nota**: no existe una sección "Migración de dominio" ni funcionalidad
 > integrada de exportar/importar datos en el código actual.
 > La persistencia es 100% `localStorage` por dispositivo; para mover datos
 > entre dominios/dispositivos habría que implementar sincronización con el
 > backend (`/api/accounts`, `/api/music/library`, etc.) o añadir un botón
 > de backup/restore JSON en la UI.
+=======
+## Respaldo y migración de dominio
+
+La app guarda todos los datos del estudiante en `localStorage` del navegador.
+**Los datos NO se comparten entre dominios**: si la app se sirve desde
+`https://lemichiw-cyber.github.io` y luego desde `https://mi-app.netlify.app`,
+el estudiante pierde sus tareas, horarios, notas y configuración.
+
+### Cómo migrar tus datos
+
+> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
+
+1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON**.
+   - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.
+   - Incluye: tareas, horarios, agenda, notas, exámenes, planificaciones, tema, volumen, biblioteca del reproductor (favoritos, playlists, historial), preferencias.
+   - **NO incluye**: contraseñas, hashes, sesión activa, URL del backend, datos de otros usuarios (alumnos, entregas, calificaciones, aulas de docente, foros, mensajes, grupos, incidentes).
+2. En el sitio **nuevo**: *Ajustes → Respaldos → Importar respaldo**.
+   - Seleccioná el archivo JSON → vista previa → elegí **Combinar** (suma, no duplica) o **Reemplazar todo**.
+   - Confirmación explícita antes de escribir.
+   - Si falla a la mitad, se restaura el estado anterior.
+   - **Primero creá tu cuenta** en el sitio nuevo (botón "Iniciar sesión" → "Crear cuenta"), **luego** importá el respaldo. El respaldo no se vincula a ninguna cuenta.
+
+### Migración guiada (automática)
+
+Configurá en Netlify (o en `.env`):
+```bash
+VITE_LEGACY_ORIGINS=https://lemichiw-cyber.github.io,https://proyecto-web-2-bygl.onrender.com
+VITE_NEW_APP_URL=https://mi-app.netlify.app
+```
+
+- **Sitio antiguo** (origen en `VITE_LEGACY_ORIGINS`): si hay datos locales, muestra banner persistente *"Estás en el sitio antiguo. Exportá tus datos e importalos en [nueva URL]"* con botón **Exportar ahora**.
+- **Sitio nuevo** (origen distinto, sin datos locales): muestra banner *"¿Venís del sitio anterior? Importá tu respaldo aquí"* con botón **Importar respaldo**.
+- El usuario puede descartar los banners (se guarda en `localStorage` y no vuelve a aparecer).
+- Banner temporal en Inicio durante la transición: *"Cambiamos de dirección. Exportá tus datos (Ajustes → Respaldos) para no perderlos."*
+
+### Formato del respaldo
+
+Ver `docs/RESPALDO.md` para el esquema JSON completo, lista blanca de claves, claves excluidas (contraseñas, hashes, sesión, datos de otros) y política de versiones.
+
+### ⚠️ Privacidad
+
+- El archivo de respaldo contiene **datos personales** (tareas, notas, horarios). Guardalo con cuidado.
+- **Nunca** se envía a ningún servidor. Todo ocurre en el navegador.
+- Al importar: validación estricta (esquema, tipos, lista blanca). Sanitización de textos.
+- El respaldo **no incluye** contraseñas ni datos de otros usuarios (alumnos, entregas, calificaciones). Si sos docente, exportá/importá solo tus propios datos de configuración.
+>>>>>>> 2fb3bbf (feat(backup): módulo exportar/importar con lista blanca, validación y rollback)
 
 ## Licencia
 
