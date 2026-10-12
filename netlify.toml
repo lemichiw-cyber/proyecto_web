@@ -1,0 +1,183 @@
+# Netlify configuration for Cherry-Bomb frontend
+# Frontend is a Vite SPA with PWA (vite-plugin-pwa)
+# Backend remains on Render (FastAPI + ytmusicapi)
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Node version matching package.json engines: ^18.0.0 || >=20.0.0
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA redirect: serve index.html for all routes EXCEPT real static files
+# Order matters: more specific rules first
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/sw.js"
+  to = "/sw.js"
+  status = 200
+
+[[redirects]]
+  from = "/manifest.webmanifest"
+  to = "/manifest.webmanifest"
+  status = 200
+
+[[redirects]]
+  from = "/manifest.json"
+  to = "/manifest.webmanifest"
+  status = 200
+
+[[redirects]]
+  from = "/icons/*"
+  to = "/icons/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/images/*"
+  to = "/images/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/base64-images/*"
+  to = "/base64-images/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/icon-*"
+  to = "/icon-:splat"
+  status = 200
+
+[[redirects]]
+  from = "/apple-touch-icon.png"
+  to = "/apple-touch-icon.png"
+  status = 200
+
+[[redirects]]
+  from = "/icon.svg"
+  to = "/icon.svg"
+  status = 200
+
+[[redirects]]
+  from = "/logo.png"
+  to = "/logo.png"
+  status = 200
+
+[[redirects]]
+  from = "/audio/*"
+  to = "/audio/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/videos/*"
+  to = "/videos/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/sakura-player/*"
+  to = "/sakura-player/:splat"
+  status = 200
+
+# Catch-all for SPA routes (must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for caching and security
+[[headers]]
+  # Service worker and manifest: no cache (must check for updates)
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  # Hashed assets in /assets/*: long-term immutable cache
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  # Other static files: moderate cache
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/base64-images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/icon-*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/apple-touch-icon.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/icon.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/logo.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/audio/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/videos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/sakura-player/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
+
+# Security headers for all HTML responses
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+    # Content-Security-Policy-Report-Only for observation without blocking.
+    # A strict CSP would break inline styles/scripts used by the app.
+    # Enable report-only to collect violations before enforcing.
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.onrender.com https://*.googlevideo.com; media-src 'self' https://*.googlevideo.com; worker-src 'self' blob:; manifest-src 'self';"

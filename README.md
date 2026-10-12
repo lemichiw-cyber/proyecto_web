@@ -337,6 +337,84 @@ rama), y el build usar `./` como base.
 
 ---
 
+## Despliegue en Netlify (Frontend)
+
+El frontend (SPA Vite + PWA) se puede desplegar en **Netlify** sin cambios de
+código. El backend FastAPI permanece en Render (u otro proveedor Python).
+
+### Configuración en Netlify
+
+1. **Conectar repositorio**: *New site from Git* → GitHub → `lemichiw-cyber/proyecto_web`
+2. **Build settings**:
+   - Base directory: (raíz del repo)
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3. **Variables de entorno** (Site settings → Environment variables):
+   - `VITE_API_URL` = `https://<TU-BACKEND>.onrender.com` (URL del backend en Render)
+     - Ejemplo: `https://proyecto-web-2-bygl.onrender.com`
+     - **Importante**: esta variable se hornea en el bundle en build time (prefijo `VITE_`)
+   - `NODE_VERSION` = `20` (opcional, ya está en `netlify.toml`)
+
+### CORS en el Backend (Render)
+
+El backend debe permitir el dominio de Netlify. En el servicio de Render →
+Environment → `SAKURA_CORS_ORIGINS`, agregá el dominio de Netlify **reemplazando
+la lista completa** (incluí también los orígenes locales si los seguís usando):
+
+```bash
+SAKURA_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,https://lemichiw-cyber.github.io,https://proyecto-web-2-bygl.onrender.com,https://<TU-SITIO>.netlify.app
+```
+
+Si usás dominio personalizado en Netlify, poné ese dominio en lugar de
+`<TU-SITIO>.netlify.app`.
+
+### Cómo funciona la URL del backend
+
+- En build time: `VITE_API_URL` (via `import.meta.env.VITE_API_URL`) define la
+  URL por defecto del backend. Si no se define, usa
+  `https://sakura-backend-indb.onrender.com` (fallback hardcodeado en
+  `src/sakura-player/api/client.js`).
+- En runtime: el usuario puede sobrescribir la URL en *Ajustes → Backend* del
+  reproductor. Eso guarda la URL en `localStorage` (`sakuraPlayerApiBase`) y
+  tiene prioridad sobre `VITE_API_URL`.
+- Auto-sanado: si la URL guardada falla a nivel de red (DNS, host muerto,
+  mixed content), el cliente reintenta una vez contra la URL por defecto del
+  sitio (`VITE_API_URL` o el fallback hardcodeado) y avisa con un toast.
+
+### `netlify.toml`
+
+El archivo `netlify.toml` en la raíz configura:
+- Build command y publish directory
+- SPA redirects (con passthrough para archivos estáticos reales)
+- Cabeceras de cache: `no-cache` para `sw.js` y manifest, `immutable` para
+  assets con hash en `/assets/*`
+- Cabeceras de seguridad básicas (`X-Content-Type-Options`, `Referrer-Policy`,
+  `X-Frame-Options`, `Content-Security-Policy-Report-Only`)
+
+### Notificaciones y recordatorios (⚠️ solo con app abierta)
+
+El sistema de recordatorios (`src/notifications.js`) usa **Notification API + Service Worker** con polling local (`setInterval` cada 30 min + `visibilitychange`):
+
+| Qué funciona | Qué NO funciona |
+|---|---|
+| ✅ Notificación al crear tarea (`notifyNewTask`) | ❌ Notificación con app cerrada / teléfono bloqueado |
+| ✅ Recordatorio 24h antes si la pestaña está abierta | ❌ Despertar el dispositivo (requiere Push API real + servidor VAPID) |
+| ✅ Chequeo al cargar y al volver a la pestaña (`visibilitychange`) | ❌ Background Sync (solo Chrome, no implementado) |
+| ✅ Panel "Pendientes" en Inicio (siempre visible) | ❌ Alarma exacta a las 24h (polling cada 30 min) |
+
+**No hay Push API real** (no hay servidor push, VAPID keys, ni suscripción). Las notificaciones del sistema **solo llegan si la app está abierta** (pestaña visible o en background reciente). Para recordatorios confiables con app cerrada, haría falta integrar Firebase Cloud Messaging / web-push + backend.
+
+El panel **"Pendientes"** en la pantalla de Inicio muestra tareas por vencer (≤48h) y entregas pendientes (docentes) **siempre**, independientemente del permiso de notificaciones.
+
+### Verificación local
+
+```bash
+npm run build
+npm run verify:build   # sirve dist/ en raíz y subdirectorio, chequea 200s
+```
+
+---
+
 ## Estructura
 
 ```
@@ -369,6 +447,13 @@ index.html               markup (24 secciones app-*)
 XOR con clave fija (`CHERRYBOMB_SALT_2026`). Es ofuscación contra alguien que
 mire por encima del hombro, **no cifrado**: no protege contra nadie con acceso
 al `localStorage`. Para datos reales, mové la autenticación al servidor.
+
+> **Nota**: no existe una sección "Migración de dominio" ni funcionalidad
+> integrada de exportar/importar datos en el código actual.
+> La persistencia es 100% `localStorage` por dispositivo; para mover datos
+> entre dominios/dispositivos habría que implementar sincronización con el
+> backend (`/api/accounts`, `/api/music/library`, etc.) o añadir un botón
+> de backup/restore JSON en la UI.
 
 ## Licencia
 

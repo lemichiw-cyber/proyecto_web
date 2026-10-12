@@ -30,15 +30,25 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var ADMIN_EMAIL = 'admin@bachillerato.edu'; // cuenta semilla: SIEMPRE admin
 
       /* URL del backend FastAPI. Permite override con la clave local
-         'cherrybombApiBase' (tilde en desarrollo local). */
+         'cherrybombApiBase' (útil en desarrollo local).
+         En build time se puede fijar con VITE_API_URL (p. ej. el backend
+         desplegado en Render); sin ella se usa el fallback hardcodeado. */
       var API_BASE = (function () {
         try {
           var custom = localStorage.getItem('cherrybombApiBase');
           if (custom) return String(custom).replace(/\/+$/, '');
         } catch (e) { /* sin storage */ }
+        // Build-time default (inyectado por Vite via import.meta.env)
+        // import.meta.env no está disponible aquí (módulo no ESM), así que
+        // usamos una variable global inyectada por Vite en index.html si existe,
+        // o el fallback hardcodeado.
         var host = (typeof location !== 'undefined' && location.hostname) || '';
         if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://127.0.0.1:8000';
-        return 'https://sakura-backend-indb.onrender.com';
+        // Fallback hardcodeado; en producción Netlify inyecta VITE_API_URL
+        // via define en vite.config.ts (ver arriba).
+        return (typeof __APP_API_BASE__ !== 'undefined' && __APP_API_BASE__)
+          ? __APP_API_BASE__
+          : 'https://sakura-backend-indb.onrender.com';
       })();
 
       /* --------------------------------------------------------------
@@ -609,6 +619,50 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           $('stat-tareas').textContent = JSON.parse(localStorage.getItem('aulas') || '[]').reduce(function (sum, a) { return sum + (a.tareas ? a.tareas.length : 0); }, 0);
         } else {
           statsEl.style.display = 'none'; statsEl.classList.add('hidden');
+        }
+        // Panel Pendientes (recordatorios visibles aunque notificaciones no funcionen)
+        var pendEl = $('inicio-pendientes');
+        if (logueado && pendEl && window.CherryBombNotifications && window.CherryBombNotifications.getPendingItems) {
+          var pend = window.CherryBombNotifications.getPendingItems();
+          var totalPend = pend.tareas.length + pend.entregas.length;
+          if (totalPend > 0) {
+            pendEl.style.display = 'block';
+            pendEl.classList.remove('hidden');
+            pendEl.innerHTML = '<h3 style="margin:0 0 .75rem;font-size:1rem;color:var(--gray-900);display:flex;align-items:center;gap:.5rem;">' +
+              '<img src="icons/alert-triangle.svg" style="width:20px;height:20px" alt=""> Pendientes (' + totalPend + ')' +
+              '</h3>' +
+              '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
+                (pend.tareas.length ? pend.tareas.slice(0, 5).map(function (t) {
+                  return '<div class="pend-item" style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;border-left:4px solid ' + (t.urgente ? 'var(--red)' : 'var(--amber)') + ';">' +
+                    '<div style="flex:1;min-width:0;">' +
+                      '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.titulo + '</div>' +
+                      '<div style="font-size:.78rem;color:var(--gray-500);display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">' +
+                        (t.aula ? '<span class="badge" style="background:' + (t.urgente ? 'var(--red-light)' : 'var(--amber-light)') + ';color:' + (t.urgente ? 'var(--red)' : 'var(--amber)') + ';">' + t.aula + '</span>' : '') +
+                        '<span>' + (t.vencida ? '⚠ Vencida' : t.horas + 'h') + '</span>' +
+                      '</div>' +
+                    '</div>' +
+                    '<button class="btn btn-sm" onclick="mostrarApp(\'tareas\')">Ver</button>' +
+                  '</div>';
+                }).join('') : '') +
+                (pend.entregas.length ? pend.entregas.slice(0, 3).map(function (e) {
+                  return '<div class="pend-item" style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;border-left:4px solid var(--purple);">' +
+                    '<div style="flex:1;min-width:0;">' +
+                      '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + e.titulo + '</div>' +
+                      '<div style="font-size:.78rem;color:var(--gray-500);display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">' +
+                        '<span class="badge badge-purple">' + e.aula + '</span>' +
+                        '<span>' + e.pendientes + ' pendientes</span>' +
+                        '<span>' + e.horas + 'h</span>' +
+                      '</div>' +
+                    '</div>' +
+                    '<button class="btn btn-sm" onclick="mostrarApp(\'aulas\')">Ver</button>' +
+                  '</div>';
+                }).join('') : '') +
+              '</div>' +
+              (totalPend > 8 ? '<div style="margin-top:.5rem;text-align:center;"><button class="btn btn-outline btn-sm" onclick="mostrarApp(\'tareas\')">Ver todos (' + totalPend + ')</button></div>' : '');
+          } else {
+            pendEl.style.display = 'none';
+            pendEl.classList.add('hidden');
+          }
         }
         // App cards
         var el = $('inicio-apps');
