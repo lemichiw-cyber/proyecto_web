@@ -42,6 +42,7 @@ _CORS_DEFAULT = ",".join([
     "http://127.0.0.1:3000",
     "https://lemichiw-cyber.github.io",
     "https://proyecto-web-2-bygl.onrender.com",
+    "https://cherry-bomb.netlify.app",
 ])
 _CORS = [o.strip() for o in os.getenv("SAKURA_CORS_ORIGINS", _CORS_DEFAULT).split(",") if o.strip()]
 
