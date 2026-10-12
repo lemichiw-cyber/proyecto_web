@@ -1,4 +1,5 @@
 import { escapeHtml } from "./utils/escape.js";
+import { isEnabled } from "./config/features.js";
 (function () {
       'use strict';
 
@@ -580,6 +581,28 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       };
 
       /* ===== DASHBOARD ===== */
+      // Feature flag mapping for apps
+      var appFeatures = {
+        'actividades': 'ACTIVIDADES',
+        'examenes': 'EXAMENES',
+        'foros': 'FOROS',
+        'agenda': 'AGENDA',
+        'calendario': 'CALENDARIO',
+        'horario': 'HORARIO',
+        'clases': 'CLASES',
+        'mensajes': 'MENSAJES',
+        'grupales': 'GRUPALES',
+        'protegido': 'PROTEGIDO',
+        'tareas': 'TAREAS',
+        'aulas': 'AULAS',
+        'planificacion': 'ROLES_DOCENTE',
+        'matricula': 'MATRICULA',
+        'estudio': 'ESTUDIO',
+        'sakura-player': 'SAKURA_PLAYER',
+        'configuracion': 'CONFIGURACION',
+        'respaldos': 'RESPALDOS',
+      };
+
       var appsData = [
         { id:'actividades', icon:'clipboard-list', label:'Actividades', desc:'Tareas y pendientes', color:'#56CCF2' },
         { id:'examenes', icon:'file-text', label:'Exámenes', desc:'Creador y simulador', color:'var(--purple)' },
@@ -627,7 +650,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var pendEl = $('inicio-pendientes');
         if (logueado && pendEl && window.CherryBombNotifications && window.CherryBombNotifications.getPendingItems) {
           var pend = window.CherryBombNotifications.getPendingItems();
-          var totalPend = pend.tareas.length + pend.entregas.length;
+          // Only show entregas (teacher notifications) if ASISTENCIA_DOCENTE is enabled
+          var showEntregas = isEnabled('ASISTENCIA_DOCENTE');
+          var totalPend = pend.tareas.length + (showEntregas ? pend.entregas.length : 0);
           if (totalPend > 0) {
             pendEl.style.display = 'block';
             pendEl.classList.remove('hidden');
@@ -667,10 +692,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             pendEl.classList.add('hidden');
           }
         }
-        // App cards
+        // App cards - filter by feature flags
         var el = $('inicio-apps');
         el.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
-        el.innerHTML = appsData.map(function (a) {
+        var visibleApps = appsData.filter(function (a) {
+          var feature = appFeatures[a.id];
+          return !feature || isEnabled(feature);
+        });
+        el.innerHTML = visibleApps.map(function (a) {
           var isProtected = appsProtegidas.indexOf(a.id) !== -1;
           var locked = !logueado && isProtected;
           return '<div class="app-card' + (locked ? ' app-card-locked' : '') + '" onclick="' + (locked ? "mostrarToast('Inicia sesión para acceder.','error');document.getElementById('btn-login').click()" : "mostrarApp('" + a.id + "')") + '">' +
@@ -679,7 +708,37 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         }).join('');
       }
 
+      function mostrarPróximamente(appId) {
+        var el = $('app-' + (appId || 'inicio'));
+        if (!el) return;
+        // Hide all other sections
+        apps.forEach(function (a) {
+          var sec = $('app-' + a);
+          if (sec) sec.classList.add('hidden');
+        });
+        el.classList.remove('hidden');
+        var featureName = appFeatures[appId] || appId;
+        var label = '';
+        var appData = appsData.find(function (a) { return a.id === appId; });
+        if (appData) label = appData.label;
+        el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;padding:2rem;text-align:center;">' +
+          '<div style="font-size:3rem;margin-bottom:1rem;">🚧</div>' +
+          '<h2 style="margin:0 0 .5rem;font-size:1.5rem;color:var(--gray-900);">' + (label || featureName) + '</h2>' +
+          '<p style="margin:0 0 1rem;font-size:1rem;color:var(--gray-600);max-width:400px;">' +
+          'Esta función necesita un servidor para compartirse entre personas y todavía no está disponible.' +
+          '</p>' +
+          '<p style="margin:0;font-size:.875rem;color:var(--gray-500);">Sin prometer fechas. Cuando exista backend real con autenticación, se habilitará.</p>' +
+          '<button class="btn btn-outline" style="margin-top:1.5rem;" onclick="mostrarApp(\'inicio\')">Volver al inicio</button>' +
+        '</div>';
+      }
+
       window.mostrarApp = function (app) {
+        // Check feature flag first (before login check)
+        var feature = appFeatures[app];
+        if (feature && !isEnabled(feature)) {
+          mostrarPróximamente(app);
+          return;
+        }
         if (app && appsProtegidas.indexOf(app) !== -1 && !logueado) {
           $('modal-login').classList.add('open');
           lockBody();
@@ -726,6 +785,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           if (dest && !dest.children.length) {
             var src = $('theme-options');
             if (src) dest.innerHTML = src.innerHTML;
+          }
+          // Add data privacy notice
+          var noticeEl = $('config-data-notice');
+          if (!noticeEl) {
+            var notice = document.createElement('div');
+            notice.id = 'config-data-notice';
+            notice.style.cssText = 'margin:1.5rem 0;padding:1rem;background:var(--blue-50);border:1px solid var(--blue);border-radius:8px;color:var(--blue);font-size:.875rem;';
+            notice.innerHTML = '<strong>📱 Tus datos viven solo en este dispositivo.</strong> Si lo compartes, otras personas pueden verlos. Haz un respaldo en Ajustes → Respaldos.';
+            var themeSection = document.querySelector('#theme-options-section');
+            if (themeSection) themeSection.parentNode.insertBefore(notice, themeSection);
           }
         }
         if (app === 'sakura-player' && window.mountSakuraPlayer) {
@@ -3803,10 +3872,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       renderGrupos();
 
       function renderProtegido() {
-        // FEATURE_PROTEGIDO flag - set to false to hide the entire section (default: true)
-        if (typeof FEATURE_PROTEGIDO !== 'undefined' && !FEATURE_PROTEGIDO) return;
+        // FEATURES.PROTEGIDO flag - default: false (hidden). Set to true to enable.
+        // WARNING: Only enable when a real reporting channel with a responsible person exists.
+        if (!isEnabled('PROTEGIDO')) return;
         var el = $('prot-lista');
-        // Permanent warning notice
+        // Permanent warning notice (shown when feature is enabled)
         if (!el.querySelector('.protegido-warning')) {
           var warning = document.createElement('div');
           warning.className = 'protegido-warning';

@@ -441,12 +441,44 @@ backend/
 index.html               markup (24 secciones app-*)
 ```
 
-## Seguridad
+## Alcance actual — Organizador personal
 
-`src/app.js` no guarda contraseñas en claro: usa un hash FNV-1a con sal y un
-XOR con clave fija (`CHERRYBOMB_SALT_2026`). Es ofuscación contra alguien que
-mire por encima del hombro, **no cifrado**: no protege contra nadie con acceso
-al `localStorage`. Para datos reales, mové la autenticación al servidor.
+Cherry-Bomb es un **organizador personal del estudiante en su dispositivo**.
+Todos los datos (actividades, agenda, horario, tareas, exámenes, notas, tema,
+volumen, biblioteca de música, preferencias) se guardan **solo en el
+`localStorage` de este navegador**. No hay servidor, no hay sincronización,
+no hay cuentas en la nube.
+
+**Lo que funciona hoy (funciones PERSONALES):**
+- Actividades / Pendientes · Agenda · Calendario · Horario · Clases en línea
+- Tareas (bachillerato) · Estudio (Pomodoro) · Sakura Player
+- Exámenes (creador y simulador) · Respaldos (Export/Import JSON)
+- Configuración (tema, volumen, URL de backend) · 13 temas visuales
+
+**Lo que NO funciona (funciones MULTIUSUARIO — desactivadas por defecto):**
+- Foros · Mensajes · Actividades grupales · Aulas virtuales · Matrícula
+- Planificación docente · Asistencia · Roles docente/director/admin
+- Reportes de incidentes (Colegio Protegido) · Portal Padres
+- Estas funciones requieren **backend real con autenticación, base de datos
+  con RLS y canales de comunicación reales**. Están desactivadas por defecto
+  (`src/config/features.js`).
+
+> ⚠️ **Tus datos viven solo en este dispositivo.** Si lo compartes, otras
+> personas pueden verlos. Haz un respaldo en **Ajustes → Respaldos**.
+
+## Hoja de ruta — Lo multiusuario
+
+| Función | Qué hace falta para activarla |
+|---------|-------------------------------|
+| Foros, Mensajes, Grupales | Backend real + WebSockets/polling + moderación + RLS en BD |
+| Aulas, Matrícula, Planificación, Asistencia | Backend real + BD con RLS + gestión de inscripciones/tareas/calificaciones/asistencia |
+| Roles docente/director/admin | Autenticación real (no editable en consola) + backend + RLS + auditoría |
+| Reportes (Colegio Protegido) | **Canal real con responsable** (psicólogo, orientador, dirección) + protocolo + anonimato real + notificación a adulto |
+| Portal Padres | Backend real + BD con RLS + vínculo estudiante-padre verificado + auth real |
+
+Ver `docs/FUNCIONES.md` para la tabla completa con estado y requisitos.
+
+## Seguridad
 
 <<<<<<< HEAD
 > **Nota**: no existe una sección "Migración de dominio" ni funcionalidad
@@ -465,7 +497,7 @@ el estudiante pierde sus tareas, horarios, notas y configuración.
 
 ### Cómo migrar tus datos
 
-> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay sincronización con servidor**. El archivo JSON es un archivo local.
+> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay **. El archivo JSON es un archivo local.
 
 1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON**.
    - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.

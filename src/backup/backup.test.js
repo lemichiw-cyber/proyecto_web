@@ -338,7 +338,27 @@ describe("escapeHtml attribute safety", () => {
     // The escaped string should not contain unescaped quotes or angle brackets
     expect(escaped).not.toContain('<');
     expect(escaped).not.toContain('>');
-    // The escaped value should be the original with entities (" becomes ")
-    expect(escaped).toBe('" onmouseover="x');
+    expect(escaped).toBe('&quot; onmouseover=&quot;x');
+    expect(escaped).toBe('&quot; onmouseover=&quot;x');
+  });
+});
+
+describe("escapeHtml attribute safety — jsdom parse", () => {
+  it('parses <div title="${escapeHtml(...)}"> and verifies single title attribute with full value', async () => {
+    const malicious = '" onmouseover="x';
+    const escaped = escapeHtml(malicious);
+    const html = `<div title="${escaped}"></div>`;
+
+    const { JSDOM } = await import('jsdom');
+    const dom = new JSDOM(html);
+    const div = dom.window.document.querySelector('div');
+
+    // Should have exactly one attribute (title)
+    expect(div.attributes.length).toBe(1);
+    expect(div.hasAttribute('title')).toBe(true);
+    expect(div.hasAttribute('onmouseover')).toBe(false);
+
+    // Title value should be the original malicious string (with entities escaped)
+    expect(div.getAttribute('title')).toBe(malicious);
   });
 });

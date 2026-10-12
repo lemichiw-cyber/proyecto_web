@@ -14,10 +14,10 @@ export function escapeHtml(s) {
   if (s === null || s === undefined) return '';
   if (typeof s !== 'string') s = String(s);
   return s
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
+    .replace(/&/g, '\u0026amp;')
+    .replace(/</g, '\u0026lt;')
+    .replace(/>/g, '\u0026gt;')
+    .replace(/"/g, '\u0026quot;')
     .replace(/'/g, '&#039;');
 }
 
@@ -30,10 +30,10 @@ export function escapeHtmlWithBr(s) {
   if (s === null || s === undefined) return '';
   if (typeof s !== 'string') s = String(s);
   return s
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
+    .replace(/&/g, '\u0026amp;')
+    .replace(/</g, '\u0026lt;')
+    .replace(/>/g, '\u0026gt;')
+    .replace(/"/g, '\u0026quot;')
     .replace(/'/g, '&#039;')
     .replace(/\n/g, '<br>');
 }
