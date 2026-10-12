@@ -1,0 +1,22 @@
+# .dockerignore — solo se necesita backend/ para la imagen del backend
+node_modules
+dist
+.git
+.github
+src
+public
+docs
+img
+scripts
+*.md
+package.json
+package-lock.json
+tsconfig*.json
+vite.config.ts
+index.html
+netlify.toml
+Containerfile
+compose.yml
+Makefile
+extract-base64-images.cjs
+.env
