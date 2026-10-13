@@ -337,6 +337,84 @@ rama), y el build usar `./` como base.
 
 ---
 
+## Despliegue en Netlify (Frontend)
+
+El frontend (SPA Vite + PWA) se puede desplegar en **Netlify** sin cambios de
+código. El backend FastAPI permanece en Render (u otro proveedor Python).
+
+### Configuración en Netlify
+
+1. **Conectar repositorio**: *New site from Git* → GitHub → `lemichiw-cyber/proyecto_web`
+2. **Build settings**:
+   - Base directory: (raíz del repo)
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3. **Variables de entorno** (Site settings → Environment variables):
+   - `VITE_API_URL` = `https://<TU-BACKEND>.onrender.com` (URL del backend en Render)
+     - Ejemplo: `https://proyecto-web-2-bygl.onrender.com`
+     - **Importante**: esta variable se hornea en el bundle en build time (prefijo `VITE_`)
+   - `NODE_VERSION` = `20` (opcional, ya está en `netlify.toml`)
+
+### CORS en el Backend (Render)
+
+El backend debe permitir el dominio de Netlify. En el servicio de Render →
+Environment → `SAKURA_CORS_ORIGINS`, agregá el dominio de Netlify **reemplazando
+la lista completa** (incluí también los orígenes locales si los seguís usando):
+
+```bash
+SAKURA_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,https://lemichiw-cyber.github.io,https://proyecto-web-2-bygl.onrender.com,https://<TU-SITIO>.netlify.app
+```
+
+Si usás dominio personalizado en Netlify, poné ese dominio en lugar de
+`<TU-SITIO>.netlify.app`.
+
+### Cómo funciona la URL del backend
+
+- En build time: `VITE_API_URL` (via `import.meta.env.VITE_API_URL`) define la
+  URL por defecto del backend. Si no se define, usa
+  `https://sakura-backend-indb.onrender.com` (fallback hardcodeado en
+  `src/sakura-player/api/client.js`).
+- En runtime: el usuario puede sobrescribir la URL en *Ajustes → Backend* del
+  reproductor. Eso guarda la URL en `localStorage` (`sakuraPlayerApiBase`) y
+  tiene prioridad sobre `VITE_API_URL`.
+- Auto-sanado: si la URL guardada falla a nivel de red (DNS, host muerto,
+  mixed content), el cliente reintenta una vez contra la URL por defecto del
+  sitio (`VITE_API_URL` o el fallback hardcodeado) y avisa con un toast.
+
+### `netlify.toml`
+
+El archivo `netlify.toml` en la raíz configura:
+- Build command y publish directory
+- SPA redirects (con passthrough para archivos estáticos reales)
+- Cabeceras de cache: `no-cache` para `sw.js` y manifest, `immutable` para
+  assets con hash en `/assets/*`
+- Cabeceras de seguridad básicas (`X-Content-Type-Options`, `Referrer-Policy`,
+  `X-Frame-Options`, `Content-Security-Policy-Report-Only`)
+
+### Notificaciones y recordatorios (⚠️ solo con app abierta)
+
+El sistema de recordatorios (`src/notifications.js`) usa **Notification API + Service Worker** con polling local (`setInterval` cada 30 min + `visibilitychange`):
+
+| Qué funciona | Qué NO funciona |
+|---|---|
+| ✅ Notificación al crear tarea (`notifyNewTask`) | ❌ Notificación con app cerrada / teléfono bloqueado |
+| ✅ Recordatorio 24h antes si la pestaña está abierta | ❌ Despertar el dispositivo (requiere Push API real + servidor VAPID) |
+| ✅ Chequeo al cargar y al volver a la pestaña (`visibilitychange`) | ❌ Background Sync (solo Chrome, no implementado) |
+| ✅ Panel "Pendientes" en Inicio (siempre visible) | ❌ Alarma exacta a las 24h (polling cada 30 min) |
+
+**No hay Push API real** (no hay servidor push, VAPID keys, ni suscripción). Las notificaciones del sistema **solo llegan si la app está abierta** (pestaña visible o en background reciente). Para recordatorios confiables con app cerrada, haría falta integrar Firebase Cloud Messaging / web-push + backend.
+
+El panel **"Pendientes"** en la pantalla de Inicio muestra tareas por vencer (≤48h) y entregas pendientes (docentes) **siempre**, independientemente del permiso de notificaciones.
+
+### Verificación local
+
+```bash
+npm run build
+npm run verify:build   # sirve dist/ en raíz y subdirectorio, chequea 200s
+```
+
+---
+
 ## Estructura
 
 ```
@@ -364,6 +442,50 @@ backend/
 index.html               markup (24 secciones app-*)
 ```
 
+
+## Alcance actual — Organizador personal
+
+Cherry-Bomb es un **organizador personal del estudiante en su dispositivo**.
+Todos los datos (actividades, agenda, horario, tareas, exámenes, notas, tema,
+volumen, biblioteca de música, preferencias) se guardan **solo en el
+`localStorage` de este navegador**. No hay servidor, no hay sincronización,
+no hay cuentas en la nube.
+
+**Lo que funciona hoy (funciones PERSONALES):**
+- Actividades / Pendientes · Agenda · Calendario · Horario · Clases en línea
+- Tareas (bachillerato) · Estudio (Pomodoro) · Sakura Player
+- Exámenes (creador y simulador) · Respaldos (Export/Import JSON)
+- Configuración (tema, volumen, URL de backend) · 13 temas visuales
+- **Funciones de bachillerato**: Calculadora de notas · Horario y agenda ·
+  Compartir en WhatsApp · Simulacro PAES · Flashcards · Servicio social ·
+  Proyecto de grado · Comunicados · Orientación vocacional · Metas y rachas
+
+**Lo que NO funciona (funciones MULTIUSUARIO — desactivadas por defecto):**
+- Foros · Mensajes · Actividades grupales · Aulas virtuales · Matrícula
+- Planificación docente · Asistencia · Roles docente/director/admin
+- Reportes de incidentes (Colegio Protegido) · Portal Padres
+- Estas funciones requieren **backend real con autenticación, base de datos
+  con RLS y canales de comunicación reales**. Están desactivadas por defecto
+  (`src/config/features.js`).
+
+> ⚠️ **Tus datos viven solo en este dispositivo.** Si lo compartes, otras
+> personas pueden verlos. Haz un respaldo en **Ajustes → Respaldos**.
+
+## Hoja de ruta — Lo multiusuario
+
+| Función | Qué hace falta para activarla |
+|---------|-------------------------------|
+| Foros, Mensajes, Grupales | Backend real + WebSockets/polling + moderación + RLS en BD |
+| Aulas, Matrícula, Planificación, Asistencia | Backend real + BD con RLS + gestión de inscripciones/tareas/calificaciones/asistencia |
+| Roles docente/director/admin | Autenticación real (no editable en consola) + backend + RLS + auditoría |
+| Reportes (Colegio Protegido) | **Canal real con responsable** (psicólogo, orientador, dirección) + protocolo + anonimato real + notificación a adulto |
+| Portal Padres | Backend real + BD con RLS + vínculo estudiante-padre verificado + auth real |
+
+Ver `docs/FUNCIONES.md` para la tabla completa con estado y requisitos.
+
+## Seguridad
+
+
 ## ⚠️ Seguridad — lee esto antes de usar con datos reales
 
 > **La autenticación actual NO es segura.** Las contraseñas se «protegen» en el
@@ -383,6 +505,51 @@ Nota aparte: el panel admin del reproductor (`backend/api/admin.py`) usa una
 contraseña por defecto publicada en el repo; si desplegás el backend, definí
 `SAKURA_ADMIN_EMAIL`, `SAKURA_ADMIN_PASSWORD` y
 `SAKURA_ADMIN_TOKEN_SECRET` como variables de entorno.
+
+## Respaldo y migración de dominio
+
+La app guarda todos los datos del estudiante en `localStorage` del navegador.
+**Los datos NO se comparten entre dominios**: si la app se sirve desde
+`https://lemichiw-cyber.github.io` y luego desde `https://mi-app.netlify.app`,
+el estudiante pierde sus tareas, horarios, notas y configuración.
+
+### Cómo migrar tus datos
+
+> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay **. El archivo JSON es un archivo local.
+
+1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON**.
+   - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.
+   - Incluye: tareas, horarios, agenda, notas, exámenes, planificaciones, tema, volumen, biblioteca del reproductor (favoritos, playlists, historial), preferencias.
+   - **NO incluye**: contraseñas, hashes, sesión activa, URL del backend, datos de otros usuarios (alumnos, entregas, calificaciones, aulas de docente, foros, mensajes, grupos, incidentes).
+2. En el sitio **nuevo**: *Ajustes → Respaldos → Importar respaldo**.
+   - Seleccioná el archivo JSON → vista previa → elegí **Combinar** (suma, no duplica) o **Reemplazar todo**.
+   - Confirmación explícita antes de escribir.
+   - Si falla a la mitad, se restaura el estado anterior.
+   - **Primero creá tu cuenta** en el sitio nuevo (botón "Iniciar sesión" → "Crear cuenta"), **luego** importá el respaldo. El respaldo no se vincula a ninguna cuenta.
+
+### Migración guiada (automática)
+
+Configurá en Netlify (o en `.env`):
+```bash
+VITE_LEGACY_ORIGINS=https://lemichiw-cyber.github.io,https://proyecto-web-2-bygl.onrender.com
+VITE_NEW_APP_URL=https://mi-app.netlify.app
+```
+
+- **Sitio antiguo** (origen en `VITE_LEGACY_ORIGINS`): si hay datos locales, muestra banner persistente *"Estás en el sitio antiguo. Exportá tus datos e importalos en [nueva URL]"* con botón **Exportar ahora**.
+- **Sitio nuevo** (origen distinto, sin datos locales): muestra banner *"¿Venís del sitio anterior? Importá tu respaldo aquí"* con botón **Importar respaldo**.
+- El usuario puede descartar los banners (se guarda en `localStorage` y no vuelve a aparecer).
+- Banner temporal en Inicio durante la transición: *"Cambiamos de dirección. Exportá tus datos (Ajustes → Respaldos) para no perderlos."*
+
+### Formato del respaldo
+
+Ver `docs/RESPALDO.md` para el esquema JSON completo, lista blanca de claves, claves excluidas (contraseñas, hashes, sesión, datos de otros) y política de versiones.
+
+### ⚠️ Privacidad
+
+- El archivo de respaldo contiene **datos personales** (tareas, notas, horarios). Guardalo con cuidado.
+- **Nunca** se envía a ningún servidor. Todo ocurre en el navegador.
+- Al importar: validación estricta (esquema, tipos, lista blanca). Sanitización de textos.
+- El respaldo **no incluye** contraseñas ni datos de otros usuarios (alumnos, entregas, calificaciones). Si sos docente, exportá/importá solo tus propios datos de configuración.
 
 ## Licencia
 
