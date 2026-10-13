@@ -78,6 +78,38 @@
 - `planData` — plan de materias
 - `POMO_KEY` (cherrybombPomodoro) — estado pomodoro
 
+### Funciones de bachillerato (`cb.bach.*`)
+
+Todas las funciones nuevas guardan con el prefijo `cb.bach.` (definido en
+`src/bachillerato/storage.js`). **No se escriben a mano en `backup.js`**:
+se derivan de `CLAVES`, así que si mañana se agrega una clave a
+`CLAVES` entra sola en el respaldo.
+
+| Clave completa | Contenido |
+|---|---|
+| `cb.bach.notas.config` | Escala, nota de aprobación y períodos de la calculadora |
+| `cb.bach.notas.materias` | Materias, actividades y notas |
+| `cb.bach.horario.clases` | Clases del horario semanal |
+| `cb.bach.agenda.tareas` | Tareas de la agenda con tipo y estado |
+| `cb.bach.paes.banco` | Preguntas que cargó el docente |
+| `cb.bach.paes.historial` | Resultados de simulacros con desglose por tema |
+| `cb.bach.paes.metas` | Meta personal de puntaje por materia |
+| `cb.bach.paes.tarjetas` | Flashcards y su estado Leitner |
+| `cb.bach.paes.simulacro-en-curso` | Progreso guardado de un simulacro a medias |
+| `cb.bach.servicio.horas` | Horas de servicio social registradas |
+| `cb.bach.servicio.meta` | Meta de horas (configurable) |
+| `cb.bach.proyecto.hitos` | Hitos del proyecto de grado |
+| `cb.bach.centro.comunicados` | Comunicados y eventos guardados |
+| `cb.bach.orientacion.registros` | Exploración vocacional (sin requisitos inventados) |
+| `cb.bach.apoyo.contactos` | Contactos de apoyo que agregó la persona |
+| `cb.bach.apoyo.consejos` | Consejos de estudio marcados |
+| `cb.bach.estudio.sesiones` | Sesiones del Pomodoro (para las estadísticas) |
+| `cb.bach.estudio.metas` | Metas semanales de estudio |
+| `cb.bach.estudio.rachas` | Racha de días consecutivos |
+
+Todas son **personales**: pertenecen a quien usa el dispositivo y no
+contienen datos de otros estudiantes.
+
 ## Claves EXCLUIDAS (NUNCA en respaldo)
 
 | Clave | Motivo |
@@ -99,6 +131,7 @@
 | `asistencia_historial` | Registros de asistencia de otros usuarios |
 | `protegidoItems` | Reportes de incidentes sensibles (acoso, robo, emergencias) |
 | `passHash_*` (prefijo) | Hashes de contraseña |
+| `cb.bach.sistema.ahorro` | Preferencia del aparato y de la conexión del momento; no sirve en otro dispositivo |
 
 **Regla:** Si la clave contiene datos identificables de OTROS usuarios (emails, nombres, calificaciones, entregas, mensajes, incidentes), se excluye. El respaldo es **personal**.
 

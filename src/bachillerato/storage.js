@@ -22,7 +22,7 @@
    viejas de la app (cherrybombTheme, aulas, etc.).
    =================================================================== */
 
-const PREFIJO = 'cb.bach.';
+export const PREFIJO = 'cb.bach.';
 
 /** Sanitiza el nombre de una clave: sin puntos dobles ni vacíos. */
 function claveLimpia(clave) {

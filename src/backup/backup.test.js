@@ -7,6 +7,7 @@ import {
   BACKUP_SCHEMA_VERSION,
   APP_NAME,
   WHITELIST_KEYS,
+  BACHILLERATO_KEYS,
   EXCLUDED_KEYS,
   EXCLUDED_PREFIXES,
   MAX_BACKUP_SIZE,
@@ -18,6 +19,7 @@ import {
   isLegacyOrigin,
   hasLocalData,
 } from './backup.js';
+import { CLAVES, PREFIJO } from '../bachillerato/storage.js';
 import { escapeHtml } from '../utils/escape.js';
 
 /* ------------------------------------------------------------------
@@ -80,6 +82,33 @@ describe('backup.js — Lista blanca y exclusiones', () => {
 
   it('EXCLUDED_PREFIXES incluye passHash_', () => {
     expect(EXCLUDED_PREFIXES).toContain('passHash_');
+  });
+
+  it('WHITELIST_KEYS incluye las claves cb.bach.* de bachillerato', () => {
+    expect(WHITELIST_KEYS.has('cb.bach.notas.materias')).toBe(true);
+    expect(WHITELIST_KEYS.has('cb.bach.horario.clases')).toBe(true);
+    expect(WHITELIST_KEYS.has('cb.bach.paes.historial')).toBe(true);
+    expect(WHITELIST_KEYS.has('cb.bach.servicio.horas')).toBe(true);
+    expect(WHITELIST_KEYS.has('cb.bach.estudio.rachas')).toBe(true);
+    expect(WHITELIST_KEYS.has('cb.bach.apoyo.contactos')).toBe(true);
+  });
+
+  it('sistema.ahorro queda fuera: es preferencia del aparato', () => {
+    expect(WHITELIST_KEYS.has('cb.bach.sistema.ahorro')).toBe(false);
+    expect(BACHILLERATO_KEYS).not.toContain('cb.bach.sistema.ahorro');
+  });
+
+  it('BACHILLERATO_KEYS se deriva de CLAVES (una sola fuente de verdad)', () => {
+    // Toda clave cb.bach.* de CLAVES debe estar en la lista blanca,
+    // salvo la de modo ahorro.
+    Object.values(CLAVES).forEach((clave) => {
+      const completa = PREFIJO + clave;
+      if (completa === PREFIJO + CLAVES.MODO_AHORRO) {
+        expect(WHITELIST_KEYS.has(completa)).toBe(false);
+      } else {
+        expect(WHITELIST_KEYS.has(completa)).toBe(true);
+      }
+    });
   });
 
   it('Ninguna clave excluida está en la lista blanca', () => {

@@ -19,7 +19,7 @@ const MODULOS = {
   servicio: () => import('./servicio/servicio-ui.js'),
   miCentro: () => import('./centro/centro-ui.js'),
   bienestar: () => import('./bienestar/bienestar-ui.js'),
-  configuracion: () => import('./datos/datos-ui.js'),
+  configuracion: () => import('./ahorro/ahorro-ui.js'),
 };
 
 /** Módulos ya cargados, para no volver a descargarlos. */
