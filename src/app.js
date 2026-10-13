@@ -11,8 +11,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('cherrybombSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','respaldos','auth'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','respaldos','auth','notas','planificador','paes','servicio','miCentro','bienestar'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth','notas','planificador','paes','servicio','miCentro','bienestar'];
       function $(id) { return document.getElementById(id); }
 
       /* ===================================================================
@@ -601,6 +601,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         'sakura-player': 'SAKURA_PLAYER',
         'configuracion': 'CONFIGURACION',
         'respaldos': 'RESPALDOS',
+        'notas': 'NOTAS',
+        'planificador': 'PLANIFICADOR',
+        'paes': 'PAES',
+        'servicio': 'SERVICIO',
+        'miCentro': 'MI_CENTRO',
+        'bienestar': 'BIENESTAR',
       };
 
       var appsData = [
@@ -619,6 +625,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
         { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
+        { id:'notas', icon:'clipboard-data', label:'Mis notas', desc:'Calculadora y promedios', color:'var(--green)' },
+        { id:'planificador', icon:'calendar-time', label:'Horario y tareas', desc:'Clases y entregas', color:'var(--primary)' },
+        { id:'paes', icon:'file-text', label:'Preparación PAES', desc:'Simulacros y repaso', color:'var(--purple)' },
+        { id:'servicio', icon:'certificate', label:'Servicio social', desc:'Horas y proyecto de grado', color:'var(--teal)' },
+        { id:'miCentro', icon:'building-community', label:'Mi centro', desc:'Avisos y orientación', color:'var(--pink)' },
+        { id:'bienestar', icon:'target', label:'Bienestar', desc:'Metas y apoyo', color:'var(--orange)' },
         { id:'sakura-player', icon:'headphones', label:'Sakura Player', desc:'Música con YouTube Music', color:'#FF4FD8' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
         { id:'respaldos', icon:'device-floppy', label:'Respaldos', desc:'Exportar / Importar mis datos', color:'#4ADE80' },
@@ -799,6 +811,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         }
         if (app === 'sakura-player' && window.mountSakuraPlayer) {
           window.mountSakuraPlayer();
+        }
+        /* Secciones de bachillerato: se piden con import() al entrar,
+           así el JS pesado no baja hasta que el estudiante las abre. */
+        if (app && window.CherryBombBachillerato) {
+          window.CherryBombBachillerato.cargar(app);
         }
       };
 
@@ -5173,6 +5190,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         function onFaseFinalizada(){
           if(faseActual === 'estudio'){
             ciclos++;
+            // Gancho para «Bienestar»: registra el bloque de estudio terminado.
+            // Es opcional: si esa sección no está cargada, no hace nada.
+            if(window.CherryBombBachillerato && typeof window.CherryBombBachillerato.registrarBloqueEstudio === 'function'){
+              try{ window.CherryBombBachillerato.registrarBloqueEstudio(Math.round(POMO_STUDY/60)); }catch(err){ /* no rompemos el temporizador */ }
+            }
             var esCicloPar = (ciclos % 2) === 0;
             aplicarFase(esCicloPar ? 'descansoLargo' : 'descansoCorto');
             mostrarToast('¡Bloque completado! ' + (esCicloPar ? 'Tiempo de descanso largo.' : 'Tiempo de descanso corto.'), 'success');

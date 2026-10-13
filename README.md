@@ -427,6 +427,7 @@ scripts/
   verify-build.mjs       regresión de rutas del deploy
 docs/
   supabase-schema.sql    esquema con RLS (10 tablas, 35 políticas)
+  MIGRACION_AUTH.md      plan de migración de auth a Supabase (pendiente)
 src/
   app.js                 lógica principal
   data.js                persistencia en localStorage
@@ -441,6 +442,7 @@ backend/
 index.html               markup (24 secciones app-*)
 ```
 
+
 ## Alcance actual — Organizador personal
 
 Cherry-Bomb es un **organizador personal del estudiante en su dispositivo**.
@@ -454,6 +456,9 @@ no hay cuentas en la nube.
 - Tareas (bachillerato) · Estudio (Pomodoro) · Sakura Player
 - Exámenes (creador y simulador) · Respaldos (Export/Import JSON)
 - Configuración (tema, volumen, URL de backend) · 13 temas visuales
+- **Funciones de bachillerato**: Calculadora de notas · Horario y agenda ·
+  Compartir en WhatsApp · Simulacro PAES · Flashcards · Servicio social ·
+  Proyecto de grado · Comunicados · Orientación vocacional · Metas y rachas
 
 **Lo que NO funciona (funciones MULTIUSUARIO — desactivadas por defecto):**
 - Foros · Mensajes · Actividades grupales · Aulas virtuales · Matrícula
@@ -480,14 +485,27 @@ Ver `docs/FUNCIONES.md` para la tabla completa con estado y requisitos.
 
 ## Seguridad
 
-<<<<<<< HEAD
-> **Nota**: no existe una sección "Migración de dominio" ni funcionalidad
-> integrada de exportar/importar datos en el código actual.
-> La persistencia es 100% `localStorage` por dispositivo; para mover datos
-> entre dominios/dispositivos habría que implementar sincronización con el
-> backend (`/api/accounts`, `/api/music/library`, etc.) o añadir un botón
-> de backup/restore JSON en la UI.
-=======
+
+## ⚠️ Seguridad — lee esto antes de usar con datos reales
+
+> **La autenticación actual NO es segura.** Las contraseñas se «protegen» en el
+> navegador con un hash FNV-1a/djb2 débil y sin sal por cuenta
+> (`hashPassword`), y algunos datos se «cifran» en `localStorage` con XOR bajo
+> una clave derivada de una sal fija (`CHERRYBOMB_SALT_2026`). **Esto es
+> ofuscación, no cifrado ni autenticación**: cualquiera con acceso al
+> dispositivo (o DevTools) puede recuperar los hashes y los datos. Las cuentas
+> solo existen en ese navegador. **No lo uses con datos reales ni con roles
+> privilegiados.**
+
+El plan para migrar la identidad a **Supabase Auth** (usando
+`docs/supabase-schema.sql`) está en [`docs/MIGRACION_AUTH.md`](docs/MIGRACION_AUTH.md).
+La migración **no está implementada** y requiere aprobación del propietario.
+
+Nota aparte: el panel admin del reproductor (`backend/api/admin.py`) usa una
+contraseña por defecto publicada en el repo; si desplegás el backend, definí
+`SAKURA_ADMIN_EMAIL`, `SAKURA_ADMIN_PASSWORD` y
+`SAKURA_ADMIN_TOKEN_SECRET` como variables de entorno.
+
 ## Respaldo y migración de dominio
 
 La app guarda todos los datos del estudiante en `localStorage` del navegador.
@@ -532,7 +550,6 @@ Ver `docs/RESPALDO.md` para el esquema JSON completo, lista blanca de claves, cl
 - **Nunca** se envía a ningún servidor. Todo ocurre en el navegador.
 - Al importar: validación estricta (esquema, tipos, lista blanca). Sanitización de textos.
 - El respaldo **no incluye** contraseñas ni datos de otros usuarios (alumnos, entregas, calificaciones). Si sos docente, exportá/importá solo tus propios datos de configuración.
->>>>>>> 2fb3bbf (feat(backup): módulo exportar/importar con lista blanca, validación y rollback)
 
 ## Licencia
 

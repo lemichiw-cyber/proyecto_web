@@ -26,6 +26,14 @@ export const FEATURES = {
   PICKER: true,             // app-picker (componente UI)
   DIGITAL: true,            // app-digital (si se usa)
 
+  // ===== FUNCIONES DE BACHILLERATO (siempre activas, sin servidor) =====
+  NOTAS: true,              // app-notas (calculadora de notas)
+  PLANIFICADOR: true,       // app-planificador (horario y agenda)
+  PAES: true,               // app-paes (simulacro, flashcards, meta)
+  SERVICIO: true,           // app-servicio (servicio social y proyecto)
+  MI_CENTRO: true,          // app-miCentro (comunicados y orientación)
+  BIENESTAR: true,          // app-bienestar (metas, rachas, apoyo)
+
   // ===== FUNCIONES MULTIUSUARIO (desactivadas por defecto) =====
   // Requieren backend real con autenticación, base de datos, RLS
   FOROS: false,             // app-foros
@@ -101,4 +109,10 @@ export const APP_TO_FEATURE = {
   'sabi': 'SABI',
   'picker': 'PICKER',
   'digital': 'DIGITAL',
+  'notas': 'NOTAS',
+  'planificador': 'PLANIFICADOR',
+  'paes': 'PAES',
+  'servicio': 'SERVICIO',
+  'miCentro': 'MI_CENTRO',
+  'bienestar': 'BIENESTAR',
 };

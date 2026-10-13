@@ -22,6 +22,13 @@
 | **Exámenes (creador/simulador)** | `app-examenes` | ✅ Activa | — |
 | **Picker (fecha/hora)** | `app-picker` | ✅ Activa | — |
 | **Digital (firma/documentos)** | `app-digital` | ✅ Activa | — |
+| **Calculadora de notas** | `app-notas` | ✅ Activa | — (escala, aprobación y períodos configurables; marcados como NO oficiales) |
+| **Horario y agenda de bachillerato** | `app-planificador` | ✅ Activa | — |
+| **Simulacro PAES cronometrado** | `app-paes` | ✅ Activa | — (10 preguntas originales por materia; ver `docs/PAES.md`) |
+| **Flashcards PAES (Leitner) y meta personal** | `app-paes` | ✅ Activa | — |
+| **Servicio social y proyecto de grado** | `app-servicio` | ✅ Activa | — (meta de horas configurable; exportable a CSV) |
+| **Comunicados, eventos y orientación vocacional** | `app-miCentro` | ✅ Activa | — (la orientación sólo enlaza fuentes oficiales; no inventa requisitos) |
+| **Metas semanales, rachas y apoyo** | `app-bienestar` | ✅ Activa | — (estadísticas del Pomodoro; sin comparación entre estudiantes y sin diagnósticos) |
 | **Foros** | `app-foros` | 🔒 Próximamente | Backend real + WebSockets / polling + moderación + RLS en BD |
 | **Mensajes** | `app-mensajes` | 🔒 Próximamente | Backend real + WebSockets / polling + cifrado extremo-a-extremo opcional + RLS |
 | **Actividades grupales** | `app-grupales` | 🔒 Próximamente | Backend real + gestión de grupos + invitaciones + RLS |

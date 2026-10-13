@@ -47,6 +47,15 @@
   to = "/base64-images/:splat"
   status = 200
 
+# Bancos de preguntas PAES. Sin esta regla, el catch-all /* serviría
+# index.html en lugar del JSON. NO se le agrega cabecera immutable: el
+# service worker los refresca con StaleWhileRevalidate y necesita poder
+# revalidar contra la red.
+[[redirects]]
+  from = "/data/*"
+  to = "/data/:splat"
+  status = 200
+
 [[redirects]]
   from = "/icon-*"
   to = "/icon-:splat"

@@ -69,6 +69,19 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          {
+            // Bancos de preguntas PAES: se sirven desde la caché y se
+            // refrescan en segundo plano, así el simulacro funciona sin
+            // conexión después de la primera visita. Como `base` es './',
+            // el patrón cubre también el despliegue en subdirectorio.
+            urlPattern: /\/data\/paes\/.*\.json$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'paes-bancos',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
     }),

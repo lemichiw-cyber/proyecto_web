@@ -3,8 +3,25 @@
    Módulo sin DOM, cargado bajo demanda con import()
    =================================================================== */
 
+import { CLAVES, PREFIJO } from '../bachillerato/storage.js';
+
 export const BACKUP_SCHEMA_VERSION = 1;
 export const APP_NAME = 'Cherry-Bomb';
+
+/* ------------------------------------------------------------------
+   Claves de las funciones de bachillerato (cb.bach.*).
+
+   Se derivan de CLAVES en vez de escribirse a mano, para que si algún
+   día se añade una clave nueva al módulo de datos entre sola en el
+   respaldo sin tener que tocar dos archivos.
+
+   `sistema.ahorro` queda fuera: es una preferencia del aparato y de la
+   conexión del momento, no algo que el estudiante quiera llevarse a
+   otro dispositivo.
+   ------------------------------------------------------------------ */
+export const BACHILLERATO_KEYS = Object.values(CLAVES)
+  .map((clave) => PREFIJO + clave)
+  .filter((claveCompleta) => claveCompleta !== PREFIJO + CLAVES.MODO_AHORRO);
 
 /* ------------------------------------------------------------------
    Lista blanca de claves a exportar (sin datos de otros usuarios)
@@ -40,6 +57,9 @@ export const WHITELIST_KEYS = new Set([
   'planData',
   'cherrybombPomodoro',
   'nuevaClaveListaBlanca', // test key
+
+  // Funciones de bachillerato (cb.bach.notas.*, cb.bach.paes.*, …)
+  ...BACHILLERATO_KEYS,
 ]);
 
 /* Claves que NUNCA se exportan (sensibles o datos de otros) */

@@ -3736,6 +3736,74 @@ unicode: "eb1c"
     </section>
 
     <section id="app-configuracion" class="section hidden">
+      <div class="container">
+        <h2 class="section-title"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /></svg> Configuración</h2>
+        <p class="section-sub">Personalizá el estilo visual de la plataforma.</p>
+
+        <div class="card">
+          <h3 style="margin:0 0 .75rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25" /><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg> Personalizar tema</h3>
+          <p style="margin:0 0 1rem;color:var(--gray-500);">Elegí el estilo que más te guste.</p>
+          <div id="theme-options-section" class="theme-grid" style="max-width:420px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:1rem;">
+          <h3 style="margin:0 0 .75rem;">Modo ahorro</h3>
+          <p style="margin:0 0 1rem;color:var(--gray-500);">Elegí si la app reduce animaciones para gastar menos datos y batería. Para exportar o importar tus datos, andá a <strong>Respaldos</strong>.</p>
+          <div id="cb-datos-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SECCIONES DE BACHILLERATO ==========
+         Su contenido lo dibuja JavaScript al entrar (carga diferida).
+         Acá sólo van el marco y los títulos, para que el HTML pese poco. -->
+    <section id="app-notas" class="section hidden" aria-labelledby="titulo-notas">
+      <div class="container">
+        <h2 class="section-title" id="titulo-notas"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2" /><path d="M9 12h6" /><path d="M9 16h6" /></svg> Mis notas</h2>
+        <p class="section-sub">Calculá tus promedios por materia y descubrí cuánto necesitás en lo que falta.</p>
+        <div id="cb-notas-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+      </div>
+    </section>
+
+    <section id="app-planificador" class="section hidden" aria-labelledby="titulo-planificador">
+      <div class="container">
+        <h2 class="section-title" id="titulo-planificador"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /></svg> Horario y tareas</h2>
+        <p class="section-sub">Tu horario semanal, las tareas y exámenes de cada materia, y lo que vence en los próximos 7 días.</p>
+        <div id="cb-planificador-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+      </div>
+    </section>
+
+    <section id="app-paes" class="section hidden" aria-labelledby="titulo-paes">
+      <div class="container">
+        <h2 class="section-title" id="titulo-paes"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 9l1 0" /><path d="M9 13l6 0" /><path d="M9 17l4 0" /></svg> Preparación PAES</h2>
+        <p class="section-sub">Hacé simulacros cronometrados, repasá con tarjetas y mirá en qué temas te va peor.</p>
+        <div id="cb-paes-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+      </div>
+    </section>
+
+    <section id="app-servicio" class="section hidden" aria-labelledby="titulo-servicio">
+      <div class="container">
+        <h2 class="section-title" id="titulo-servicio"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12a3 3 0 1 0 -6 0a3 3 0 0 0 6 0" /><path d="M6 3h12l3 9l-6 3l-6 -3z" /><path d="M9 21l3 -3l3 3" /></svg> Servicio social y proyecto de grado</h2>
+        <p class="section-sub">Registrá tus horas de servicio social y llevá el avance de tu proyecto de grado.</p>
+        <div id="cb-servicio-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+      </div>
+    </section>
+
+    <section id="app-miCentro" class="section hidden" aria-labelledby="titulo-miCentro">
+      <div class="container">
+        <h2 class="section-title" id="titulo-miCentro"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18" /><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16" /><path d="M9 7l1 0" /><path d="M14 7l1 0" /><path d="M9 11l1 0" /><path d="M14 11l1 0" /><path d="M10 21v-4a2 2 0 0 1 4 0v4" /></svg> Mi centro escolar</h2>
+        <p class="section-sub">Avisos y eventos del centro, y una guía de carreras y universidades para decidir a dónde ir.</p>
+        <div id="cb-centro-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+      </div>
+    </section>
+
+    <section id="app-bienestar" class="section hidden" aria-labelledby="titulo-bienestar">
+      <div class="container">
+        <h2 class="section-title" id="titulo-bienestar"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M12 3v1m0 16v1" /></svg> Bienestar y hábitos</h2>
+        <p class="section-sub">Cuánto estudiaste, tus metas de la semana y unos consejos para los días de examen.</p>
+        <div id="cb-bienestar-root" aria-live="polite"><noscript><p>Esta sección necesita que JavaScript esté activado.</p></noscript></div>
+      </div>
+    </section>
 
   </main>
 

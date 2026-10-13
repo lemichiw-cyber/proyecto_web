@@ -32,6 +32,14 @@ describe('features.js — Feature flags', () => {
     expect(isEnabled('SAKURA_PLAYER')).toBe(true);
   });
 
+  it('Funciones de bachillerato están activas sin servidor', () => {
+    const bachillerato = ['NOTAS', 'PLANIFICADOR', 'PAES', 'SERVICIO', 'MI_CENTRO', 'BIENESTAR'];
+    bachillerato.forEach(f => {
+      expect(FEATURES[f]).toBe(true);
+      expect(isEnabled(f)).toBe(true);
+    });
+  });
+
   it('isEnabled returns false for multiusuario features', () => {
     expect(isEnabled('FOROS')).toBe(false);
     expect(isEnabled('AULAS')).toBe(false);
@@ -70,6 +78,13 @@ describe('features.js — Feature flags', () => {
     expect(APP_TO_FEATURE.auth).toBe('ROLES_DOCENTE');
     expect(APP_TO_FEATURE.asistencias).toBe('ASISTENCIA_DOCENTE');
     expect(APP_TO_FEATURE.protegido).toBe('PROTEGIDO');
+    // Secciones de bachillerato
+    expect(APP_TO_FEATURE.notas).toBe('NOTAS');
+    expect(APP_TO_FEATURE.planificador).toBe('PLANIFICADOR');
+    expect(APP_TO_FEATURE.paes).toBe('PAES');
+    expect(APP_TO_FEATURE.servicio).toBe('SERVICIO');
+    expect(APP_TO_FEATURE.miCentro).toBe('MI_CENTRO');
+    expect(APP_TO_FEATURE.bienestar).toBe('BIENESTAR');
   });
 
   it('Feature flag check does not depend on user role', () => {
