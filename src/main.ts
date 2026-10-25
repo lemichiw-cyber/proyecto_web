@@ -2,7 +2,6 @@ import './styles.css';
 import './data.js';
 import './notifications.js';
 import './app.js';
-import './sakura-player/sakura-player.js';
 
 /* ------------------------------------------------------------------
    CSP Report-Only: escuchar violations y loggearlas a consola.
@@ -57,3 +56,57 @@ if ('serviceWorker' in navigator) {
   });
   window.setInterval(pedirActualizacion, 60 * 60 * 1000);
 }
+
+/* ------------------------------------------------------------------
+   Estado de conexión visible en todo el sitio.
+   La app funciona con datos locales; avisar que YouTube Music no está
+   disponible evita que el usuario piense que la app se rompió.
+   ------------------------------------------------------------------ */
+function actualizarEstadoConexion(): void {
+  const banner = document.getElementById('app-offline-banner');
+  if (!banner) return;
+  banner.classList.toggle('hidden', navigator.onLine);
+}
+window.addEventListener('online', actualizarEstadoConexion);
+window.addEventListener('offline', actualizarEstadoConexion);
+actualizarEstadoConexion();
+
+/* ------------------------------------------------------------------
+   PWA: botón de instalación. El navegador dispara beforeinstallprompt
+   solo cuando la app cumple los requisitos y aún no está instalada.
+   En iOS no existe el evento: el botón queda oculto y se usa
+   Compartir → Añadir a pantalla de inicio.
+   ------------------------------------------------------------------ */
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};
+
+let installPrompt: InstallPromptEvent | null = null;
+const installBtn = document.getElementById('btn-install-app') as HTMLButtonElement | null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installPrompt = event as InstallPromptEvent;
+  installBtn?.classList.remove('hidden');
+});
+
+installBtn?.addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installBtn.disabled = true;
+  try {
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+  } catch {
+    /* el usuario canceló o el navegador invalidó el prompt */
+  } finally {
+    installPrompt = null;
+    installBtn.disabled = false;
+    installBtn.classList.add('hidden');
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  installBtn?.classList.add('hidden');
+});

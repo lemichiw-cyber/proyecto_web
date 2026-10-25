@@ -480,14 +480,15 @@ Ver `docs/FUNCIONES.md` para la tabla completa con estado y requisitos.
 
 ## Seguridad
 
-<<<<<<< HEAD
-> **Nota**: no existe una sección "Migración de dominio" ni funcionalidad
-> integrada de exportar/importar datos en el código actual.
-> La persistencia es 100% `localStorage` por dispositivo; para mover datos
-> entre dominios/dispositivos habría que implementar sincronización con el
-> backend (`/api/accounts`, `/api/music/library`, etc.) o añadir un botón
-> de backup/restore JSON en la UI.
-=======
+- La autenticación actual es **local** (`localStorage`) y sirve para separar
+  perfiles en un mismo dispositivo, no como autenticación real multiusuario.
+- Para producción multiusuario hace falta backend con sesiones, contraseñas
+  hasheadas, RLS y auditoría (ver la hoja de ruta de arriba).
+- El respaldo **nunca incluye** contraseñas, hashes, sesión activa ni datos de
+  otras personas. Aun así, contiene información personal: guardalo con cuidado.
+- Los datos de un dispositivo compartido son visibles para todas las cuentas
+  locales; no uses Cherry-Bomb para información sensible.
+
 ## Respaldo y migración de dominio
 
 La app guarda todos los datos del estudiante en `localStorage` del navegador.
@@ -497,13 +498,13 @@ el estudiante pierde sus tareas, horarios, notas y configuración.
 
 ### Cómo migrar tus datos
 
-> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no hay **. El archivo JSON es un archivo local.
+> **⚠️ Importante**: Los datos se guardan **solo en el dispositivo** (localStorage). **Las claves son globales del dispositivo, no por usuario**. Si el dispositivo es compartido, **todos los usuarios verán los mismos datos**. El respaldo **no se vincula a ninguna cuenta** y **no está cifrado**. El archivo JSON es un archivo local.
 
-1. En el sitio **antiguo**: *Ajustes → Respaldos → Exportar JSON**.
+1. En el sitio **antiguo**: **Ajustes → Respaldos → Exportar JSON**.
    - Se descarga `respaldo-cherry-bomb-YYYY-MM-DD.json`.
    - Incluye: tareas, horarios, agenda, notas, exámenes, planificaciones, tema, volumen, biblioteca del reproductor (favoritos, playlists, historial), preferencias.
    - **NO incluye**: contraseñas, hashes, sesión activa, URL del backend, datos de otros usuarios (alumnos, entregas, calificaciones, aulas de docente, foros, mensajes, grupos, incidentes).
-2. En el sitio **nuevo**: *Ajustes → Respaldos → Importar respaldo**.
+2. En el sitio **nuevo**: **Ajustes → Respaldos → Importar respaldo**.
    - Seleccioná el archivo JSON → vista previa → elegí **Combinar** (suma, no duplica) o **Reemplazar todo**.
    - Confirmación explícita antes de escribir.
    - Si falla a la mitad, se restaura el estado anterior.
@@ -532,7 +533,6 @@ Ver `docs/RESPALDO.md` para el esquema JSON completo, lista blanca de claves, cl
 - **Nunca** se envía a ningún servidor. Todo ocurre en el navegador.
 - Al importar: validación estricta (esquema, tipos, lista blanca). Sanitización de textos.
 - El respaldo **no incluye** contraseñas ni datos de otros usuarios (alumnos, entregas, calificaciones). Si sos docente, exportá/importá solo tus propios datos de configuración.
->>>>>>> 2fb3bbf (feat(backup): módulo exportar/importar con lista blanca, validación y rollback)
 
 ## Licencia
 

@@ -61,39 +61,41 @@ export class NowPlayingView {
     const repeatIcon = s.repeat === REPEAT.ONE ? 'repeatOne' : 'repeat';
 
     this.el.innerHTML =
-      '<div class="sp-now" style="display:grid;grid-template-columns:200px 1fr;gap:1.3rem;align-items:start;">' +
-        '<div class="sp-cover" id="np-cover" style="width:100%;aspect-ratio:1;min-width:0;">' +
+      '<div class="sp-now">' +
+        '<div class="sp-cover sp-now-cover" id="np-cover">' +
           (t.thumb
             ? '<img src="' + t.thumb + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
             : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--player-text-secondary);">' + icon('disc') + '</div>') +
         '</div>' +
-        '<div style="min-width:0;">' +
+        '<div class="sp-now-body">' +
           '<span class="sp-badge">' + (t.source === 'local' ? 'Archivo local' : 'YouTube Music') + '</span>' +
-          '<div class="sp-track-title" id="np-title" style="font-size:1.35rem;font-weight:800;line-height:1.2;margin:.45rem 0 .2rem;word-break:break-word;">' + escapeHtml(t.title) + '</div>' +
-          '<div id="np-artist" style="font-size:.9rem;color:var(--player-text-secondary);word-break:break-word;">' +
+          '<div class="sp-track-title sp-now-title" id="np-title">' + escapeHtml(t.title) + '</div>' +
+          '<div id="np-artist" class="sp-now-artist">' +
             escapeHtml(t.artist || 'Artista desconocido') + (t.album ? ' · ' + escapeHtml(t.album) : '') + '</div>' +
 
-          '<div class="sp-progress" id="np-progress" style="margin-top:1.1rem;">' +
-            '<div class="sp-progress-fill" id="np-fill" style="width:0%;"></div></div>' +
-          '<div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--player-text-secondary);margin-top:.35rem;font-variant-numeric:tabular-nums;">' +
-            '<span id="np-cur">0:00</span><span id="np-dur">' + formatTime(s.duration || t.duration) + '</span></div>' +
-
-          '<div id="np-controls" style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:.9rem;flex-wrap:wrap;">' +
-            '<button class="sp-btn sp-btn-icon' + (s.shuffle ? ' sp-btn-active' : '') + '" id="np-shuffle" title="Shuffle (S)">' + icon('shuffle') + '</button>' +
-            '<button class="sp-btn sp-btn-icon" id="np-prev" title="Anterior">' + icon('prev') + '</button>' +
-            '<button class="sp-btn sp-btn-primary" id="np-play" title="Reproducir / Pausa (Espacio)" style="width:54px;height:54px;padding:0;border-radius:50%;">' + icon('play') + '</button>' +
-            '<button class="sp-btn sp-btn-icon" id="np-next" title="Siguiente">' + icon('next') + '</button>' +
-            '<button class="sp-btn sp-btn-icon' + (s.repeat !== REPEAT.OFF ? ' sp-btn-active' : '') + '" id="np-repeat" title="Repetir (R)">' + icon(repeatIcon) + '</button>' +
+          '<div class="sp-now-progress">' +
+            '<div class="sp-progress" id="np-progress" role="slider" tabindex="0" aria-label="Progreso de la canción" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00">' +
+              '<div class="sp-progress-fill" id="np-fill" style="width:0%;"></div></div>' +
+            '<div class="sp-now-times">' +
+              '<span id="np-cur">0:00</span><span id="np-dur">' + formatTime(s.duration || t.duration) + '</span></div>' +
           '</div>' +
 
-          '<div id="np-secondary" style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">' +
-            '<button class="sp-btn sp-btn-icon' + (fav ? ' sp-btn-active' : '') + '" id="np-fav" title="Favorito">' + icon(fav ? 'heartFill' : 'heart') + '</button>' +
-            '<button class="sp-btn sp-btn-icon" id="np-queue" title="Ver cola">' + icon('queue') + '</button>' +
-            '<button class="sp-btn sp-btn-icon" id="np-mute" title="Silencio (M)">' + icon(s.muted ? 'mute' : 'volume') + '</button>' +
+          '<div id="np-controls" class="sp-now-controls">' +
+            '<button class="sp-btn sp-btn-icon' + (s.shuffle ? ' sp-btn-active' : '') + '" id="np-shuffle" title="Shuffle (S)" aria-label="Aleatorio" aria-pressed="' + !!s.shuffle + '">' + icon('shuffle') + '</button>' +
+            '<button class="sp-btn sp-btn-icon" id="np-prev" title="Anterior" aria-label="Canción anterior">' + icon('prev') + '</button>' +
+            '<button class="sp-btn sp-btn-primary sp-now-play" id="np-play" title="Reproducir / Pausa (Espacio)" aria-label="Reproducir o pausar">' + icon('play') + '</button>' +
+            '<button class="sp-btn sp-btn-icon" id="np-next" title="Siguiente" aria-label="Canción siguiente">' + icon('next') + '</button>' +
+            '<button class="sp-btn sp-btn-icon' + (s.repeat !== REPEAT.OFF ? ' sp-btn-active' : '') + '" id="np-repeat" title="Repetir (R)" aria-label="Repetir" aria-pressed="' + (s.repeat !== REPEAT.OFF) + '">' + icon(repeatIcon) + '</button>' +
+          '</div>' +
+
+          '<div id="np-secondary" class="sp-now-secondary">' +
+            '<button class="sp-btn sp-btn-icon' + (fav ? ' sp-btn-active' : '') + '" id="np-fav" title="Favorito" aria-label="Agregar a favoritos" aria-pressed="' + !!fav + '">' + icon(fav ? 'heartFill' : 'heart') + '</button>' +
+            '<button class="sp-btn sp-btn-icon" id="np-queue" title="Ver cola" aria-label="Ver cola de reproducción">' + icon('queue') + '</button>' +
+            '<button class="sp-btn sp-btn-icon" id="np-mute" title="Silencio (M)" aria-label="Silenciar">' + icon(s.muted ? 'mute' : 'volume') + '</button>' +
             '<input type="range" class="sp-slider" id="np-vol" min="0" max="100" value="' + Math.round(s.volume * 100) + '" style="width:96px;" aria-label="Volumen">' +
-            '<button class="sp-btn" id="np-speed" title="Velocidad de reproducción" style="font-variant-numeric:tabular-nums;">' + player.rate.toFixed(2).replace(/0$/, '') + 'x</button>' +
+            '<button class="sp-btn" id="np-speed" title="Velocidad de reproducción" aria-label="Velocidad de reproducción" style="font-variant-numeric:tabular-nums;">' + player.rate.toFixed(2).replace(/0$/, '') + 'x</button>' +
           '</div>' +
-          '<div id="np-queuepos" style="text-align:center;font-size:.7rem;color:var(--player-text-secondary);margin-top:.7rem;">' +
+          '<div id="np-queuepos" class="sp-now-queuepos">' +
             (s.index >= 0 ? 'Pista ' + (s.index + 1) + ' de ' + s.queueLength : '') + '</div>' +
         '</div>' +
       '</div>';
@@ -112,12 +114,14 @@ export class NowPlayingView {
     q('#np-shuffle').addEventListener('click', (e) => {
       player.toggleShuffle();
       e.currentTarget.classList.toggle('sp-btn-active', player.shuffle);
+      e.currentTarget.setAttribute('aria-pressed', String(player.shuffle));
       toast(player.shuffle ? 'Shuffle activado' : 'Shuffle desactivado', 'success');
     });
     q('#np-repeat').addEventListener('click', (e) => {
       player.cycleRepeat();
       const on = player.repeat !== REPEAT.OFF;
       e.currentTarget.classList.toggle('sp-btn-active', on);
+      e.currentTarget.setAttribute('aria-pressed', String(on));
       e.currentTarget.innerHTML = icon(player.repeat === REPEAT.ONE ? 'repeatOne' : 'repeat');
       toast(player.repeat === REPEAT.OFF ? 'Repetir desactivado'
         : player.repeat === REPEAT.ALL ? 'Repetir: toda la cola' : 'Repetir: una canción', 'success');
@@ -128,6 +132,7 @@ export class NowPlayingView {
       const added = library.toggleFavorite(t);
       const btn = e.currentTarget;
       btn.classList.toggle('sp-btn-active', added);
+      btn.setAttribute('aria-pressed', String(added));
       btn.innerHTML = icon(added ? 'heartFill' : 'heart');
       toast(added ? 'Agregada a favoritos' : 'Quitada de favoritos', 'success');
     });
@@ -140,6 +145,7 @@ export class NowPlayingView {
     q('#np-mute').addEventListener('click', (e) => {
       player.toggleMute();
       e.currentTarget.innerHTML = icon(player.muted ? 'mute' : 'volume');
+      e.currentTarget.setAttribute('aria-label', player.muted ? 'Activar sonido' : 'Silenciar');
     });
     q('#np-vol').addEventListener('input', (e) => {
       player.setVolume(e.target.value / 100);
@@ -153,6 +159,7 @@ export class NowPlayingView {
       const next = i === -1 ? SPEEDS[0] : SPEEDS[i];
       player.setRate(next);
       e.currentTarget.textContent = Number(next.toFixed(2)) + 'x';
+      e.currentTarget.setAttribute('aria-label', 'Velocidad de reproducción: ' + next + 'x');
       toast('Velocidad ' + next + 'x', 'success');
     });
 
@@ -170,6 +177,20 @@ export class NowPlayingView {
     });
     bar.addEventListener('pointermove', (e) => { if (this._dragging) seek(e); });
     bar.addEventListener('pointerup', () => { this._dragging = false; });
+    bar.addEventListener('pointercancel', () => { this._dragging = false; });
+    // La barra es un slider accesible: flechas, Inicio y Fin.
+    bar.addEventListener('keydown', (e) => {
+      const s = player.status();
+      if (!s.duration) return;
+      let next = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = s.currentTime + 5;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = s.currentTime - 5;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = s.duration;
+      if (next === null) return;
+      e.preventDefault();
+      player.seek(Math.max(0, Math.min(s.duration, next)));
+    });
   }
 
   /* ---------------- actualizaciones en vivo ---------------- */
@@ -187,9 +208,15 @@ export class NowPlayingView {
     const cur = this.el.querySelector('#np-cur');
     const dur = this.el.querySelector('#np-dur');
     if (!fill) return;
-    if (!this._dragging) fill.style.width = (s.duration ? (s.currentTime / s.duration) * 100 : 0) + '%';
+    const pct = s.duration ? (s.currentTime / s.duration) * 100 : 0;
+    if (!this._dragging) fill.style.width = pct + '%';
     if (cur) cur.textContent = formatTime(s.currentTime);
     if (dur) dur.textContent = formatTime(s.duration);
+    const bar = this.el.querySelector('#np-progress');
+    if (bar) {
+      bar.setAttribute('aria-valuenow', String(Math.round(pct)));
+      bar.setAttribute('aria-valuetext', formatTime(s.currentTime) + ' de ' + formatTime(s.duration));
+    }
   }
 
   destroy() { this._unbind(); }

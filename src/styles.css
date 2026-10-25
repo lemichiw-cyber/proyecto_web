@@ -272,6 +272,11 @@
       --footer-link: #d8a8dc; --footer-link-hover: #ffe9f6;
       --footer-brand: #ffe9f6;
     }
+    /* Controles nativos (select, date, scrollbar) coherentes con cada tema */
+    :root { color-scheme: light; accent-color: var(--primary); }
+    [data-theme="dark"], [data-theme="sunset"], [data-theme="sakura"],
+    [data-theme="paraiso"], [data-theme="sakura-player"] { color-scheme: dark; }
+
     /* ===== Temas oscuros: primarios claros -> texto/tinta oscuro encima ===== */
     [data-theme="dark"],
     [data-theme="sunset"],
@@ -289,6 +294,22 @@
     [data-theme="sunset"] img[src*=".svg"],[data-theme="sunset"] img[src^="data:image/svg+xml"],
     [data-theme="sakura"] img[src*=".svg"],[data-theme="sakura"] img[src^="data:image/svg+xml"] {
       filter: brightness(0) invert(1);
+    }
+    /* Accesibilidad: salto al contenido y foco visible con teclado */
+    .skip-link {
+      position: fixed; top: .5rem; left: .5rem; z-index: 1000;
+      transform: translateY(-200%); background: var(--primary); color: var(--on-primary);
+      padding: .6rem 1rem; border-radius: 8px; font-weight: 700; text-decoration: none;
+      box-shadow: var(--shadow-lg); transition: transform .15s ease;
+    }
+    .skip-link:focus { transform: translateY(0); }
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
     }
     ::selection { background: var(--primary); color: var(--on-primary); }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -315,6 +336,41 @@
     .logo-link svg { width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px; }
     .logo-link img { border-radius: 7px; box-shadow: 0 2px 8px -3px rgba(15,23,42,.45); transition: transform .2s; }
     .logo-link:hover img { transform: rotate(-6deg) scale(1.05); }
+    #user-info { min-width: 0; }
+    #user-email-display { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .app-loading {
+      display: flex; align-items: center; justify-content: center; gap: .7rem;
+      min-height: 220px; padding: 2rem; color: var(--text-secondary);
+      font-size: .88rem; text-align: center;
+    }
+    .app-loading::before {
+      content: ''; width: 22px; height: 22px; flex: none; border-radius: 50%;
+      border: 3px solid var(--border); border-top-color: var(--primary);
+      animation: appLoadingSpin .8s linear infinite;
+    }
+    .app-loading-error { color: var(--red-ink); }
+    .app-loading-error::before { display: none; }
+    @keyframes appLoadingSpin { to { transform: rotate(360deg); } }
+    .app-offline-banner {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .4rem 1rem; font-size: .78rem; font-weight: 600;
+      background: var(--amber-light); color: var(--amber-ink);
+      border-top: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+    }
+    .app-offline-banner.hidden { display: none; }
+    .app-offline-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+      box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+      flex: none;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .app-offline-dot { animation: offlinePulse 1.8s ease-in-out infinite; }
+      @keyframes offlinePulse { 50% { opacity: .45; } }
+    }
+    @media (max-width: 640px) {
+      #user-info { display: none !important; }
+      .app-offline-banner { font-size: .72rem; padding: .35rem .75rem; text-align: center; line-height: 1.35; }
+    }
     .main-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex: 1; }
     .main-nav::-webkit-scrollbar { display: none; }
     .main-nav ul { display: flex; gap: .15rem; list-style: none; white-space: nowrap; padding: .15rem 0; }

@@ -19,7 +19,7 @@ import { MixerView } from './components/mixer.js';
 import { UploadView } from './components/upload.js';
 import { QueueView } from './components/queue.js';
 import { MiniPlayer } from './components/mini-player.js';
-import { icon, toast, emptyState, spinner, promptDialog, escapeHtml, coverHtml } from './components/ui.js';
+import { icon, toast, emptyState, errorState, bindRetry, spinner, promptDialog, escapeHtml, coverHtml } from './components/ui.js';
 
 const VIEWS = [
   { id: 'player', label: 'Reproductor', icon: 'note' },
@@ -64,11 +64,17 @@ class SakuraPlayer {
     this._onNetUpdate = () => {
       this._offline = !navigator.onLine;
       this._renderOffline();
+      // Al recuperar la conexión, verificar de nuevo el backend sin que
+      // el usuario tenga que entrar a Ajustes y pulsar "Probar".
+      if (!this._offline) this._checkBackend();
     };
     this._onKeydown = (e) => {
       const tag = (e.target.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
-      if (!this._mounted) return;
+      const isControl = e.target.closest && e.target.closest('button, a, [role="button"], [role="slider"]');
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable || isControl) return;
+      if (!this._mounted || e.ctrlKey || e.metaKey || e.altKey) return;
+      // No secuestrar atajos mientras hay un diálogo abierto.
+      if (document.querySelector('.modal-overlay.open, .sp-dialog-overlay')) return;
       switch (e.key) {
         case ' ': e.preventDefault(); player.toggle(); break;
         case 'ArrowRight': e.preventDefault(); player.seek(player.audio.currentTime + 5); break;
@@ -189,22 +195,26 @@ class SakuraPlayer {
   }
 
   _shell() {
-    return '<div style="display:grid;grid-template-columns:220px 1fr;gap:1rem;align-items:start;" id="sp-layout">' +
-      '<nav class="sp-panel" style="padding:.6rem;display:flex;flex-direction:column;gap:.2rem;position:sticky;top:1rem;" id="sp-nav">' +
-        '<div style="display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem .7rem;">' +
-          '<span style="font-size:1.1rem;">🌸</span>' +
-          '<div><div style="font-weight:800;font-size:.9rem;letter-spacing:.04em;">Sakura Player</div>' +
-          '<div style="font-size:.62rem;color:var(--player-text-secondary);">YouTube Music + Local</div></div>' +
+    return '<div id="sp-layout" class="sp-layout">' +
+      '<nav class="sp-panel sp-nav" id="sp-nav" aria-label="Secciones del reproductor">' +
+        '<div class="sp-nav-brand">' +
+          '<span class="sp-nav-logo" aria-hidden="true">🌸</span>' +
+          '<div><div class="sp-nav-title">Sakura Player</div>' +
+          '<div class="sp-nav-sub">YouTube Music + Local</div></div>' +
         '</div>' +
-        VIEWS.map((v) => '<button class="sp-btn" data-view="' + v.id + '" style="justify-content:flex-start;">' + icon(v.icon) + ' ' + v.label + '</button>').join('') +
-        '<div id="sp-offline-slot" style="margin-top:.6rem;"></div>' +
+        '<div class="sp-nav-links">' +
+          VIEWS.map((v) => '<button class="sp-btn" type="button" data-view="' + v.id + '" title="' + v.label + '" aria-label="' + v.label + '">' +
+            '<span class="sp-nav-icon" aria-hidden="true">' + icon(v.icon) + '</span>' +
+            '<span class="sp-nav-label">' + v.label + '</span></button>').join('') +
+        '</div>' +
+        '<div id="sp-offline-slot" class="sp-nav-offline"></div>' +
       '</nav>' +
-      '<div style="display:flex;flex-direction:column;gap:1rem;min-width:0;">' +
-        '<div class="sp-panel sp-visualizer-wrap" style="height:150px;">' +
-          '<canvas id="sp-visualizer-canvas" style="width:100%;height:100%;"></canvas>' +
-          '<div id="sp-visualizer-fallback" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--player-text-secondary);font-size:.78rem;"></div>' +
+      '<div class="sp-main">' +
+        '<div class="sp-panel sp-visualizer-wrap" id="sp-visualizer-wrap" aria-hidden="true">' +
+          '<canvas id="sp-visualizer-canvas"></canvas>' +
+          '<div id="sp-visualizer-fallback" class="sp-visualizer-fallback"></div>' +
         '</div>' +
-        '<div id="sp-view-content" class="sp-panel" style="padding:1.1rem;min-height:340px;"></div>' +
+        '<div id="sp-view-content" class="sp-panel sp-content"></div>' +
       '</div>' +
     '</div>';
   }
@@ -214,31 +224,8 @@ class SakuraPlayer {
       const btn = e.target.closest('[data-view]');
       if (!btn) return;
       this.view = btn.dataset.view;
-      this.root.querySelectorAll('#sp-nav [data-view]').forEach((b) => {
-        b.classList.toggle('sp-btn-active', b === btn);
-      });
       this._renderView();
     });
-    // Responsive: nav horizontal en móvil
-    const mq = window.matchMedia('(max-width: 760px)');
-    const applyMq = () => {
-      const layout = this.root.querySelector('#sp-layout');
-      const nav = this.root.querySelector('#sp-nav');
-      if (!layout || !nav) return;
-      if (mq.matches) {
-        layout.style.gridTemplateColumns = '1fr';
-        nav.style.position = 'static';
-        nav.style.flexDirection = 'row';
-        nav.style.flexWrap = 'wrap';
-      } else {
-        layout.style.gridTemplateColumns = '220px 1fr';
-        nav.style.position = 'sticky';
-        nav.style.flexDirection = 'column';
-        nav.style.flexWrap = 'nowrap';
-      }
-    };
-    mq.addEventListener('change', applyMq);
-    applyMq();
   }
 
   _renderView() {
@@ -250,6 +237,12 @@ class SakuraPlayer {
     if (prev && typeof prev.destroy === 'function') prev.destroy();
     this._currentView = this.view;
     this._detailSeq++; // invalida detalles de álbum/artista/playlist pendientes
+    this.root.querySelectorAll('#sp-nav [data-view]').forEach((b) => {
+      const active = b.dataset.view === this.view;
+      b.classList.toggle('sp-btn-active', active);
+      if (active) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
     content.innerHTML = '';
     if (this.view === 'settings') {
       content.innerHTML = this._settingsHtml();
@@ -286,7 +279,7 @@ class SakuraPlayer {
       });
     } catch (err) {
       if (seq !== this._detailSeq) return;
-      content.innerHTML = emptyState('album', 'Álbum no encontrado', friendlyError(err));
+      this._detailError(content, 'album', 'No se pudo abrir el álbum', err, () => this.openAlbum(id));
     }
   }
 
@@ -314,7 +307,7 @@ class SakuraPlayer {
         c.addEventListener('click', () => this.openAlbum(c.dataset.album)));
     } catch (err) {
       if (seq !== this._detailSeq) return;
-      content.innerHTML = emptyState('user', 'Artista no encontrado', friendlyError(err));
+      this._detailError(content, 'user', 'No se pudo abrir el artista', err, () => this.openArtist(id));
     }
   }
 
@@ -334,8 +327,17 @@ class SakuraPlayer {
       });
     } catch (err) {
       if (seq !== this._detailSeq) return;
-      content.innerHTML = emptyState('list', 'Playlist no encontrada', friendlyError(err));
+      this._detailError(content, 'list', 'No se pudo abrir la playlist', err, () => this.openPlaylist(id));
     }
+  }
+
+  _detailError(content, iconName, title, err, retry) {
+    const offline = this._offline || (typeof navigator !== 'undefined' && navigator.onLine === false);
+    content.innerHTML = errorState(offline ? 'wifiOff' : iconName,
+      offline ? 'Sin conexión' : title,
+      offline ? 'Este contenido vive en YouTube Music y necesita internet.' : friendlyError(err),
+      { retryLabel: 'Reintentar' });
+    bindRetry(content, retry);
   }
 
   _detail({ title, subtitle, cover, description, tracks, extra }) {
@@ -637,20 +639,29 @@ class SakuraPlayer {
   _bindConnectivity() {
     window.addEventListener('online', this._onNetUpdate);
     window.addEventListener('offline', this._onNetUpdate);
-    this._onNetUpdate();
+    // Estado inicial sin lanzar dos veces la comprobación del backend:
+    // mount() llama a _checkBackend() justo después.
+    this._offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    this._renderOffline();
   }
 
   _renderOffline() {
     const slot = this.root && this.root.querySelector('#sp-offline-slot');
     if (!slot) return;
     if (this._offline) {
-      slot.innerHTML = '<div class="sp-offline-banner">🌸 <div><b>MODO OFFLINE</b><br>Las funciones de YouTube Music no están disponibles.<br>Tu biblioteca local continúa disponible.</div></div>';
+      slot.innerHTML = '<div class="sp-offline-banner" role="status">' + icon('wifiOff') +
+        '<div><b>Sin conexión</b><span>YouTube Music no está disponible. Tu biblioteca local sigue funcionando.</span></div></div>';
     } else {
       slot.innerHTML = '';
     }
   }
 
   async _checkBackend() {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const statusOff = this.root && this.root.querySelector('#sp-api-status');
+      if (statusOff) statusOff.innerHTML = '<span style="color:var(--player-warning);">● Sin conexión</span> — el backend no es accesible ahora.';
+      return;
+    }
     const status = this.root && this.root.querySelector('#sp-api-status');
     const inUse = activeApiBase();
     const custom = inUse !== getApiBase(); // la URL guardada falló y se forzó la del sitio

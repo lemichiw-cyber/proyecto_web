@@ -426,6 +426,174 @@
 }
 
 /* ===================================================================
+   Estructura: barra lateral en escritorio y pestañas en móvil
+   =================================================================== */
+.sp-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.sp-nav {
+  padding: .6rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  position: sticky;
+  top: 1rem;
+}
+.sp-nav-brand {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .4rem .5rem .7rem;
+}
+.sp-nav-logo { font-size: 1.1rem; }
+.sp-nav-title { font-weight: 800; font-size: .9rem; letter-spacing: .04em; }
+.sp-nav-sub { font-size: .62rem; color: var(--player-text-secondary); }
+.sp-nav-links { display: flex; flex-direction: column; gap: .2rem; }
+.sp-nav .sp-btn { justify-content: flex-start; width: 100%; }
+.sp-nav-icon { display: inline-flex; align-items: center; justify-content: center; }
+.sp-nav-offline:empty { display: none; }
+.sp-nav-offline { margin-top: .6rem; }
+.sp-main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.sp-visualizer-wrap { height: 120px; }
+.sp-visualizer-fallback {
+  position: absolute; inset: 0; display: none; align-items: center;
+  justify-content: center; color: var(--player-text-secondary); font-size: .78rem;
+}
+.sp-content { padding: 1.1rem; min-height: 340px; min-width: 0; }
+
+/* ===================================================================
+   Vista "Reproductor" (now playing)
+   =================================================================== */
+.sp-now {
+  display: grid;
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
+  gap: 1.3rem;
+  align-items: start;
+}
+.sp-now-cover { width: 100%; aspect-ratio: 1; min-width: 0; }
+.sp-now-body { min-width: 0; }
+.sp-now-title {
+  font-size: 1.35rem; font-weight: 800; line-height: 1.2;
+  margin: .45rem 0 .2rem; word-break: break-word;
+}
+.sp-now-artist {
+  font-size: .9rem; color: var(--player-text-secondary);
+  word-break: break-word;
+}
+.sp-now-progress { margin-top: 1.1rem; }
+.sp-now-times {
+  display: flex; justify-content: space-between; font-size: .72rem;
+  color: var(--player-text-secondary); margin-top: .35rem;
+  font-variant-numeric: tabular-nums;
+}
+.sp-now-controls {
+  display: flex; align-items: center; justify-content: center;
+  gap: .5rem; margin-top: .9rem; flex-wrap: wrap;
+}
+.sp-now-play { width: 54px; height: 54px; padding: 0; border-radius: 50%; }
+.sp-now-secondary {
+  display: flex; align-items: center; justify-content: center;
+  gap: .5rem; margin-top: .8rem; flex-wrap: wrap;
+}
+.sp-now-queuepos {
+  text-align: center; font-size: .7rem;
+  color: var(--player-text-secondary); margin-top: .7rem;
+}
+
+/* ===================================================================
+   Mini reproductor global
+   =================================================================== */
+body.sp-mini-open { padding-bottom: 78px; }
+.sp-mini { padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom)); }
+.sp-mini-inner {
+  display: flex; align-items: center; gap: .7rem;
+  max-width: 1200px; margin: 0 auto; min-width: 0;
+}
+.sp-mini-progress { position: absolute; top: -3px; left: 0; right: 0; height: 6px; }
+.sp-mini-cover { width: 44px; height: 44px; flex: none; }
+.sp-mini-meta { flex: 1; min-width: 0; }
+.sp-mini-title {
+  font-weight: 700; font-size: .85rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-mini-artist {
+  font-size: .72rem; color: var(--player-text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-mini-controls { display: flex; align-items: center; gap: .25rem; flex: none; }
+.sp-mini-play { width: 40px; height: 40px; }
+.sp-mini-time-wrap {
+  display: flex; align-items: center; justify-content: flex-end;
+  flex: none; min-width: 74px; font-size: .72rem;
+  color: var(--player-text-secondary); font-variant-numeric: tabular-nums;
+}
+.sp-mini-volume { display: flex; align-items: center; gap: .2rem; flex: none; }
+#sp-mini-vol { width: 74px; }
+.sakura-player :focus-visible { outline-color: var(--player-primary); }
+
+/* ===================================================================
+   Responsive del reproductor (móvil primero, sin perder controles)
+   =================================================================== */
+@media (max-width: 760px) {
+  .sp-layout { grid-template-columns: minmax(0, 1fr); }
+  .sp-nav {
+    position: static; padding: .45rem;
+    border-radius: 12px;
+  }
+  .sp-nav-brand { display: none; }
+  .sp-nav-links {
+    flex-direction: row; gap: .3rem; overflow-x: auto;
+    scrollbar-width: thin; padding-bottom: .1rem;
+  }
+  .sp-nav .sp-btn {
+    width: auto; flex: none; padding: .45rem .7rem;
+    white-space: nowrap;
+  }
+  .sp-visualizer-wrap { height: 86px; }
+  .sp-content { padding: .85rem; min-height: 260px; }
+  .sp-offline-banner { font-size: .74rem; padding: .55rem .7rem; }
+  .sp-offline-banner svg { flex: none; }
+}
+
+@media (max-width: 640px) {
+  .sp-now { grid-template-columns: minmax(0, 1fr); gap: .9rem; justify-items: center; }
+  .sp-now-cover { width: min(62vw, 210px); max-width: 210px; }
+  .sp-now-body { width: 100%; }
+  .sp-now-title { text-align: center; font-size: 1.18rem; }
+  .sp-now-artist { text-align: center; }
+  .sp-now-controls { gap: .4rem; }
+  .sp-now-play { width: 58px; height: 58px; }
+  .sp-now-secondary { gap: .35rem; }
+  #np-vol { width: 76px !important; }
+  .sp-mini-time-wrap, .sp-mini-volume { display: none; }
+}
+
+@media (max-width: 480px) {
+  .sp-nav-links { justify-content: space-between; }
+  .sp-nav-label { display: none; }
+  .sp-nav .sp-btn { padding: .55rem .75rem; }
+  .sp-visualizer-wrap { height: 68px; }
+  .sp-content { padding: .7rem; }
+  body.sp-mini-open { padding-bottom: 70px; }
+  .sp-mini { padding: .45rem .6rem calc(.45rem + env(safe-area-inset-bottom)); }
+  .sp-mini-inner { gap: .5rem; }
+  .sp-mini-cover { width: 38px; height: 38px; }
+  .sp-mini-title { font-size: .8rem; }
+  .sp-mini-artist { font-size: .68rem; }
+  .sp-mini-controls { gap: .1rem; }
+  .sp-mini-play { width: 44px; height: 44px; }
+  .sp-mini-controls .sp-btn-icon { padding: .4rem; }
+}
+
+@media (max-width: 360px) {
+  .sp-now-cover { width: 150px; }
+  .sp-now-controls { gap: .25rem; }
+  .sp-now-play { width: 52px; height: 52px; }
+  .sp-now-secondary #np-vol { width: 64px !important; }
+}
+
+/* ===================================================================
    Componentes (siempre con tokens)
    =================================================================== */
 
@@ -659,6 +827,8 @@
   color: var(--player-text-secondary);
 }
 .sp-empty-icon { font-size: 2.2rem; margin-bottom: .6rem; }
+.sp-error .sp-empty-icon { color: var(--player-warning); }
+.sp-error .sp-btn { margin-top: .9rem; }
 
 .sp-spinner {
   width: 26px;

@@ -150,6 +150,8 @@ const ICONS = {
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M18 6L6 18M6 6l12 12"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 6l6 6-6 6"/></svg>',
   note: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>',
+  wifiOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M1 1l22 22"/><path d="M16.7 12.3a11 11 0 0 0-3.4-1.8M5 12.5a11 11 0 0 1 4.2-2.4M2 8.8a16 16 0 0 1 4.4-2.6M12 20h.01M8.5 16.5a5 5 0 0 1 4.6-.9"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
 };
 
 export function icon(name) {
@@ -199,6 +201,27 @@ export function emptyState(iconName, title, hint) {
   return '<div class="sp-empty"><div class="sp-empty-icon">' + icon(iconName) + '</div>' +
     '<div style="font-weight:700;margin-bottom:.3rem;">' + escapeHtml(title) + '</div>' +
     '<div style="font-size:.8rem;">' + escapeHtml(hint || '') + '</div></div>';
+}
+
+/* Error con acción de reintento. El caller enlaza el botón con bindRetry(). */
+export function errorState(iconName, title, hint, { retry = true, retryLabel = 'Reintentar' } = {}) {
+  return '<div class="sp-empty sp-error" role="alert">' +
+    '<div class="sp-empty-icon">' + icon(iconName || 'alert') + '</div>' +
+    '<div style="font-weight:700;margin-bottom:.3rem;">' + escapeHtml(title) + '</div>' +
+    '<div style="font-size:.8rem;line-height:1.55;max-width:440px;margin:0 auto;">' + escapeHtml(hint || '') + '</div>' +
+    (retry ? '<button class="sp-btn sp-btn-primary" type="button" data-sp-retry style="margin-top:.9rem;">' + escapeHtml(retryLabel) + '</button>' : '') +
+    '</div>';
+}
+
+export function bindRetry(container, fn) {
+  if (!container || typeof fn !== 'function') return;
+  container.querySelectorAll('[data-sp-retry]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      btn.textContent = 'Reintentando…';
+      fn();
+    });
+  });
 }
 
 export function spinner(text) {

@@ -6,7 +6,7 @@
 import { player } from '../player/player.js';
 import { library } from '../library/library.js';
 import { api, friendlyError } from '../api/client.js';
-import { icon, coverHtml, trackRow, emptyState, spinner, toast, escapeHtml } from './ui.js';
+import { icon, coverHtml, trackRow, emptyState, errorState, bindRetry, spinner, toast, escapeHtml } from './ui.js';
 
 const SECTIONS = [
   { id: 'songs', label: 'Canciones', icon: 'music' },
@@ -34,7 +34,7 @@ export class LibraryView {
         '<button class="sp-btn" id="sp-lib-refresh">' + icon('search') + ' Traer de YouTube Music</button>' +
         '<button class="sp-btn" id="sp-lib-clear-history" style="display:none;">Limpiar historial</button>' +
       '</div>' +
-      '<div id="sp-lib-content"></div>' +
+      '<div id="sp-lib-content" aria-live="polite"></div>' +
     '</div>';
   }
 
@@ -162,6 +162,13 @@ export class LibraryView {
 
   async _loadRemote(content) {
     if (!content || !content.isConnected) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      content.innerHTML = errorState('wifiOff', 'Sin conexión',
+        'La biblioteca de YouTube Music necesita internet. Tus canciones locales, favoritos y playlists siguen disponibles.',
+        { retryLabel: 'Volver a intentar' });
+      bindRetry(content, () => this._loadRemote(content));
+      return;
+    }
     content.innerHTML = spinner('Conectando con YouTube Music...');
     try {
       const data = await api.library(50);
@@ -169,9 +176,14 @@ export class LibraryView {
       this.remoteLoaded = true;
       toast('Biblioteca de YouTube Music sincronizada', 'success');
     } catch (err) {
-      if (content.isConnected) {
-        content.innerHTML = emptyState('search', 'YouTube Music no disponible', friendlyError(err) + '<br><br>Tu biblioteca local sigue disponible.');
-      }
+      if (!content.isConnected) return;
+      const offline = err.code === 'backend_offline' || err.code === 'network' ||
+        (typeof navigator !== 'undefined' && navigator.onLine === false);
+      content.innerHTML = errorState(offline ? 'wifiOff' : 'alert',
+        offline ? 'YouTube Music no está disponible' : 'No se pudo sincronizar',
+        friendlyError(err) + '. Tu biblioteca local sigue disponible.',
+        { retryLabel: 'Reintentar sincronización' });
+      bindRetry(content, () => this._loadRemote(content));
       return;
     }
     this._load(content);

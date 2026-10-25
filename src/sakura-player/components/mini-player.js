@@ -20,31 +20,32 @@ export class MiniPlayer {
     if (this.el) return;
     const el = document.createElement('div');
     el.id = 'sp-mini-player';
-    el.className = 'sakura-player';
+    el.className = 'sakura-player sp-mini';
+    el.setAttribute('role', 'region');
+    el.setAttribute('aria-label', 'Mini reproductor');
     el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:400;display:none;' +
       'background:var(--player-bg-secondary);border-top:1px solid var(--player-border);' +
-      'box-shadow:0 -6px 30px rgba(0,0,0,.4);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);' +
-      'padding:.55rem .9rem;';
+      'box-shadow:0 -6px 30px rgba(0,0,0,.4);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);';
     el.innerHTML =
-      '<div class="sp-progress" id="sp-mini-progress" style="position:absolute;top:-3px;left:0;right:0;height:6px;">' +
+      '<div class="sp-progress sp-mini-progress" id="sp-mini-progress" aria-hidden="true">' +
         '<div class="sp-progress-fill" id="sp-mini-fill" style="width:0%;"></div></div>' +
-      '<div style="display:flex;align-items:center;gap:.7rem;max-width:1200px;margin:0 auto;">' +
-        '<div id="sp-mini-cover" class="sp-cover" style="width:44px;height:44px;flex:none;"></div>' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div id="sp-mini-title" style="font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>' +
-          '<div id="sp-mini-artist" style="font-size:.72rem;color:var(--player-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>' +
+      '<div class="sp-mini-inner">' +
+        '<div id="sp-mini-cover" class="sp-cover sp-mini-cover"></div>' +
+        '<div class="sp-mini-meta">' +
+          '<div id="sp-mini-title" class="sp-mini-title"></div>' +
+          '<div id="sp-mini-artist" class="sp-mini-artist"></div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:.25rem;flex:none;">' +
-          '<button class="sp-btn sp-btn-icon" id="sp-mini-prev" title="Anterior">' + icon('prev') + '</button>' +
-          '<button class="sp-btn sp-btn-icon" id="sp-mini-play" title="Reproducir/Pausa" style="width:40px;height:40px;">' + icon('play') + '</button>' +
-          '<button class="sp-btn sp-btn-icon" id="sp-mini-next" title="Siguiente">' + icon('next') + '</button>' +
+        '<div class="sp-mini-controls">' +
+          '<button class="sp-btn sp-btn-icon" id="sp-mini-prev" title="Anterior" aria-label="Canción anterior">' + icon('prev') + '</button>' +
+          '<button class="sp-btn sp-btn-icon sp-mini-play" id="sp-mini-play" title="Reproducir/Pausa" aria-label="Reproducir o pausar">' + icon('play') + '</button>' +
+          '<button class="sp-btn sp-btn-icon" id="sp-mini-next" title="Siguiente" aria-label="Canción siguiente">' + icon('next') + '</button>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:.4rem;flex:none;font-size:.72rem;color:var(--player-text-secondary);min-width:74px;justify-content:flex-end;">' +
+        '<div class="sp-mini-time-wrap">' +
           '<span id="sp-mini-time">0:00 / 0:00</span>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:.2rem;flex:none;">' +
-          '<button class="sp-btn sp-btn-icon" id="sp-mini-mute" title="Silencio">' + icon('volume') + '</button>' +
-          '<input type="range" class="sp-slider" id="sp-mini-vol" min="0" max="100" value="80" style="width:74px;" aria-label="Volumen">' +
+        '<div class="sp-mini-volume">' +
+          '<button class="sp-btn sp-btn-icon" id="sp-mini-mute" title="Silencio" aria-label="Silenciar">' + icon('volume') + '</button>' +
+          '<input type="range" class="sp-slider" id="sp-mini-vol" min="0" max="100" value="80" aria-label="Volumen">' +
         '</div>' +
       '</div>';
     document.body.appendChild(el);
@@ -73,6 +74,7 @@ export class MiniPlayer {
     });
     this.progressEl.addEventListener('pointermove', (e) => { if (this._dragging) seek(e); });
     this.progressEl.addEventListener('pointerup', () => { this._dragging = false; });
+    this.progressEl.addEventListener('pointercancel', () => { this._dragging = false; });
 
     player.on('trackchange', () => this._renderTrack());
     player.on('time', (s) => this._renderTime(s));
@@ -89,6 +91,9 @@ export class MiniPlayer {
     if (!this.el) return;
     const t = player.current();
     this.el.style.display = t ? 'block' : 'none';
+    // El mini reproductor es fijo: deja espacio para que no tape el final
+    // de la página ni el pie en móvil.
+    if (typeof document !== 'undefined') document.body.classList.toggle('sp-mini-open', !!t);
     if (!t) return;
     const cover = this.el.querySelector('#sp-mini-cover');
     cover.innerHTML = t.thumb
@@ -101,7 +106,9 @@ export class MiniPlayer {
   _renderPlay() {
     if (!this.el) return;
     const playing = !player.audio.paused;
-    this.el.querySelector('#sp-mini-play').innerHTML = playing ? icon('pause') : icon('play');
+    const btn = this.el.querySelector('#sp-mini-play');
+    btn.innerHTML = playing ? icon('pause') : icon('play');
+    btn.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
   }
 
   _renderTime(s) {
@@ -116,6 +123,8 @@ export class MiniPlayer {
   setVolumeUI(v, muted) {
     if (!this.el) return;
     this.el.querySelector('#sp-mini-vol').value = Math.round(v * 100);
-    this.el.querySelector('#sp-mini-mute').innerHTML = muted ? icon('mute') : icon('volume');
+    const mute = this.el.querySelector('#sp-mini-mute');
+    mute.innerHTML = muted ? icon('mute') : icon('volume');
+    mute.setAttribute('aria-label', muted ? 'Activar sonido' : 'Silenciar');
   }
 }

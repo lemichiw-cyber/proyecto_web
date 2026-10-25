@@ -11,10 +11,21 @@
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_SV">
+  <meta property="og:site_name" content="Cherry-Bomb">
+  <meta property="og:title" content="Cherry-Bomb — Plataforma educativa">
+  <meta property="og:description" content="Organizador personal para estudiantes: actividades, agenda, horario, Pomodoro y música con Sakura Player.">
+  <meta property="og:image" content="icon-512.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Cherry-Bomb — Plataforma educativa">
+  <meta name="twitter:description" content="Organizador personal para estudiantes: actividades, agenda, horario, Pomodoro y música con Sakura Player.">
+  <meta name="twitter:image" content="icon-512.png">
   <title>Cherry-Bomb</title>
 
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
 
   <!-- ========== HEADER ========== -->
   <header class="app-header">
@@ -84,6 +95,10 @@ unicode: "ea05"
       <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
         <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
       </div>
+    </div>
+    <div id="app-offline-banner" class="app-offline-banner hidden" role="status" aria-live="polite">
+      <span class="app-offline-dot" aria-hidden="true"></span>
+      <span>Sin conexión. Tus datos guardados y la música local siguen disponibles.</span>
     </div>
   </header>
 
@@ -482,6 +497,9 @@ unicode: "eaf8"
         <span id="sidebar-user-email" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;"></span>
         <button class="btn btn-sm" id="btn-logout" style="background:var(--gray-100);color:var(--gray-700);flex-shrink:0;">Salir</button>
       </div>
+      <button class="btn btn-outline btn-sm btn-block hidden" id="btn-install-app" type="button" style="margin-top:.5rem;">
+        Instalar aplicación
+      </button>
     </div>
   </aside>
 
@@ -941,7 +959,7 @@ unicode: "eb2e"
     </div>
 
     <!-- ========== MAIN ========== -->
-  <main>
+  <main id="main-content">
     <div class="mlp-cuties mlp-cuties-bg">
       <img src="/base64-images/base64-img-9491587d.png" alt="">
       <img src="/base64-images/base64-img-10f7429a.webp" alt="">
@@ -3670,7 +3688,6 @@ unicode: "eb1c"
       </div>
     </section>
 
-    <main>
     <div id="app-respaldos" class="section hidden">
       <div class="container">
         <h2 class="section-title"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" /><path d="M3 10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" /><path d="M3 3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3" /></svg> Respaldos</h2>
@@ -3736,7 +3753,7 @@ unicode: "eb1c"
     </section>
 
     <section id="app-configuracion" class="section hidden">
-
+    </div>
   </main>
 
   <!-- ========== FOOTER ========== -->

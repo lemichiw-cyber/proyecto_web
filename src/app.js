@@ -797,8 +797,37 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             if (themeSection) themeSection.parentNode.insertBefore(notice, themeSection);
           }
         }
-        if (app === 'sakura-player' && window.mountSakuraPlayer) {
-          window.mountSakuraPlayer();
+        if (app === 'sakura-player') {
+          // Carga diferida: el reproductor (y sus 13 temas) pesa bastante
+          // y no debe retrasar el primer render de la plataforma.
+          if (window.mountSakuraPlayer) {
+            window.mountSakuraPlayer();
+          } else {
+            var playerRoot = $('sakura-player-root');
+            if (playerRoot && !playerRoot.children.length) {
+              playerRoot.innerHTML = '<div class="app-loading" role="status">Cargando reproductor…</div>';
+            }
+            if (!window.__sakuraPlayerImport) {
+              window.__sakuraPlayerImport = import('./sakura-player/sakura-player.js')
+                .then(function (mod) {
+                  window.mountSakuraPlayer = mod.mountSakuraPlayer;
+                  window.getSakuraPlayer = mod.getSakuraPlayer;
+                  return mod;
+                })
+                .catch(function (err) {
+                  console.error('[SakuraPlayer] Error cargando módulo:', err);
+                  window.__sakuraPlayerImport = null;
+                  if (playerRoot) playerRoot.innerHTML = '<div class="app-loading app-loading-error">No se pudo cargar el reproductor. Recargá la página e intentá de nuevo.</div>';
+                  mostrarToast('No se pudo cargar el reproductor.', 'error');
+                });
+            }
+            window.__sakuraPlayerImport.then(function () {
+              var section = $('app-sakura-player');
+              if (section && !section.classList.contains('hidden') && window.mountSakuraPlayer) {
+                window.mountSakuraPlayer();
+              }
+            });
+          }
         }
       };
 

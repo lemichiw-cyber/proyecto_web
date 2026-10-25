@@ -6,7 +6,7 @@
 import { api, debounce, friendlyError } from '../api/client.js';
 import { player } from '../player/player.js';
 import { library } from '../library/library.js';
-import { icon, coverHtml, trackRow, emptyState, spinner, toast, escapeHtml } from './ui.js';
+import { icon, coverHtml, trackRow, emptyState, errorState, bindRetry, spinner, toast, escapeHtml } from './ui.js';
 
 const TABS = [
   { id: 'songs', label: 'Canciones' },
@@ -26,14 +26,14 @@ export class SearchView {
 
   render() {
     return '<div style="display:flex;flex-direction:column;gap:1rem;">' +
-      '<div style="position:relative;">' +
+      '<div style="position:relative;" role="search">' +
         '<span style="position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--player-text-secondary);">' + icon('search') + '</span>' +
         '<input id="sp-search-input" class="sp-input" style="width:100%;padding-left:2.4rem;" type="search" placeholder="Buscar en YouTube Music..." autocomplete="off">' +
       '</div>' +
       '<div style="display:flex;gap:.4rem;flex-wrap:wrap;" id="sp-search-tabs">' +
         TABS.map((t) => '<button class="sp-tab' + (t.id === this.tab ? ' active' : '') + '" data-tab="' + t.id + '">' + t.label + '</button>').join('') +
       '</div>' +
-      '<div id="sp-search-results"></div>' +
+      '<div id="sp-search-results" aria-live="polite"></div>' +
     '</div>';
   }
 
@@ -43,11 +43,19 @@ export class SearchView {
     const tabs = this.root.querySelector('#sp-search-tabs');
 
     let controller = null;
-    const run = debounce(async (q) => {
+    const execute = async (q) => {
       if (!q || q.trim().length < 2) {
         this.results = { songs: [], artists: [], albums: [], playlists: [] };
         this._lastQuery = null;
         this._renderResults(results);
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        this._offlineNotice = true;
+        results.innerHTML = errorState('wifiOff', 'Sin conexión',
+          'YouTube Music necesita internet. Tu biblioteca local y tus playlists guardadas siguen disponibles.',
+          { retryLabel: 'Volver a intentar' });
+        bindRetry(results, () => execute(q));
         return;
       }
       if (controller) controller.abort();
@@ -59,17 +67,25 @@ export class SearchView {
         this.results = (await api.search(q.trim(), 'all', 20, controller.signal)) ||
           { songs: [], artists: [], albums: [], playlists: [] };
         this._lastQuery = q.trim();
+        this._offlineNotice = false;
       } catch (err) {
-        if (err.code !== 'network' || err.message !== 'La solicitud fue cancelada') {
-          results.innerHTML = emptyState('search', 'No se pudo buscar', friendlyError(err));
-        }
+        if (err.code === 'network' && err.message === 'La solicitud fue cancelada') return;
+        const offline = err.code === 'backend_offline' || err.code === 'network' ||
+          (typeof navigator !== 'undefined' && navigator.onLine === false);
+        results.innerHTML = errorState(offline ? 'wifiOff' : 'alert',
+          offline ? 'YouTube Music no está disponible' : 'No se pudo buscar',
+          friendlyError(err) + ' Tu biblioteca local sigue disponible.',
+          { retryLabel: 'Reintentar búsqueda' });
+        bindRetry(results, () => execute(q));
         return;
       } finally {
         this.loading = false;
       }
       this._renderResults(results);
-    }, 350);
+    };
+    const run = debounce(execute, 350);
     this._run = run;
+    this._execute = execute;
 
     input.addEventListener('input', (e) => run(e.target.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && run.flush) run.flush(); });
@@ -89,6 +105,7 @@ export class SearchView {
     if (this._run) this._run.cancel();
     if (this._controller) this._controller.abort();
     this._controller = null;
+    this._execute = null;
   }
 
   _renderResults(container) {

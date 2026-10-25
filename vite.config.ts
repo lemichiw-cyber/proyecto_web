@@ -37,20 +37,39 @@ export default defineConfig({
       manifest: {
         name: 'Cherry-Bomb - Plataforma Educativa',
         short_name: 'Cherry-Bomb',
-        description: 'Plataforma educativa institucional',
-        theme_color: '#4F46E5',
+        description: 'Organizador personal para estudiantes: agenda, tareas, Pomodoro y música.',
+        lang: 'es',
+        dir: 'ltr',
+        categories: ['education', 'music', 'productivity'],
+        theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: './',
         scope: './',
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf,otf}'],
+        // La app es una SPA: cualquier navegación cae en el index precacheado.
+        navigateFallback: 'index.html',
         runtimeCaching: [
+          {
+            // Música de los temas ya descargada: disponible sin conexión.
+            // rangeRequests permite servir respuestas parciales de <audio>.
+            urlPattern: /\.(?:mp3|m4a|ogg|wav|flac|aac)(?:\?.*)?$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'sakura-audio',
+              rangeRequests: true,
+              expiration: { maxEntries: 24, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200, 206] },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
