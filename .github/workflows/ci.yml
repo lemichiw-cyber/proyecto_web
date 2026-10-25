@@ -43,7 +43,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Install Playwright
-        run: npx playwright install --with-deps chromium
+        run: |
+          # 'npx playwright install' descarga el navegador, pero no deja el
+          # paquete en node_modules; el smoke test lo requiere con require().
+          npm install --no-save playwright@1.64.1
+          npx playwright install --with-deps chromium
       - name: Run smoke test
         run: |
           npx serve -s dist -l 4173 &
