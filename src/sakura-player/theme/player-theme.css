@@ -551,6 +551,7 @@ body.sp-mini-open { padding-bottom: 78px; }
     white-space: nowrap;
   }
   .sp-visualizer-wrap { height: 86px; }
+  .sakura-player:not(.sp-playing) .sp-visualizer-wrap { display: none; }
   .sp-content { padding: .85rem; min-height: 260px; }
   .sp-offline-banner { font-size: .74rem; padding: .55rem .7rem; }
   .sp-offline-banner svg { flex: none; }
@@ -558,7 +559,7 @@ body.sp-mini-open { padding-bottom: 78px; }
 
 @media (max-width: 640px) {
   .sp-now { grid-template-columns: minmax(0, 1fr); gap: .9rem; justify-items: center; }
-  .sp-now-cover { width: min(62vw, 210px); max-width: 210px; }
+  .sp-now-cover { width: min(52vw, 180px); max-width: 180px; }
   .sp-now-body { width: 100%; }
   .sp-now-title { text-align: center; font-size: 1.18rem; }
   .sp-now-artist { text-align: center; }
@@ -570,9 +571,9 @@ body.sp-mini-open { padding-bottom: 78px; }
 }
 
 @media (max-width: 480px) {
-  .sp-nav-links { justify-content: space-between; }
+  .sp-nav-links { justify-content: stretch; gap: .1rem; overflow: visible; }
   .sp-nav-label { display: none; }
-  .sp-nav .sp-btn { padding: .55rem .75rem; }
+  .sp-nav .sp-btn { flex: 1 1 0; min-width: 0; padding: .55rem .15rem; }
   .sp-visualizer-wrap { height: 68px; }
   .sp-content { padding: .7rem; }
   body.sp-mini-open { padding-bottom: 70px; }
@@ -587,7 +588,7 @@ body.sp-mini-open { padding-bottom: 78px; }
 }
 
 @media (max-width: 360px) {
-  .sp-now-cover { width: 150px; }
+  .sp-now-cover { width: 145px; }
   .sp-now-controls { gap: .25rem; }
   .sp-now-play { width: 52px; height: 52px; }
   .sp-now-secondary #np-vol { width: 64px !important; }
@@ -827,6 +828,7 @@ body.sp-mini-open { padding-bottom: 78px; }
   color: var(--player-text-secondary);
 }
 .sp-empty-icon { font-size: 2.2rem; margin-bottom: .6rem; }
+.sp-empty-icon svg { width: 38px; height: 38px; }
 .sp-error .sp-empty-icon { color: var(--player-warning); }
 .sp-error .sp-btn { margin-top: .9rem; }
 
@@ -842,16 +844,20 @@ body.sp-mini-open { padding-bottom: 78px; }
 
 .sp-offline-banner {
   display: flex;
-  align-items: center;
-  gap: .6rem;
+  align-items: flex-start;
+  gap: .55rem;
   background: var(--player-bg-card);
   border: 1px solid var(--player-warning);
   color: var(--player-warning);
   border-radius: 12px;
-  padding: .7rem 1rem;
+  padding: .7rem .8rem;
   font-size: .82rem;
   font-weight: 600;
+  line-height: 1.4;
 }
+.sp-offline-banner > div { min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+.sp-offline-banner b { display: block; font-size: .8rem; }
+.sp-offline-banner span { display: block; font-size: .72rem; font-weight: 500; }
 
 /* ===================================================================
    Animaciones — opción global "Desactivar animaciones" (sección 30)
@@ -883,6 +889,12 @@ body.sp-mini-open { padding-bottom: 78px; }
   background: var(--player-bg-secondary);
 }
 .sp-visualizer-wrap canvas { display: block; width: 100%; height: 100%; }
+.sakura-player:not(.sp-playing) .sp-visualizer-wrap::after {
+  content: 'Reproducí una canción para activar el visualizador';
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 1rem; text-align: center; pointer-events: none;
+  color: var(--player-text-secondary); font-size: .76rem;
+}
 
 .sp-dropzone {
   border: 2px dashed var(--player-border);

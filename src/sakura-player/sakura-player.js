@@ -52,14 +52,21 @@ class SakuraPlayer {
     // sin esto, cada remontaje duplicaba los listeners globales.
     this._onPlayerTime = (s) => this.mini.setVolumeUI(s.volume, s.muted);
     this._onPlayerPlay = () => {
+      if (this.root) this.root.classList.add('sp-playing');
       this._applyThemeToVisualizer();
       if (this.visualizer) {
+        // El canvas pudo medir 0 mientras estaba oculto en móvil: recalcular
+        // antes de dibujar evita que el visualizador quede en blanco.
+        this.visualizer.resize();
         // setAnalyser nunca se llamaba: el visualizador quedaba en línea plana
         this.visualizer.setAnalyser(player.getAnalyser());
         this.visualizer.start();
       }
     };
-    this._onPlayerPause = () => { if (this.visualizer) this.visualizer.stop(); };
+    this._onPlayerPause = () => {
+      if (this.root) this.root.classList.remove('sp-playing');
+      if (this.visualizer) this.visualizer.stop();
+    };
     this._onPlayerBlocked = () => toast('El navegador bloqueó el autoplay: tocá ▶ para iniciar el audio', 'error');
     this._onNetUpdate = () => {
       this._offline = !navigator.onLine;
@@ -163,6 +170,7 @@ class SakuraPlayer {
     player.on('pause', this._onPlayerPause);
     player.on('blocked', this._onPlayerBlocked);
     this._applyThemeToVisualizer();
+    this.root.classList.toggle('sp-playing', !player.audio.paused);
     if (!player.audio.paused) this._onPlayerPlay(); // si ya venía sonando
 
     // Ajustes guardados

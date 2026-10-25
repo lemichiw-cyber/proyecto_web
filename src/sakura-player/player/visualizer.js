@@ -22,6 +22,10 @@ export class Visualizer {
 
   setAnalyser(analyser) { this.analyser = analyser; }
 
+  /* Recalcula el buffer del canvas. Necesario cuando el contenedor pasa de
+     display:none a visible (móvil) o al girar el dispositivo. */
+  resize() { this._resize(); }
+
   destroy() {
     this.stop();
     window.removeEventListener('resize', this._resize);

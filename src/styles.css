@@ -1064,6 +1064,13 @@
     .badge-presente { background:#d4edda;color:#155724; }
     .badge-ausente { background:#f8d7da;color:#721c24; }
     #est-empty { display:none; }
+    /* En móvil el reproductor ya tiene su propia navegación: el subtítulo
+       de la sección solo empuja los controles fuera de pantalla. */
+    @media (max-width: 640px) {
+      #app-sakura-player .section-sub { display: none; }
+      #app-sakura-player .section-title { margin-bottom: 1rem; }
+    }
+
     @media (max-width:600px) {
       .est-table { font-size:.78rem; }
       .est-table th,.est-table td { padding:.4rem .5rem; }
