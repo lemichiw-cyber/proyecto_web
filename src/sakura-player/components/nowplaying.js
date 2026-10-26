@@ -199,7 +199,7 @@ export class NowPlayingView {
   _renderPlay() {
     if (!this.el) return;
     const btn = this.el.querySelector('#np-play');
-    if (btn) btn.innerHTML = icon(player.audio.paused ? 'play' : 'pause');
+    if (btn) btn.innerHTML = icon(player.isPlaying() ? 'pause' : 'play');
   }
 
   _renderTime(s) {

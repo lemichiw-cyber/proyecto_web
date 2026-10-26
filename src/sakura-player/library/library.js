@@ -202,37 +202,6 @@ class Library {
   }
 
   playlistsList() { return this.state.playlists; }
-
-  /* ---------------- fusión con YouTube Music ---------------- */
-  mergeRemote(data) {
-    // data: {songs, artists, albums, playlists} del backend
-    if (data.songs) {
-      const ids = new Set(this.state.favorites.map((t) => t.id));
-      const fresh = data.songs.filter((t) => !ids.has(t.id));
-      this.state.favorites = [...this.state.favorites, ...fresh];
-    }
-    if (data.artists) this.state.artists = data.artists;
-    if (data.albums) this.state.albums = data.albums;
-    if (data.playlists) {
-      const ids = new Set(this.state.playlists.map((p) => p.id));
-      // Normaliza: las playlists del backend vienen sin tracks (y con title,
-      // no name) — sin esto, abrirlas reventaba con pl.tracks.map
-      const fresh = data.playlists
-        .filter((p) => !ids.has(p.id))
-        .map((p) => ({
-          id: p.id,
-          name: p.name || p.title || 'Playlist',
-          description: p.description || '',
-          tracks: Array.isArray(p.tracks) ? p.tracks : [],
-          createdAt: p.createdAt || Date.now(),
-          source: p.source || 'yt',
-          thumb: p.thumb || '',
-        }));
-      this.state.playlists = [...this.state.playlists, ...fresh];
-    }
-    this._commit();
-    this.emit('change', this.state);
-  }
 }
 
 export const library = new Library();

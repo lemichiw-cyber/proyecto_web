@@ -5,8 +5,8 @@
 
 import { player } from '../player/player.js';
 import { library } from '../library/library.js';
-import { api, friendlyError } from '../api/client.js';
-import { icon, coverHtml, trackRow, emptyState, errorState, bindRetry, spinner, toast, escapeHtml } from './ui.js';
+import * as catalogo from '../api/catalogo.js';
+import { icon, coverHtml, trackRow, emptyState, escapeHtml } from './ui.js';
 
 const SECTIONS = [
   { id: 'songs', label: 'Canciones', icon: 'music' },
@@ -22,7 +22,6 @@ export class LibraryView {
     this.root = root;
     this.ctx = ctx;
     this.section = 'songs';
-    this.remoteLoaded = false;
   }
 
   render() {
@@ -31,7 +30,6 @@ export class LibraryView {
         SECTIONS.map((s) => '<button class="sp-tab' + (s.id === this.section ? ' active' : '') + '" data-sec="' + s.id + '">' + icon(s.icon) + ' ' + s.label + '</button>').join('') +
       '</div>' +
       '<div style="display:flex;gap:.5rem;align-items:center;">' +
-        '<button class="sp-btn" id="sp-lib-refresh">' + icon('search') + ' Traer de YouTube Music</button>' +
         '<button class="sp-btn" id="sp-lib-clear-history" style="display:none;">Limpiar historial</button>' +
       '</div>' +
       '<div id="sp-lib-content" aria-live="polite"></div>' +
@@ -48,9 +46,7 @@ export class LibraryView {
       tabs.querySelectorAll('.sp-tab').forEach((b) => b.classList.toggle('active', b === btn));
       this._load(content);
     });
-    this.root.querySelector('#sp-lib-refresh').addEventListener('click', () => this._loadRemote(content));
-    const clearBtn = this.root.querySelector('#sp-lib-clear-history');
-    clearBtn.addEventListener('click', async () => {
+    this.root.querySelector('#sp-lib-clear-history').addEventListener('click', async () => {
       const { confirmDialog } = await import('./ui.js');
       if (await confirmDialog('¿Vaciar el historial de reproducción?')) {
         library.clearHistory();
@@ -122,10 +118,19 @@ export class LibraryView {
   }
 
   _artists(content) {
-    const artists = library.artistsList();
-    if (!artists.length) { content.innerHTML = emptyState('user', 'Sin artistas', 'Los artistas de tu biblioteca de YouTube Music aparecen acá.'); return; }
+    // Artistas derivados del catálogo curado (ya no hay backend).
+    const all = catalogo.todos();
+    const seen = new Set();
+    const artists = [];
+    for (const t of all) {
+      if (!seen.has(t.artist)) {
+        seen.add(t.artist);
+        artists.push({ id: 'art:' + t.artist, name: t.artist, thumb: t.thumb });
+      }
+    }
+    if (!artists.length) { content.innerHTML = emptyState('user', 'Sin artistas', 'Los artistas del catálogo aparecen acá.'); return; }
     content.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.8rem;">' +
-      artists.map((a) => '<div class="sp-card" style="padding:.8rem;cursor:pointer;" data-id="' + a.id + '">' +
+      artists.map((a) => '<div class="sp-card" style="padding:.8rem;cursor:pointer;" data-id="' + escapeHtml(a.id) + '">' +
         coverHtml(a, '100%') +
         '<div style="font-weight:700;font-size:.85rem;margin-top:.5rem;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(a.name) + '</div></div>').join('') + '</div>';
     content.querySelectorAll('.sp-card').forEach((c) =>
@@ -133,10 +138,19 @@ export class LibraryView {
   }
 
   _albums(content) {
-    const albums = library.albumsList();
-    if (!albums.length) { content.innerHTML = emptyState('album', 'Sin álbumes', 'Los álbumes de tu biblioteca de YouTube Music aparecen acá.'); return; }
+    // Álbumes derivados del catálogo curado (ya no hay backend).
+    const all = catalogo.todos();
+    const seen = new Set();
+    const albums = [];
+    for (const t of all) {
+      if (t.album && !seen.has(t.album)) {
+        seen.add(t.album);
+        albums.push({ id: 'alb:' + t.album, title: t.album, artist: t.artist, thumb: t.thumb });
+      }
+    }
+    if (!albums.length) { content.innerHTML = emptyState('album', 'Sin álbumes', 'Los álbumes del catálogo aparecen acá.'); return; }
     content.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.8rem;">' +
-      albums.map((a) => '<div class="sp-card" style="padding:.8rem;cursor:pointer;" data-id="' + a.id + '">' +
+      albums.map((a) => '<div class="sp-card" style="padding:.8rem;cursor:pointer;" data-id="' + escapeHtml(a.id) + '">' +
         coverHtml(a, '100%') +
         '<div style="font-weight:700;font-size:.85rem;margin-top:.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(a.title) + '</div>' +
         '<div style="font-size:.72rem;color:var(--player-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(a.artist || '') + '</div></div>').join('') + '</div>';
@@ -158,34 +172,5 @@ export class LibraryView {
 
   _history(content) {
     this._list(content, library.historyList(), 'clock', 'Sin historial', 'Lo que reproduzcas va a aparecer acá.');
-  }
-
-  async _loadRemote(content) {
-    if (!content || !content.isConnected) return;
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      content.innerHTML = errorState('wifiOff', 'Sin conexión',
-        'La biblioteca de YouTube Music necesita internet. Tus canciones locales, favoritos y playlists siguen disponibles.',
-        { retryLabel: 'Volver a intentar' });
-      bindRetry(content, () => this._loadRemote(content));
-      return;
-    }
-    content.innerHTML = spinner('Conectando con YouTube Music...');
-    try {
-      const data = await api.library(50);
-      library.mergeRemote(data);
-      this.remoteLoaded = true;
-      toast('Biblioteca de YouTube Music sincronizada', 'success');
-    } catch (err) {
-      if (!content.isConnected) return;
-      const offline = err.code === 'backend_offline' || err.code === 'network' ||
-        (typeof navigator !== 'undefined' && navigator.onLine === false);
-      content.innerHTML = errorState(offline ? 'wifiOff' : 'alert',
-        offline ? 'YouTube Music no está disponible' : 'No se pudo sincronizar',
-        friendlyError(err) + '. Tu biblioteca local sigue disponible.',
-        { retryLabel: 'Reintentar sincronización' });
-      bindRetry(content, () => this._loadRemote(content));
-      return;
-    }
-    this._load(content);
   }
 }

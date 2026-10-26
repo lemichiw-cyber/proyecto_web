@@ -4,7 +4,7 @@
    historial y grafo Web Audio (EQ + mezclador + visualizador).
    =================================================================== */
 
-import { api } from '../api/client.js';
+import { YTEngine } from './yt-engine.js';
 
 const LS = {
   queue: 'sp_queue',
@@ -68,6 +68,19 @@ export class Player {
     this.nodes = null;
     this._objectUrls = new Map(); // trackId -> objectURL (archivos locales)
 
+    // Motor de reproducción por pista: 'local' usa <audio> + Web Audio
+    // (ecualizador y visualizador funcionan); 'yt' usa el iframe de
+    // YouTube (sin Web Audio porque su audio es de origen cruzado).
+    this.mode = 'local';
+    this.yt = new YTEngine({
+      onTime: (s) => this.emit('time', Object.assign(this.status(), s)),
+      onPlay: () => this.emit('play'),
+      onPause: () => this.emit('pause'),
+      onEnded: () => this._onEnded(),
+      onLoading: (l) => this.emit('loading', l),
+      onError: () => { this.emit('error', { message: 'Este video de YouTube no está disponible' }); this._onEnded(true); },
+    });
+
     this._bind();
     this._applyVolume();
     this.audio.playbackRate = this.rate;
@@ -89,7 +102,7 @@ export class Player {
     this.audio.addEventListener('pause', () => this.emit('pause'));
     this.audio.addEventListener('ended', () => this._onEnded());
     this.audio.addEventListener('error', () => {
-      if (!this.audio.src) return;
+      if (this.mode !== 'local' || !this.audio.src) return;
       this.emit('error', { message: 'Error de reproducción' });
       this._onEnded(true);
     });
@@ -150,6 +163,9 @@ export class Player {
   }
 
   getAnalyser() {
+    // El audio de un iframe de YouTube no pasa por Web Audio: sin
+    // analizador que mostrar (el visualizador dibuja su estado de reposo).
+    if (this.mode === 'yt') return null;
     this._ensureGraph();
     return this.nodes ? this.nodes.analyser : null;
   }
@@ -157,20 +173,25 @@ export class Player {
   /* ---------------- estado ---------------- */
   current() { return this.queue[this.index] || null; }
 
+  /* Lecturas agnósticas al motor activo (local vs YouTube). */
+  isPlaying() { return this.mode === 'yt' ? this.yt.playing : (!this.audio.paused && !this.audio.ended); }
+  currentTime() { return this.mode === 'yt' ? this.yt.currentTime : (this.audio.currentTime || 0); }
+  duration() { return this.mode === 'yt' ? this.yt.duration : (this.audio.duration || 0); }
+
   status() {
     return {
       track: this.current(),
       index: this.index,
       queueLength: this.queue.length,
-      playing: !this.audio.paused && !this.audio.ended,
-      currentTime: this.audio.currentTime || 0,
-      duration: this.audio.duration || 0,
+      playing: this.isPlaying(),
+      currentTime: this.currentTime(),
+      duration: this.duration(),
       volume: this.volume,
       muted: this.muted,
       shuffle: this.shuffle,
       repeat: this.repeat,
       rate: this.rate,
-      loading: this.audio.readyState < 3,
+      loading: this.mode === 'yt' ? false : this.audio.readyState < 3,
     };
   }
 
@@ -212,7 +233,7 @@ export class Player {
   removeFromQueue(i) {
     if (i < 0 || i >= this.queue.length) return;
     const wasCurrent = i === this.index;
-    const wasPlaying = !this.audio.paused;
+    const wasPlaying = this.isPlaying();
     this.queue.splice(i, 1);
     if (i < this.index) this.index--;
     else if (wasCurrent) this.index = Math.min(this.index, this.queue.length - 1);
@@ -227,7 +248,7 @@ export class Player {
   }
 
   clearQueue() {
-    const wasPlaying = !this.audio.paused;
+    const wasPlaying = this.isPlaying();
     this.queue = [];
     this.index = -1;
     this._playedShuffle = new Set();
@@ -239,6 +260,8 @@ export class Player {
   }
 
   _stopPlayback() {
+    // Detiene el motor activo (iframe de YouTube o <audio> local).
+    this.yt.stop();
     this.audio.pause();
     this.audio.removeAttribute('src');
     try { this.audio.load(); } catch (e) { /* noop */ }
@@ -258,6 +281,11 @@ export class Player {
 
   /* ---------------- reproducción ---------------- */
   async play() {
+    if (this.mode === 'yt') {
+      // El contexto Web Audio no controla el iframe de YouTube.
+      this.yt.play();
+      return;
+    }
     this.resumeContext();
     if (!this.current()) return;
     try {
@@ -273,14 +301,41 @@ export class Player {
     }
   }
 
-  pause() { this.audio.pause(); }
-  toggle() { return this.audio.paused ? this.play() : this.pause(); }
+  pause() {
+    if (this.mode === 'yt') { this.yt.pause(); return; }
+    this.audio.pause();
+  }
+
+  toggle() {
+    if (this.mode === 'yt') return this.yt.playing ? this.yt.pause() : this.play();
+    return this.audio.paused ? this.play() : this.pause();
+  }
 
   _loadCurrent(autoplay = false) {
     const track = this.current();
     if (!track) { this.emit('time', this.status()); return; }
+    // ¿Pista local o de YouTube? Cambia de motor si hace falta.
+    const wantYt = track.source !== 'local';
+    if (wantYt && this.mode !== 'yt') {
+      this.mode = 'yt';
+      // Silencia el <audio> para que no suene por debajo ni quede colgado.
+      this.audio.pause();
+      this.audio.removeAttribute('src');
+      try { this.audio.load(); } catch (e) { /* noop */ }
+    } else if (!wantYt && this.mode !== 'local') {
+      this.mode = 'local';
+      this.yt.stop(); // detiene el iframe al volver a una pista local
+    }
+
+    if (this.mode === 'yt') {
+      this.emit('trackchange', this.status());
+      this._pushHistory(track);
+      this.yt.load(track.id, { autoplay });
+      return;
+    }
+
     this._ensureGraph();
-    this.audio.src = track.source === 'local' ? track.url : api.streamUrl(track.id);
+    this.audio.src = track.url || '';
     this.audio.load();
     this.emit('trackchange', this.status());
     this._pushHistory(track);
@@ -288,7 +343,10 @@ export class Player {
   }
 
   _onEnded(skipped = false) {
-    if (!skipped && this.repeat === REPEAT.ONE) { this.audio.currentTime = 0; this.play(); return; }
+    if (!skipped && this.repeat === REPEAT.ONE) {
+      if (this.mode === 'yt') { this.yt.seek(0); this.play(); return; }
+      this.audio.currentTime = 0; this.play(); return;
+    }
     if (this.repeat === REPEAT.ALL && this.index === this.queue.length - 1) {
       this.index = 0;
       this._loadCurrent(true);
@@ -318,7 +376,7 @@ export class Player {
         // Se acabaron las pistas con repeat off: parar (antes el shuffle
         // elegía al azar para siempre y la cola nunca terminaba)
         this._playedShuffle = new Set();
-        this.audio.pause();
+        this.pause();
         this.emit('time', this.status());
         return;
       }
@@ -330,7 +388,7 @@ export class Player {
         if (this.repeat === REPEAT.ALL) this.index = 0;
         else {
           this.index = this.queue.length - 1;
-          this.audio.pause();
+          this.pause();
           this.emit('time', this.status());
           return;
         }
@@ -340,7 +398,8 @@ export class Player {
   }
 
   prev() {
-    if (this.audio.currentTime > 3) { this.audio.currentTime = 0; return; }
+    const cur = this.currentTime();
+    if (cur > 3) { this.seek(0); return; }
     if (this.shuffle) { this.index = Math.floor(Math.random() * this.queue.length); }
     else { this.index = this.index - 1; if (this.index < 0) this.index = 0; }
     this._loadCurrent(true);
@@ -348,12 +407,18 @@ export class Player {
 
   seek(seconds) {
     if (!isFinite(seconds)) return;
+    if (this.mode === 'yt') {
+      this.yt.seek(Math.max(0, seconds));
+      this.emit('time', this.status());
+      return;
+    }
     this.audio.currentTime = Math.max(0, Math.min(seconds, this.audio.duration || seconds));
     this.emit('time', this.status());
   }
 
   seekFraction(frac) {
-    if (this.audio.duration) this.seek(this.audio.duration * frac);
+    const d = this.duration();
+    if (d) this.seek(d * frac);
   }
 
   /* ---------------- volumen / velocidad ---------------- */
@@ -376,6 +441,9 @@ export class Player {
   _applyVolume() {
     this.audio.muted = this.muted;
     this.audio.volume = Math.max(0, Math.min(1, this.volume));
+    // El motor de YouTube tiene su propio volumen/mute (0..100).
+    if (this.muted) this.yt.mute(); else this.yt.unMute();
+    this.yt.setVolume(Math.max(0, Math.min(1, this.volume)));
   }
 
   setRate(rate) {

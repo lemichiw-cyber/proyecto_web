@@ -2,15 +2,19 @@
    Sakura Player — Controlador principal
    Integra el reproductor dentro de proyecto_web sin tocar su núcleo:
    se monta en #sakura-player-root y agrega el mini reproductor global.
+
+   Ya no hay backend: la búsqueda y los detalles salen del catálogo
+   curado (api/catalogo.js) y la reproducción remota usa el reproductor
+   oficial de YouTube (IFrame API). Los archivos locales siguen igual,
+   con ecualizador y visualizador activos.
    =================================================================== */
 
 import './theme/player-theme.css';
-import { api, friendlyError, getApiBase, setApiBase, clearCache, activeApiBase } from './api/client.js';
-import { isAdmin, adminEmail, loginAdmin, clearSession, restoreSession, adminStats, adminError } from './api/admin.js';
 import { player } from './player/player.js';
 import { Visualizer } from './player/visualizer.js';
 import { library } from './library/library.js';
 import { themeManager } from './theme/player-theme-manager.js';
+import * as catalogo from './api/catalogo.js';
 import { SearchView } from './components/search.js';
 import { NowPlayingView } from './components/nowplaying.js';
 import { LibraryView } from './components/library.js';
@@ -19,7 +23,7 @@ import { MixerView } from './components/mixer.js';
 import { UploadView } from './components/upload.js';
 import { QueueView } from './components/queue.js';
 import { MiniPlayer } from './components/mini-player.js';
-import { icon, toast, emptyState, errorState, bindRetry, spinner, promptDialog, escapeHtml, coverHtml } from './components/ui.js';
+import { icon, toast, emptyState, promptDialog, escapeHtml } from './components/ui.js';
 
 const VIEWS = [
   { id: 'player', label: 'Reproductor', icon: 'note' },
@@ -58,7 +62,8 @@ class SakuraPlayer {
         // El canvas pudo medir 0 mientras estaba oculto en móvil: recalcular
         // antes de dibujar evita que el visualizador quede en blanco.
         this.visualizer.resize();
-        // setAnalyser nunca se llamaba: el visualizador quedaba en línea plana
+        // En pistas de YouTube no hay analizador (Web Audio no llega al
+        // iframe): setAnalyser(null) deja el visualizador en su modo reposo.
         this.visualizer.setAnalyser(player.getAnalyser());
         this.visualizer.start();
       }
@@ -71,9 +76,6 @@ class SakuraPlayer {
     this._onNetUpdate = () => {
       this._offline = !navigator.onLine;
       this._renderOffline();
-      // Al recuperar la conexión, verificar de nuevo el backend sin que
-      // el usuario tenga que entrar a Ajustes y pulsar "Probar".
-      if (!this._offline) this._checkBackend();
     };
     this._onKeydown = (e) => {
       const tag = (e.target.tagName || '').toLowerCase();
@@ -84,8 +86,9 @@ class SakuraPlayer {
       if (document.querySelector('.modal-overlay.open, .sp-dialog-overlay')) return;
       switch (e.key) {
         case ' ': e.preventDefault(); player.toggle(); break;
-        case 'ArrowRight': e.preventDefault(); player.seek(player.audio.currentTime + 5); break;
-        case 'ArrowLeft': e.preventDefault(); player.seek(player.audio.currentTime - 5); break;
+        // currentTime() es agnóstico al motor (local o YouTube).
+        case 'ArrowRight': e.preventDefault(); player.seek(player.currentTime() + 5); break;
+        case 'ArrowLeft': e.preventDefault(); player.seek(player.currentTime() - 5); break;
         case 'ArrowUp': e.preventDefault(); player.setVolume(player.volume + 0.05); break;
         case 'ArrowDown': e.preventDefault(); player.setVolume(player.volume - 0.05); break;
         case 'm': case 'M': player.toggleMute(); break;
@@ -93,21 +96,6 @@ class SakuraPlayer {
         case 'r': case 'R': player.cycleRepeat(); break;
       }
     };
-
-    // El cliente detectó que la URL guardada en Ajustes → Backend no
-    // respondía y se pasó a la del sitio: avisamos una vez para que el
-    // usuario sepa por qué sus cambios "no se ven" en esa URL.
-    this._onBaseFallback = (e) => {
-      const from = e && e.detail ? e.detail.from : '';
-      toast(
-        'No se pudo conectar con ' + (from || 'la URL guardada') +
-        '. Se usó el backend del sitio; volvé a probar tu URL en Ajustes → Backend.',
-        'info',
-      );
-    };
-    if (typeof document !== 'undefined') {
-      document.addEventListener('sp:api-base-fallback', this._onBaseFallback);
-    }
   }
 
   /* ---------------- montaje ---------------- */
@@ -170,8 +158,9 @@ class SakuraPlayer {
     player.on('pause', this._onPlayerPause);
     player.on('blocked', this._onPlayerBlocked);
     this._applyThemeToVisualizer();
-    this.root.classList.toggle('sp-playing', !player.audio.paused);
-    if (!player.audio.paused) this._onPlayerPlay(); // si ya venía sonando
+    const wasPlaying = player.isPlaying();
+    this.root.classList.toggle('sp-playing', wasPlaying);
+    if (wasPlaying) this._onPlayerPlay(); // si ya venía sonando
 
     // Ajustes guardados
     player.applySettings();
@@ -181,13 +170,6 @@ class SakuraPlayer {
 
     // Estado de conexión
     this._bindConnectivity();
-    this._checkBackend();
-
-    // Restaurar sesión de administrador guardada (token de 24 h).
-    // Si el backend la rechaza, se limpia y el panel vuelve al formulario.
-    if (isAdmin()) {
-      restoreSession().then((email) => { if (!email) this._renderAdmin(); }).catch(() => {});
-    }
 
     this._mounted = true;
   }
@@ -208,7 +190,7 @@ class SakuraPlayer {
         '<div class="sp-nav-brand">' +
           '<span class="sp-nav-logo" aria-hidden="true">🌸</span>' +
           '<div><div class="sp-nav-title">Sakura Player</div>' +
-          '<div class="sp-nav-sub">YouTube Music + Local</div></div>' +
+          '<div class="sp-nav-sub">Catálogo + Local</div></div>' +
         '</div>' +
         '<div class="sp-nav-links">' +
           VIEWS.map((v) => '<button class="sp-btn" type="button" data-view="' + v.id + '" title="' + v.label + '" aria-label="' + v.label + '">' +
@@ -270,82 +252,72 @@ class SakuraPlayer {
     toast('Reproduciendo: ' + (tracks[index] ? tracks[index].title : ''), 'success');
   }
 
-  /* ---------------- vistas de detalle ---------------- */
-  async openAlbum(id) {
-    const seq = ++this._detailSeq; // invalida respuestas anteriores
-    const content = this.root.querySelector('#sp-view-content');
-    content.innerHTML = spinner('Cargando álbum...');
-    try {
-      const album = await api.album(id);
-      if (seq !== this._detailSeq) return; // el usuario ya navegó
-      this._detail({
-        title: album.title,
-        subtitle: album.artist || '',
-        cover: album.thumb,
-        description: album.description,
-        tracks: album.tracks || [],
-      });
-    } catch (err) {
-      if (seq !== this._detailSeq) return;
-      this._detailError(content, 'album', 'No se pudo abrir el álbum', err, () => this.openAlbum(id));
-    }
-  }
-
-  async openArtist(id) {
+  /* ---------------- vistas de detalle (catálogo local) ---------------- */
+  openAlbum(id) {
     const seq = ++this._detailSeq;
-    const content = this.root.querySelector('#sp-view-content');
-    content.innerHTML = spinner('Cargando artista...');
-    try {
-      const artist = await api.artist(id);
-      if (seq !== this._detailSeq) return;
-      const tracks = artist.songs || [];
-      this._detail({
-        title: artist.name,
-        subtitle: artist.subscribers || 'Artista',
-        cover: artist.thumb,
-        description: artist.description,
-        tracks,
-        extra: '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.7rem;margin-top:1rem;">' +
-          (artist.albums || []).map((a) => '<div class="sp-card" style="padding:.6rem;cursor:pointer;" data-album="' + escapeHtml(String(a.id)) + '">' +
-            coverHtml(a, '100%') +
-            '<div style="font-weight:700;font-size:.78rem;margin-top:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(a.title) + '</div></div>').join('') +
-          '</div>',
-      });
-      content.querySelectorAll('[data-album]').forEach((c) =>
-        c.addEventListener('click', () => this.openAlbum(c.dataset.album)));
-    } catch (err) {
-      if (seq !== this._detailSeq) return;
-      this._detailError(content, 'user', 'No se pudo abrir el artista', err, () => this.openArtist(id));
-    }
+    const album = this._albumFromCatalog(id);
+    if (seq !== this._detailSeq) return;
+    if (!album) { this._detailNotFound('album', 'No se pudo abrir el álbum'); return; }
+    this._detail({
+      title: album.title,
+      subtitle: album.artist || '',
+      cover: album.thumb,
+      tracks: album.tracks,
+    });
   }
 
-  async openPlaylist(id) {
+  openArtist(id) {
     const seq = ++this._detailSeq;
-    const content = this.root.querySelector('#sp-view-content');
-    content.innerHTML = spinner('Cargando playlist...');
-    try {
-      const pl = await api.playlist(id);
-      if (seq !== this._detailSeq) return;
-      this._detail({
-        title: pl.title,
-        subtitle: (pl.author ? pl.author + ' · ' : '') + (pl.count || (pl.tracks || []).length) + ' canciones',
-        cover: pl.thumb,
-        description: pl.description,
-        tracks: pl.tracks || [],
-      });
-    } catch (err) {
-      if (seq !== this._detailSeq) return;
-      this._detailError(content, 'list', 'No se pudo abrir la playlist', err, () => this.openPlaylist(id));
-    }
+    const artist = this._artistFromCatalog(id);
+    if (seq !== this._detailSeq) return;
+    if (!artist) { this._detailNotFound('user', 'No se pudo abrir el artista'); return; }
+    this._detail({
+      title: artist.name,
+      subtitle: 'Artista',
+      cover: artist.thumb,
+      tracks: artist.tracks,
+    });
   }
 
-  _detailError(content, iconName, title, err, retry) {
-    const offline = this._offline || (typeof navigator !== 'undefined' && navigator.onLine === false);
-    content.innerHTML = errorState(offline ? 'wifiOff' : iconName,
-      offline ? 'Sin conexión' : title,
-      offline ? 'Este contenido vive en YouTube Music y necesita internet.' : friendlyError(err),
-      { retryLabel: 'Reintentar' });
-    bindRetry(content, retry);
+  openPlaylist(id) {
+    const seq = ++this._detailSeq;
+    // Las playlists siguen siendo locales: se leen de la biblioteca.
+    const pl = library.getPlaylist(id);
+    if (seq !== this._detailSeq) return;
+    if (!pl) { this._detailNotFound('list', 'No se pudo abrir la playlist'); return; }
+    this._detail({
+      title: pl.name,
+      subtitle: (pl.tracks ? pl.tracks.length : 0) + ' canciones',
+      cover: pl.thumb || (pl.tracks && pl.tracks[0] ? pl.tracks[0].thumb : ''),
+      description: pl.description,
+      tracks: pl.tracks || [],
+    });
+  }
+
+  /* Resuelve un álbum del catálogo curado por id ("alb:Nombre"). */
+  _albumFromCatalog(id) {
+    const nombre = String(id || '').replace(/^alb:/, '');
+    const canciones = catalogo.porAlbum(nombre);
+    if (!canciones.length) return null;
+    return { title: nombre, artist: canciones[0].artist, thumb: canciones[0].thumb, tracks: canciones };
+  }
+
+  /* Resuelve un artista del catálogo curado por id ("art:Nombre"). */
+  _artistFromCatalog(id) {
+    const nombre = String(id || '').replace(/^art:/, '');
+    const canciones = catalogo.porArtista(nombre);
+    if (!canciones.length) return null;
+    return { name: nombre, thumb: canciones[0].thumb, tracks: canciones };
+  }
+
+  _detailNotFound(iconName, title) {
+    const content = this.root.querySelector('#sp-view-content');
+    content.innerHTML = emptyState(iconName, title, 'No encontramos ese contenido en el catálogo.');
+    const back = document.createElement('button');
+    back.className = 'sp-btn';
+    back.textContent = '← Volver';
+    back.addEventListener('click', () => this._renderView());
+    content.prepend(back);
   }
 
   _detail({ title, subtitle, cover, description, tracks, extra }) {
@@ -440,19 +412,14 @@ class SakuraPlayer {
         '</div>' +
         '<input type="range" class="sp-slider" id="sp-speed-slider" min="0.5" max="2" step="0.05" value="' + player.rate + '" style="margin-top:.7rem;">' +
         '<div style="font-size:.72rem;color:var(--player-text-secondary);margin-top:.3rem;">Actual: ' + player.rate + 'x</div>' +
+        '<div style="font-size:.72rem;color:var(--player-text-secondary);margin-top:.3rem;">La velocidad aplica a archivos locales; el reproductor de YouTube la ignora.</div>' +
       '</div>' +
       '<div class="sp-panel" style="padding:1rem;">' +
-        '<div class="sp-panel-title" style="margin-bottom:.7rem;">Backend</div>' +
-        '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' +
-          '<input class="sp-input" id="sp-api-base" style="flex:1;min-width:200px;" value="' + escapeHtml(getApiBase()) + '" placeholder="http://127.0.0.1:8000">' +
-          '<button class="sp-btn" id="sp-api-save">Guardar</button>' +
-          '<button class="sp-btn" id="sp-api-test">Probar</button>' +
+        '<div class="sp-panel-title" style="margin-bottom:.7rem;">Acerca del reproductor</div>' +
+        '<div style="font-size:.78rem;color:var(--player-text-secondary);line-height:1.5;">' +
+          'Sin servidor: la búsqueda sale de un catálogo curado incluido en la página y la reproducción usa el reproductor oficial de YouTube. ' +
+          'Los archivos locales conservan ecualizador y visualizador; en pistas de YouTube esas herramientas no aplican (su audio no pasa por la página).' +
         '</div>' +
-        '<div id="sp-api-status" style="font-size:.78rem;margin-top:.5rem;color:var(--player-text-secondary);"></div>' +
-      '</div>' +
-      '<div class="sp-panel" style="padding:1rem;">' +
-        '<div class="sp-panel-title" style="margin-bottom:.7rem;">Modo administrador</div>' +
-        '<div id="sp-admin-area">' + this._adminHtml() + '</div>' +
       '</div>' +
       '<div class="sp-panel" style="padding:1rem;">' +
         '<div class="sp-panel-title" style="margin-bottom:.7rem;">Atajos de teclado</div>' +
@@ -468,122 +435,7 @@ class SakuraPlayer {
     '</div>';
   }
 
-  /* ---------------- modo administrador ---------------- */
-  _adminHtml() {
-    if (!isAdmin()) {
-      return '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' +
-        '<input class="sp-input" id="sp-admin-email" type="email" placeholder="Correo de administrador" ' +
-          'autocomplete="username" style="flex:1;min-width:170px;">' +
-        '<input class="sp-input" id="sp-admin-pass" type="password" placeholder="Contraseña" ' +
-          'autocomplete="current-password" style="flex:1;min-width:130px;">' +
-        '<button class="sp-btn" id="sp-admin-login">Ingresar</button>' +
-      '</div>' +
-      '<div id="sp-admin-status" style="font-size:.78rem;margin-top:.5rem;color:var(--player-text-secondary);">' +
-        'Acceso restringido: hacete administrador con tu correo y contraseña.' +
-      '</div>';
-    }
-    return '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' +
-        '<span style="font-size:.82rem;color:var(--player-success);">● Sesión activa: <b>' +
-          escapeHtml(adminEmail() || 'administrador') + '</b></span>' +
-      '</div>' +
-      '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem;">' +
-        '<button class="sp-btn" id="sp-admin-stats">Estado del backend</button>' +
-        '<button class="sp-btn" id="sp-admin-clear">Limpiar caché</button>' +
-        '<button class="sp-btn" id="sp-admin-logout">Cerrar sesión</button>' +
-      '</div>' +
-      '<div id="sp-admin-status" style="font-size:.78rem;margin-top:.5rem;color:var(--player-text-secondary);"></div>' +
-      '<div id="sp-admin-output" style="font-size:.76rem;margin-top:.35rem;color:var(--player-text-secondary);white-space:pre-wrap;"></div>';
-  }
-
-  /* Vuelve a dibujar el panel admin y le ata los eventos (tras login/logout). */
-  _renderAdmin() {
-    if (!this.root) return;
-    const area = this.root.querySelector('#sp-admin-area');
-    if (!area) return;
-    area.innerHTML = this._adminHtml();
-    this._bindAdmin(area);
-  }
-
-  _bindAdmin(scope) {
-    const container = scope && scope.querySelector ? scope : (this.root && this.root.querySelector('#sp-admin-area'));
-    if (!container) return;
-    const $ = (sel) => container.querySelector(sel);
-
-    const status = (html) => {
-      const el = $('#sp-admin-status');
-      if (el) el.innerHTML = html;
-    };
-
-    // ---- login ----
-    const doLogin = async () => {
-      const emailEl = $('#sp-admin-email');
-      const passEl = $('#sp-admin-pass');
-      if (!emailEl || !passEl) return;
-      const email = emailEl.value.trim();
-      const password = passEl.value;
-      if (!email || !password) {
-        status('<span style="color:var(--player-error);">Ingresá correo y contraseña.</span>');
-        return;
-      }
-      status('<span style="color:var(--player-text-secondary);">Verificando…</span>');
-      try {
-        await loginAdmin(email, password);
-        this._renderAdmin();
-        toast('Modo administrador activado', 'success');
-      } catch (err) {
-        status('<span style="color:var(--player-error);">' + escapeHtml(adminError(err)) + '</span>');
-        if (passEl) passEl.value = '';
-      }
-    };
-    if ($('#sp-admin-login')) {
-      $('#sp-admin-login').addEventListener('click', doLogin);
-      // Enter en cualquiera de los dos campos dispara el ingreso
-      [$('#sp-admin-email'), $('#sp-admin-pass')].forEach((el) =>
-        el && el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } }));
-    }
-
-    // ---- logout ----
-    if ($('#sp-admin-logout')) {
-      $('#sp-admin-logout').addEventListener('click', () => {
-        clearSession();
-        this._renderAdmin();
-        toast('Sesión de administrador cerrada', 'success');
-      });
-    }
-
-    // ---- limpiar caché de búsquedas ----
-    if ($('#sp-admin-clear')) {
-      $('#sp-admin-clear').addEventListener('click', () => {
-        clearCache();
-        status('<span style="color:var(--player-success);">Caché de búsquedas limpiada.</span>');
-      });
-    }
-
-    // ---- estado del backend ----
-    if ($('#sp-admin-stats')) {
-      $('#sp-admin-stats').addEventListener('click', async () => {
-        const out = $('#sp-admin-output');
-        status('<span style="color:var(--player-text-secondary);">Consultando…</span>');
-        try {
-          const s = await adminStats();
-          if (!s) { status('<span style="color:var(--player-error);">Sesión no válida.</span>'); this._renderAdmin(); return; }
-          if (out) {
-            out.textContent = 'YouTube Music: ' + (s.authenticated ? 'autenticado' : 'modo invitado') +
-              '\nSesión admin: ' + (s.email || '') +
-              '\nDuración del token: ' + Math.round((s.session_ttl || 0) / 3600) + ' h' +
-              (s.locked_ips ? '\nIPs bloqueadas por intentos: ' + s.locked_ips : '');
-          }
-          status('<span style="color:var(--player-success);">● Backend conectado</span>');
-        } catch (err) {
-          status('<span style="color:var(--player-error);">' + escapeHtml(adminError(err)) + '</span>');
-          if (err && err.code === 'auth') this._renderAdmin();
-        }
-      });
-    }
-  }
-
   _bindSettings(content) {
-    this._bindAdmin(content);
     content.querySelectorAll('input[name="sp-theme-mode"]').forEach((r) =>
       r.addEventListener('change', () => {
         themeManager.setMode(r.value);
@@ -614,12 +466,6 @@ class SakuraPlayer {
       content.querySelectorAll('[data-speed]').forEach((x) => x.classList.toggle('sp-btn-active', Math.abs(parseFloat(x.dataset.speed) - player.rate) < 0.01));
       content.querySelector('#sp-speed-slider').nextElementSibling.textContent = 'Actual: ' + player.rate + 'x';
     });
-    content.querySelector('#sp-api-save').addEventListener('click', () => {
-      setApiBase(content.querySelector('#sp-api-base').value.trim());
-      toast('URL del backend guardada', 'success');
-      this._checkBackend();
-    });
-    content.querySelector('#sp-api-test').addEventListener('click', () => this._checkBackend());
   }
 
   /* ---------------- tema → visualizador ---------------- */
@@ -647,8 +493,6 @@ class SakuraPlayer {
   _bindConnectivity() {
     window.addEventListener('online', this._onNetUpdate);
     window.addEventListener('offline', this._onNetUpdate);
-    // Estado inicial sin lanzar dos veces la comprobación del backend:
-    // mount() llama a _checkBackend() justo después.
     this._offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     this._renderOffline();
   }
@@ -658,36 +502,9 @@ class SakuraPlayer {
     if (!slot) return;
     if (this._offline) {
       slot.innerHTML = '<div class="sp-offline-banner" role="status">' + icon('wifiOff') +
-        '<div><b>Sin conexión</b><span>YouTube Music no está disponible. Tu biblioteca local sigue funcionando.</span></div></div>';
+        '<div><b>Sin conexión</b><span>Las pistas de YouTube necesitan internet. Tus archivos locales siguen funcionando.</span></div></div>';
     } else {
       slot.innerHTML = '';
-    }
-  }
-
-  async _checkBackend() {
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      const statusOff = this.root && this.root.querySelector('#sp-api-status');
-      if (statusOff) statusOff.innerHTML = '<span style="color:var(--player-warning);">● Sin conexión</span> — el backend no es accesible ahora.';
-      return;
-    }
-    const status = this.root && this.root.querySelector('#sp-api-status');
-    const inUse = activeApiBase();
-    const custom = inUse !== getApiBase(); // la URL guardada falló y se forzó la del sitio
-    try {
-      const h = await api.health();
-      if (status) {
-        status.innerHTML = '<span style="color:var(--player-success);">● Backend conectado</span>' +
-          (h.authenticated ? ' · YouTube Music autenticado' : ' · YouTube Music en modo invitado') +
-          (custom ? '<br><span style="color:var(--player-text-secondary);">Usando: ' + escapeHtml(inUse) +
-            ' (tu URL no respondía)</span>' : '');
-      }
-      if (this._offline) { this._offline = false; this._renderOffline(); }
-    } catch (err) {
-      if (status) {
-        status.innerHTML = '<span style="color:var(--player-error);">● Backend apagado</span> — ' +
-          escapeHtml(friendlyError(err)) + '<br><span style="color:var(--player-text-secondary);">URL probada: ' +
-          escapeHtml(inUse) + '</span>';
-      }
     }
   }
 }

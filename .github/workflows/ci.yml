@@ -60,21 +60,6 @@ jobs:
               const context = await browser.newContext();
               const page = await context.newPage();
 
-              // Interceptar peticiones al backend y responder con mocks
-              // para que el test no dependa de red externa (Render)
-              await page.route('**/api/**', async (route) => {
-                const url = route.request().url();
-                if (url.includes('/api/health')) {
-                  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, ytmusic: { authenticated: false } }) });
-                } else if (url.includes('/api/music/search')) {
-                  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ songs: [] }) });
-                } else if (url.includes('/api/music/stream/')) {
-                  await route.fulfill({ status: 206, headers: { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes' }, body: Buffer.from('') });
-                } else {
-                  await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
-                }
-              });
-
               const errors = [];
               page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
               page.on('pageerror', e => errors.push(e.message));

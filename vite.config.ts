@@ -10,10 +10,6 @@ export default defineConfig({
   base: './',
   root: '.',
   publicDir: 'public',
-  // Inyecta VITE_API_URL como __APP_API_BASE__ para src/app.js (no ESM)
-  define: {
-    __APP_API_BASE__: JSON.stringify(process.env.VITE_API_URL || ''),
-  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

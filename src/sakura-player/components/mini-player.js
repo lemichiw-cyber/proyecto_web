@@ -105,7 +105,7 @@ export class MiniPlayer {
 
   _renderPlay() {
     if (!this.el) return;
-    const playing = !player.audio.paused;
+    const playing = player.isPlaying();
     const btn = this.el.querySelector('#sp-mini-play');
     btn.innerHTML = playing ? icon('pause') : icon('play');
     btn.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');

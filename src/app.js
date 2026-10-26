@@ -32,35 +32,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var ROL_REGISTRO = 'estudiante'; // rol por defecto del formulario de registro
       var ADMIN_EMAIL = 'admin@bachillerato.edu'; // cuenta semilla: SIEMPRE admin
 
-      /* URL del backend FastAPI. Permite override con la clave local
-         'cherrybombApiBase' (útil en desarrollo local).
-         En build time se puede fijar con VITE_API_URL (p. ej. el backend
-         desplegado en Render); sin ella se usa el fallback hardcodeado. */
-      var API_BASE = (function () {
-        try {
-          var custom = localStorage.getItem('cherrybombApiBase');
-          if (custom) return String(custom).replace(/\/+$/, '');
-        } catch (e) { /* sin storage */ }
-        // Build-time default (inyectado por Vite via import.meta.env)
-        // import.meta.env no está disponible aquí (módulo no ESM), así que
-        // usamos una variable global inyectada por Vite en index.html si existe,
-        // o el fallback hardcodeado.
-        var host = (typeof location !== 'undefined' && location.hostname) || '';
-        if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://127.0.0.1:8000';
-        // Fallback hardcodeado; en producción Netlify inyecta VITE_API_URL
-        // via define en vite.config.ts (ver arriba).
-        return (typeof __APP_API_BASE__ !== 'undefined' && __APP_API_BASE__)
-          ? __APP_API_BASE__
-          : 'https://sakura-backend-indb.onrender.com';
-      })();
-
       /* --------------------------------------------------------------
          El mapa de cuentas vive SIEMPRE en localStorage (sincrono,
-         funciona sin red). El backend es un espejo: al cargar se
-         mergea (el rol remoto gana) y lo que falta se sube.
+         funciona sin red). No hay backend: el espejo a /api/accounts
+         se eliminó junto con el servidor, así que crear, modificar y
+         leer cuentas es 100% local en este dispositivo.
          -------------------------------------------------------------- */
       var cuentasBackend = null;   // vista en memoria: email → cuenta
-      var cuentasPush = {};        // email → firma ya sincronizada
 
       function normalizaEmail(e) { return String(e || '').trim().toLowerCase(); }
 
@@ -71,10 +49,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var db = JSON.parse(localStorage.getItem(LS_CUENTAS) || '{}');
           return (db && typeof db === 'object') ? db : {};
         } catch (e) { return {}; }
-      }
-
-      function firmaCuenta(c) {
-        return JSON.stringify([c.rol, c.nombre, c.activo !== false, c.semestre || '']);
       }
 
       /* La cuenta semilla de administrador siempre existe y siempre es
@@ -94,64 +68,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         return db;
       }
 
-      /* GET /api/accounts → mapa plano email→cuenta, o null sin backend. */
-      function fetchBackendAccounts() {
-        if (typeof fetch !== 'function') return Promise.resolve(null);
-        return fetch(API_BASE + '/api/accounts/', { headers: { 'Accept': 'application/json' } })
-          .then(function (resp) { if (!resp.ok) return null; return resp.json(); })
-          .then(function (data) {
-            if (!data || typeof data !== 'object') return null;
-            var map = (data.accounts && typeof data.accounts === 'object') ? data.accounts : data;
-            if (!map || typeof map !== 'object' || Array.isArray(map)) return null;
-            return map;
-          })
-          .catch(function () { return null; });
-      }
-
-      /* Replica una cuenta al backend (best-effort). PUT intenta
-         actualizar; si el backend responde 404 se crea con POST. */
-      function pushCuenta(cuenta, password) {
-        if (!cuenta || !cuenta.email || typeof fetch !== 'function') return;
-        var email = normalizaEmail(cuenta.email);
-        if (email === ADMIN_EMAIL) return; // la siembra la garantiza el backend
-        var firma = firmaCuenta(cuenta);
-        if (cuentasPush[email] === firma) return;
-        cuentasPush[email] = firma;
-        fetch(API_BASE + '/api/accounts/' + encodeURIComponent(email), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rol: cuenta.rol,
-            nombre: cuenta.nombre,
-            activo: cuenta.activo !== false,
-            semestre: cuenta.semestre || null,
-          }),
-        })
-        .then(function (resp) {
-          if (resp.status !== 404) return resp;
-          var body = {
-            email: email,
-            rol: cuenta.rol,
-            nombre: cuenta.nombre || email.split('@')[0],
-            semestre: cuenta.semestre || null,
-          };
-          if (password) body.password = password;
-          return fetch(API_BASE + '/api/accounts/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-        })
-        .catch(function () { delete cuentasPush[email]; }); // reintenta en el proximo guardado
-      }
-
-      /* Guarda el mapa: localStorage primero (sincrono y seguro) y luego
-         replica al backend unicamente lo que cambio. */
+      /* Guarda el mapa en localStorage (sincrono y seguro). Sin backend,
+         no hay nada que replicar: la persistencia es 100% local. */
       function guardarCuentas(db) {
         if (!db || typeof db !== 'object') return;
         cuentasBackend = asegurarAdmin(db);
         try { localStorage.setItem(LS_CUENTAS, JSON.stringify(cuentasBackend)); } catch (e) { /* sin storage */ }
-        Object.keys(cuentasBackend).forEach(function (k) { pushCuenta(cuentasBackend[k]); });
       }
 
       /* Cuenta de un correo: memoria → localStorage (nunca red). */
@@ -162,8 +84,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         return db[key] || null;
       }
 
-      /* CREAR cuenta — SIEMPRE sincrono: escribe en local y replica al
-         backend. password es opcional (solo el registro la conoce). */
+      /* CREAR cuenta — SIEMPRE sincrono: escribe en local (no hay backend,
+         las cuentas viven solo en este dispositivo). El 4to parámetro
+         `password` se ignora (se conserva por compatibilidad con quien
+         lo envía desde el formulario de registro). */
       function crearCuenta(email, nombre, rol, password) {
         var key = normalizaEmail(email);
         if (!key) return { ok: false, msg: 'Falta el correo.' };
@@ -180,7 +104,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         };
         var db = leerCuentas();
         db[key] = nuevo;
-        if (password) pushCuenta(nuevo, password); // con contraseña, antes de marcar firma
         guardarCuentas(db);
         return { ok: true, cuenta: nuevo };
       }
@@ -196,7 +119,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
         db[key].rol = rol;
         if (rol !== ROL_REGISTRO) db[key].semestre = '';
-        guardarCuentas(db); // localStorage + PUT/POST al backend
+        guardarCuentas(db); // localStorage (sincrono; sin backend)
 
         // Sesion abierta con esa cuenta: rango nuevo al instante.
         if (usuarioActual && normalizaEmail(usuarioActual.email) === key) {
@@ -208,11 +131,13 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         return { ok: true, cuenta: db[key] };
       }
 
-      /* Carga inicial:
-         1) sincrono: cuentas locales + siembra admin + sesion antigua
-            (as\u00ed el login funciona aunque el backend este caido o lento);
-         2) asincrono: merge con el backend (el rol remoto gana) y subida
-            de las cuentas que solo existen en este dispositivo. */
+      /* Carga inicial (100% local, sin red): cuentas locales + siembra
+         admin + sesión antigua, para que el login funcione sin backend.
+         NO refresca la UI acá: prepararCuentas se invoca de forma
+         síncrona durante el arranque, antes de que rolesPermisos esté
+         definido (más abajo), y actualizarPermisosUI lo leería en
+         undefined. El refresco lo hace el .then() del llamador, que ya
+         corre en un microtask (después de definir rolesPermisos). */
       function prepararCuentas() {
         var db = leerCuentas();
         if (savedSession) {
@@ -226,27 +151,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             };
           }
         }
-        cuentasBackend = asegurarAdmin(db);
-        try { localStorage.setItem(LS_CUENTAS, JSON.stringify(cuentasBackend)); } catch (e) { /* sin storage */ }
-
-        return fetchBackendAccounts().then(function (remote) {
-          if (remote) {
-            var merged = leerCuentas();
-            Object.keys(remote).forEach(function (k) {
-              if (remote[k] && typeof remote[k] === 'object') merged[k] = remote[k];
-            });
-            // lo que el backend ya tiene queda marcado como sincronizado
-            Object.keys(remote).forEach(function (k) {
-              if (merged[k] && typeof merged[k] === 'object') cuentasPush[k] = firmaCuenta(merged[k]);
-            });
-            // lo que solo existe local se sube
-            Object.keys(merged).forEach(function (k) { pushCuenta(merged[k]); });
-            guardarCuentas(merged);
-          }
-          if (window.usuarioActual) actualizarUsuarioDesdeCuenta();
-          if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
-          return cuentasBackend;
-        });
+        guardarCuentas(db);
+        return Promise.resolve(cuentasBackend);
       }
 
       /* Aplica los datos de la cuenta activa a window.usuarioActual */

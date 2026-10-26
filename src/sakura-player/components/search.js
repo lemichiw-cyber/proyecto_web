@@ -1,12 +1,13 @@
 /* ===================================================================
-   Sakura Player — Búsqueda en YouTube Music
-   Debounce + AbortController + pestañas por tipo de resultado.
+   Sakura Player — Búsqueda en el catálogo curado
+   Filtra el catálogo incluido en la página (sin backend). La caja de
+   búsqueda también acepta pegar un enlace o ID de YouTube.
    =================================================================== */
 
 import { api, debounce, friendlyError } from '../api/client.js';
 import { player } from '../player/player.js';
 import { library } from '../library/library.js';
-import { icon, coverHtml, trackRow, emptyState, errorState, bindRetry, spinner, toast, escapeHtml } from './ui.js';
+import { icon, coverHtml, trackRow, emptyState, toast, escapeHtml } from './ui.js';
 
 const TABS = [
   { id: 'songs', label: 'Canciones' },
@@ -28,7 +29,7 @@ export class SearchView {
     return '<div style="display:flex;flex-direction:column;gap:1rem;">' +
       '<div style="position:relative;" role="search">' +
         '<span style="position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--player-text-secondary);">' + icon('search') + '</span>' +
-        '<input id="sp-search-input" class="sp-input" style="width:100%;padding-left:2.4rem;" type="search" placeholder="Buscar en YouTube Music..." autocomplete="off">' +
+        '<input id="sp-search-input" class="sp-input" style="width:100%;padding-left:2.4rem;" type="search" placeholder="Buscar en el catálogo o pegar un enlace de YouTube..." autocomplete="off">' +
       '</div>' +
       '<div style="display:flex;gap:.4rem;flex-wrap:wrap;" id="sp-search-tabs">' +
         TABS.map((t) => '<button class="sp-tab' + (t.id === this.tab ? ' active' : '') + '" data-tab="' + t.id + '">' + t.label + '</button>').join('') +
@@ -50,33 +51,21 @@ export class SearchView {
         this._renderResults(results);
         return;
       }
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        this._offlineNotice = true;
-        results.innerHTML = errorState('wifiOff', 'Sin conexión',
-          'YouTube Music necesita internet. Tu biblioteca local y tus playlists guardadas siguen disponibles.',
-          { retryLabel: 'Volver a intentar' });
-        bindRetry(results, () => execute(q));
-        return;
-      }
+      // El catálogo vive en la página: la búsqueda no usa red. Se mantiene
+      // AbortController para cancelar la búsqueda anterior si el usuario
+      // sigue tipeando (y para no pisar resultados viejos).
       if (controller) controller.abort();
       controller = new AbortController();
       this._controller = controller;
       this.loading = true;
-      results.innerHTML = spinner('Buscando en YouTube Music...');
+      results.innerHTML = '<div style="font-size:.8rem;color:var(--player-text-secondary);padding:.6rem .2rem;">Buscando en el catálogo…</div>';
       try {
         this.results = (await api.search(q.trim(), 'all', 20, controller.signal)) ||
           { songs: [], artists: [], albums: [], playlists: [] };
         this._lastQuery = q.trim();
-        this._offlineNotice = false;
       } catch (err) {
-        if (err.code === 'network' && err.message === 'La solicitud fue cancelada') return;
-        const offline = err.code === 'backend_offline' || err.code === 'network' ||
-          (typeof navigator !== 'undefined' && navigator.onLine === false);
-        results.innerHTML = errorState(offline ? 'wifiOff' : 'alert',
-          offline ? 'YouTube Music no está disponible' : 'No se pudo buscar',
-          friendlyError(err) + ' Tu biblioteca local sigue disponible.',
-          { retryLabel: 'Reintentar búsqueda' });
-        bindRetry(results, () => execute(q));
+        if (err.code === 'cancelled') return; // el usuario siguió tipeando
+        results.innerHTML = '<div style="font-size:.8rem;color:var(--player-error);padding:.6rem .2rem;">No se pudo buscar. ' + escapeHtml(friendlyError(err)) + '</div>';
         return;
       } finally {
         this.loading = false;
@@ -112,8 +101,8 @@ export class SearchView {
     const items = this.results[this.tab] || [];
     if (!items.length) {
       container.innerHTML = this._lastQuery
-        ? emptyState('search', 'Sin resultados', 'No se encontró nada para «' + escapeHtml(this._lastQuery) + '» en YouTube Music.')
-        : emptyState('search', 'Sin resultados', 'Escribí al menos 2 caracteres para buscar en YouTube Music.');
+        ? emptyState('search', 'Sin resultados', 'No se encontró nada para «' + escapeHtml(this._lastQuery) + '» en el catálogo.')
+        : emptyState('search', 'Buscá una canción', 'Escribí al menos 2 caracteres, o pegá un enlace o ID de YouTube para reproducir cualquier video.');
       return;
     }
     if (this.tab === 'songs') {
