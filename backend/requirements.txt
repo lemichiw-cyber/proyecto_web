@@ -4,3 +4,5 @@ ytmusicapi>=1.7
 yt-dlp>=2025.1.1
 python-dotenv>=1.0
 requests>=2.31
+psycopg2-binary>=2.9
+mangum>=0.17

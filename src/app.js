@@ -1,5 +1,73 @@
 import { escapeHtml } from "./utils/escape.js";
 import { isEnabled } from "./config/features.js";
+import { detectarChoqueHorario } from "./data/horario-choque.js";
+import { pomodoroRestante } from "./data/pomodoro-timer.js";
+
+var API_BASE = (function () {
+  var v = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "") || "";
+  return v.replace(/\/$/, "");
+})();
+var API_EMAIL = (typeof VITE_API_EMAIL !== "undefined" ? VITE_API_EMAIL : "") || localStorage.getItem("cherrybombSessionEmail") || "";
+function apiHeaders() {
+  var h = { "Content-Type": "application/json" };
+  if (API_EMAIL) h["X-User-Email"] = API_EMAIL;
+  return h;
+}
+function apiFetch(path, body) {
+  return fetch(API_BASE + path, {
+    method: body ? "POST" : "GET",
+    headers: apiHeaders(),
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
+  }).then(function (r) {
+    if (!r.ok) throw new Error("API " + r.status);
+    return r.json();
+  });
+}
+function apiGrupos() {
+  return apiFetch("/api/matricula/grupos").catch(function () { return []; });
+}
+function apiMiGrupo() {
+  return apiFetch("/api/matricula/mi-grupo").catch(function () { return { grupo: null }; });
+}
+function apiGuardarTarea(t) {
+  return apiFetch("/api/items/tareas", {
+    titulo: t.titulo, descripcion: t.desc || "", materia: t.materia || "",
+    fecha: t.fecha || "", grupo_ids: Array.isArray(t.grupo_ids) ? t.grupo_ids : []
+  }).catch(function () { return { ok: false }; });
+}
+function apiGuardarExamen(e) {
+  return apiFetch("/api/items/examenes", {
+    titulo: e.titulo, tiempo: e.tiempo, preguntas: e.preguntas || [],
+    notamin: e.notamin, intentos: e.intentos, barajar: !!e.barajar,
+    grupo_ids: Array.isArray(e.grupo_ids) ? e.grupo_ids : []
+  }).catch(function () { return { ok: false }; });
+}
+var _gruposCache = null;
+function renderGrupoCheckboxes(containerId, preselected) {
+  var container = $(containerId);
+  if (!container) return;
+  if (container.dataset.rendered === "1") return;
+  if (!_gruposCache) {
+    apiGrupos().then(function (gs) {
+      _gruposCache = gs;
+      renderGrupoCheckboxes(containerId, preselected);
+    });
+    return;
+  }
+  container.innerHTML = _gruposCache.map(function (g) {
+    var checked = preselected && preselected.indexOf(g.id) !== -1 ? " checked" : "";
+    var lbl = (g.anio || "") + "° " + (g.seccion || "") + " (" + (g.ciclo_escolar || "") + ")";
+    return '<label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;"><input type="checkbox" name="grupo-chk" value="' + g.id + '"' + checked + '> ' + escapeHtml(lbl) + '</label>';
+  }).join("");
+  container.dataset.rendered = "1";
+}
+function gruposSeleccionados() {
+  var boxes = document.querySelectorAll('input[name="grupo-chk"]:checked');
+  var ids = [];
+  boxes.forEach(function (b) { ids.push(parseInt(b.value, 10)); });
+  return ids;
+}
 (function () {
       'use strict';
 
@@ -11,6 +79,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       var savedSession = (function(){try{var s=localStorage.getItem('cherrybombSession');return s?JSON.parse(s):null}catch(e){return null}})();
       var logueado = !!savedSession;
       var usuarioActual = savedSession;
+      var miGrupoId = null;
+      apiMiGrupo().then(function (r) { if (r && r.grupo) miGrupoId = r.grupo.id; });
       var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','respaldos','auth'];
       var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth'];
       function $(id) { return document.getElementById(id); }
@@ -598,6 +668,30 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             pendEl.classList.add('hidden');
           }
         }
+        // Vista Hoy: entregas, exámenes y clases del día
+        var hoyBox = $('inicio-hoy');
+        if (logueado) {
+          if (!hoyBox) {
+            hoyBox = document.createElement('div');
+            hoyBox.id = 'inicio-hoy';
+            $('inicio-apps').parentNode.insertBefore(hoyBox, $('inicio-apps'));
+          }
+          var hoy = new Date().toISOString().slice(0, 10);
+          var entregasHoy = (window.eventosAPI ? window.eventosAPI.listar('tarea') : []).filter(function (t) { return t.fecha === hoy; });
+          var examenesHoy = examenes.filter(function (e) { return e.fecha === hoy; });
+          var clasesHoy = clasesItems.filter(function (c) {
+            var f = claseFecha(c);
+            return f && f.toISOString().slice(0, 10) === hoy;
+          });
+          function hoyItem(titulo, tipo, extra) { return '<div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:var(--gray-50);border-radius:8px;margin-bottom:.4rem;"><strong style="font-size:.85rem;">' + escapeHtml(titulo) + '</strong><span style="font-size:.72rem;color:var(--gray-500);margin-left:auto;">' + escapeHtml(tipo) + '</span>' + (extra ? '<span style="font-size:.72rem;color:var(--gray-500);">· ' + escapeHtml(extra) + '</span>' : '') + '</div>'; }
+          var html = '<h3 style="margin:0 0 .6rem;font-size:1rem;color:var(--gray-900);display:flex;align-items:center;gap:.5rem;"><span style="font-size:1.2rem;">📅</span> Hoy</h3>';
+          html += '<div style="font-size:.75rem;color:var(--gray-500);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Entregas</div>' + (entregasHoy.length ? entregasHoy.map(function(t){return hoyItem(t.titulo,'Tarea',t.materia);}).join('') : '<div style="font-size:.82rem;color:var(--gray-400);padding:.4rem .7rem;">Sin entregas hoy.</div>');
+          html += '<div style="font-size:.75rem;color:var(--gray-500);margin:1rem 0 .4rem;text-transform:uppercase;letter-spacing:.04em;">Exámenes</div>' + (examenesHoy.length ? examenesHoy.map(function(e){return hoyItem(e.titulo,'Examen',e.materia||'');}).join('') : '<div style="font-size:.82rem;color:var(--gray-400);padding:.4rem .7rem;">Sin exámenes hoy.</div>');
+          html += '<div style="font-size:.75rem;color:var(--gray-500);margin:1rem 0 .4rem;text-transform:uppercase;letter-spacing:.04em;">Clases</div>' + (clasesHoy.length ? clasesHoy.map(function(c){return hoyItem(c.titulo,'Clase',claseCuandoTexto(c));}).join('') : '<div style="font-size:.82rem;color:var(--gray-400);padding:.4rem .7rem;">Sin clases hoy.</div>');
+          hoyBox.innerHTML = '<div style="padding:1rem;background:var(--gray-50);border-radius:12px;border:1px solid var(--gray-200);">' + html + '</div>';
+          hoyBox.style.display = 'block';
+          hoyBox.classList.remove('hidden');
+        } else if (hoyBox) { hoyBox.style.display = 'none'; hoyBox.classList.add('hidden'); }
         // App cards - filter by feature flags
         var el = $('inicio-apps');
         el.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
@@ -1484,6 +1578,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         return arr;
       }
 
+      function examBarajarOpciones(q) {
+        if (q.tipo !== 'multiple' || !Array.isArray(q.opciones)) return q;
+        var orden = q.opciones.map(function (_, i) { return i; });
+        examDesordenar(orden);
+        q.opciones = orden.map(function (i) { return q.opciones[i]; });
+        q.correcta = orden.indexOf(q.correcta);
+        return q;
+      }
+
       /* Intentos que lleva el estudiante sobre el examen seleccionado */
       function examRenderMisIntentos() {
         var box = $('exam-mis-intentos');
@@ -1578,10 +1681,48 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         } catch (e) { mostrarToast('No se pudo exportar el CSV.', 'error'); }
       }
 
+      window.examExportarJSON = function () {
+        if (!exigirPermiso('crear')) return;
+        if (examenes.length === 0) { mostrarToast('No hay exámenes para exportar.', 'error'); return; }
+        var blob = new Blob([JSON.stringify(examenes, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'examenes-cherrybomb.json'; a.click();
+        URL.revokeObjectURL(url);
+        mostrarToast('Exámenes exportados.', 'success');
+      };
+
+      window.examImportarJSON = function () {
+        if (!exigirPermiso('crear')) return;
+        var input = document.createElement('input');
+        input.type = 'file'; input.accept = '.json';
+        input.onchange = function () {
+          var f = input.files[0];
+          if (!f) return;
+          var r = new FileReader();
+          r.onload = function () {
+            try {
+              var data = JSON.parse(r.result);
+              if (!Array.isArray(data)) throw new Error('no es array');
+              examenes = examenes.concat(data);
+              examGuardarStorage();
+              examRenderGuardados();
+              examCargarSelect();
+              mostrarToast('Exámenes importados: ' + data.length, 'success');
+            } catch (err) { mostrarToast('JSON inválido.', 'error'); }
+          };
+          r.readAsText(f);
+        };
+        input.click();
+      };
+
       function examRenderGuardados() {
         var container = $('exam-lista-guardados');
         if (examenes.length === 0) { container.innerHTML = emptyMsg('Aún no hay exámenes guardados.', { icon: '📄', title: 'Exámenes', desc: 'Creá un examen desde el formulario de arriba.' }); return; }
-        container.innerHTML = '<div style="display:grid;gap:.5rem;">' +
+        container.innerHTML = '<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">' +
+          '<button class="btn btn-primary btn-sm" onclick="examExportarJSON()">📤 Exportar JSON</button>' +
+          '<button class="btn btn-outline btn-sm" onclick="examImportarJSON()">📥 Importar JSON</button>' +
+          '</div>' + '<div style="display:grid;gap:.5rem;">' +
           examenes.map(function (e, idx) {
             var preg = e.preguntas ? e.preguntas.length : 0;
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
@@ -1684,8 +1825,12 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var preguntas = examGetPreguntas();
         if (preguntas.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Agrega al menos 1 pregunta.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        examenes.push({ titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, creado: new Date().toISOString() });
+        var grupo_ids = gruposSeleccionados();
+        if (grupo_ids.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Selecciona al menos un grupo.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
+        var ex = { titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, grupo_ids: grupo_ids, creado: new Date().toISOString() };
+        examenes.push(ex);
         examGuardarStorage();
+        apiGuardarExamen(ex);
         examRenderGuardados();
         examRenderResultados();
         examCargarSelect();
@@ -1912,7 +2057,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           return;
         }
         var copia = JSON.parse(JSON.stringify(e));
-        if (copia.barajar && Array.isArray(copia.preguntas)) copia.preguntas = examDesordenar(copia.preguntas);
+        if (copia.barajar && Array.isArray(copia.preguntas)) {
+          copia.preguntas = examDesordenar(copia.preguntas);
+          copia.preguntas.forEach(examBarajarOpciones);
+        }
         examEnCurso = {
           idx: idx,
           examen: copia,
@@ -2136,6 +2284,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var tab = this.dataset.examTab;
           $('exam-tab-profesor').classList.toggle('hidden', tab !== 'profesor');
           $('exam-tab-estudiante').classList.toggle('hidden', tab !== 'estudiante');
+          if (tab === 'profesor') renderGrupoCheckboxes('#exam-grupos');
         });
       });
 
@@ -2336,11 +2485,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          TAREAS — Docente crea, Estudiante entrega
          =================================================================== */
       var TAREAS_KEY = 'bachillerato_tareas';
-      var tareas = JSON.parse(localStorage.getItem(TAREAS_KEY) || '[]');
+      var tareas = window.eventosAPI.listar('tarea');
       var ENTREGAS_KEY = 'bachillerato_entregas';
       var entregas = JSON.parse(localStorage.getItem(ENTREGAS_KEY) || '[]');
 
-      function tareaGuardarStorage() { localStorage.setItem(TAREAS_KEY, JSON.stringify(tareas)); }
+      function tareaGuardarStorage() { /* las tareas viven ahora en eventosAPI (clave 'eventos') */ }
       function entregaGuardarStorage() { localStorage.setItem(ENTREGAS_KEY, JSON.stringify(entregas)); }
 
       function tareaRenderCreadas() {
@@ -2364,7 +2513,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             dialogConfirm('¿Eliminar la tarea "' + tareas[idx].titulo + '"?', 'Eliminar tarea').then(function (ok) {
               if (!ok) return;
               tareas.splice(idx, 1);
-              tareaGuardarStorage();
+              window.eventosAPI.borrar(tareas[idx].id);
               tareaRenderCreadas();
               mostrarToast('Tarea eliminada.', 'success');
             });
@@ -2375,7 +2524,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function tareaRenderEstudiante() {
         // Pendientes
         var pendientes = tareas.filter(function (t) {
-          return !entregas.some(function (e) { return e.tareaIdx === tareas.indexOf(t); });
+          if (!entregas.some(function (e) { return e.tareaId === t.id; })) {
+            if (miGrupoId) {
+              var ids = Array.isArray(t.grupo_ids) ? t.grupo_ids : (t.grupo ? String(t.grupo).split(',').map(Number) : []);
+              return ids.indexOf(miGrupoId) !== -1;
+            }
+            return true;
+          }
+          return false;
         });
         var pContainer = $('tarea-estudiante-lista');
         if (pendientes.length === 0) { pContainer.innerHTML = emptyMsg('No hay tareas pendientes.', { icon: '✅', title: '¡Todo al día!', desc: 'No tenés tareas pendientes por ahora.' }); }
@@ -2394,7 +2550,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               var idx = parseInt(this.dataset.idx);
               dialogPrompt('Escribe tu respuesta o comentario:', 'Entregar tarea').then(function (res) {
                 if (res === null) return;
-                entregas.push({ tareaIdx: idx, respuesta: res, fecha: new Date().toISOString().split('T')[0], estudiante: 'Yo' });
+                var t = tareas[idx];
+                entregas.push({ tareaId: t.id, respuesta: res, fecha: new Date().toISOString().split('T')[0], estudiante: 'Yo' });
                 entregaGuardarStorage();
                 tareaRenderEstudiante();
                 mostrarToast('Tarea entregada.', 'success');
@@ -2410,7 +2567,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         else {
           eContainer.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
             misEntregas.map(function (e) {
-              var t = tareas[e.tareaIdx];
+              var t = tareas.find(function (x) { return x.id === e.tareaId; });
               if (!t) return '';
               return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem .75rem;background:var(--green-light);border-radius:8px;">' +
                 '<div><strong style="font-size:.9rem;">' + escapeHtml(t.titulo) + '</strong><br>' +
@@ -2423,16 +2580,30 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function tareaInit() {
         $('btn-tarea-crear').addEventListener('click', function () {
           if (!exigirPermiso('crear')) return;
+          renderGrupoCheckboxes('#tarea-grupos');
           var titulo = $('tarea-titulo').value.trim();
           var desc = $('tarea-desc').value.trim();
           var materia = $('tarea-materia').value;
-          var grupo = $('tarea-grupo').value;
           var fecha = $('tarea-fecha').value;
+          var grupo_ids = gruposSeleccionados();
           if (!titulo) { mostrarToast('El título es obligatorio.', 'error'); return; }
           if (!fecha) { mostrarToast('Selecciona una fecha límite.', 'error'); return; }
-          tareas.push({ titulo: titulo, desc: desc || 'Sin descripción', materia: materia, grupo: grupo, fecha: fecha });
-          tareaGuardarStorage();
+          if (grupo_ids.length === 0) { mostrarToast('Selecciona al menos un grupo.', 'error'); return; }
+          var ev = window.eventosAPI.agregar({
+            tipo: 'tarea',
+            titulo: titulo,
+            desc: desc || 'Sin descripción',
+            materia: materia,
+            fecha: fecha,
+            estado: 'pendiente',
+            prioridad: 'media',
+            recordatorio: false,
+            grupo: grupo_ids.join(','),
+            grupo_ids: grupo_ids
+          });
+          tareas.push(ev);
           tareaRenderCreadas();
+          apiGuardarTarea(ev);
           $('tarea-titulo').value = ''; $('tarea-desc').value = '';
           mostrarToast('Tarea creada: ' + titulo, 'success');
         });
@@ -2868,10 +3039,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       /* ===================================================================
          SECCIONES — Actividades, Foros, Agenda, Calendario, etc.
          =================================================================== */
-      var actividades = JSON.parse(localStorage.getItem('actividades') || '[]');
+      window.eventosAPI.migrarLegacy();
+      var actividades = window.eventosAPI.listar('actividad');
       var foros = JSON.parse(localStorage.getItem('foros') || '[]');
-      var agendaItems = JSON.parse(localStorage.getItem('agendaItems') || '[]');
-      var calEventos = JSON.parse(localStorage.getItem('calEventos') || '[]');
+      var agendaItems = window.eventosAPI.listar('agenda');
+      var calEventos = window.eventosAPI.listar('calendario');
       var horarioItems = JSON.parse(localStorage.getItem('horarioItems') || '[]');
       // Migrar datos antiguos al nuevo formato de tabla
       if (horarioItems.length > 0 && horarioItems[0].materia !== undefined) {
@@ -2907,8 +3079,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
             var idx = parseInt(this.dataset.idx);
+            window.eventosAPI.borrar(actividades[idx].id);
             actividades.splice(idx, 1);
-            guardarSeccion('actividades', actividades);
             renderActividades();
             mostrarToast('Actividad eliminada.', 'success');
           });
@@ -2919,8 +3091,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         dialogPrompt('T\u00EDtulo de la actividad:', 'Nueva actividad').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            actividades.push({ titulo: titulo.trim(), desc: (desc || '').trim() });
-            guardarSeccion('actividades', actividades);
+            var ev = window.eventosAPI.agregar({
+              titulo: titulo.trim(),
+              tipo: 'actividad',
+              desc: (desc || '').trim(),
+              estado: 'pendiente',
+              prioridad: 'media',
+              recordatorio: false
+            });
+            actividades.push(ev);
             renderActividades();
             mostrarToast('Actividad agregada.', 'success');
           });
@@ -3307,13 +3486,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           agendaItems.map(function (a, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(a.titulo) + '</strong>' + (a.hora ? '<br><span style="font-size:.82rem;color:var(--gray-500);">\uD83D\uDD52 ' + escapeHtml(a.hora) + '</span>' : '') + '</div>' +
+              '<div><strong>' + escapeHtml(a.titulo) + '</strong>' + (a.hora || a.fecha ? '<br><span style="font-size:.82rem;color:var(--gray-500);">\uD83D\uDD52 ' + escapeHtml(a.hora || a.fecha) + '</span>' : '') + '</div>' +
               '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="agendaItems" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.seccion-del').forEach(function (btn) {
           btn.addEventListener('click', function () {
-            agendaItems.splice(parseInt(this.dataset.idx), 1);
-            guardarSeccion('agendaItems', agendaItems);
+            var idx = parseInt(this.dataset.idx);
+            window.eventosAPI.borrar(agendaItems[idx].id);
+            agendaItems.splice(idx, 1);
             renderAgenda();
             mostrarToast('Evento eliminado.', 'success');
           });
@@ -3324,8 +3504,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         dialogPrompt('T\u00EDtulo del evento:', 'Agregar a agenda').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Hora (opcional, ej: 10:30):', 'Hora').then(function (hora) {
-            agendaItems.push({ titulo: titulo.trim(), hora: (hora || '').trim() });
-            guardarSeccion('agendaItems', agendaItems);
+            var ev = window.eventosAPI.agregar({
+              titulo: titulo.trim(),
+              tipo: 'agenda',
+              fecha: (hora || '').trim(),
+              hora: (hora || '').trim(),
+              estado: 'pendiente',
+              prioridad: 'media',
+              recordatorio: false
+            });
+            agendaItems.push(ev);
             renderAgenda();
             mostrarToast('Evento agregado.', 'success');
           });
@@ -3335,29 +3523,77 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function renderCalendario() {
         var el = $('cal-lista');
-        if (calEventos.length === 0) { el.innerHTML = emptyMsg('No hay eventos registrados.', { icon: '📆', title: 'Calendario', desc: 'Agregá eventos importantes, exámenes y fechas clave.' }); return; }
+        var eventos = (calEventos || []).slice();
+        // Entregas (tareas) y exámenes aparecen automáticamente
+        if (window.eventosAPI) {
+          window.eventosAPI.listar('tarea').forEach(function (t) { eventos.push({ id: t.id, titulo: t.titulo, fecha: t.fecha, tipo: 'tarea', materia: t.materia, origen: 'tarea' }); });
+        }
+        if (typeof examenes !== 'undefined') {
+          examenes.forEach(function (e) { eventos.push({ id: e.id, titulo: e.titulo, fecha: e.fecha, tipo: 'examen', materia: e.materia, origen: 'examen' }); });
+        }
+        if (eventos.length === 0) { el.innerHTML = emptyMsg('No hay eventos registrados.', { icon: '📆', title: 'Calendario', desc: 'Agregá eventos importantes, exámenes y fechas clave.' }); return; }
+        var badge = { actividad: 'badge-blue', agenda: 'badge-amber', calendario: 'badge-green', tarea: 'badge-purple', examen: 'badge-red' };
+        var orden = eventos.slice().sort(function (a, b) { return (a.fecha || '').localeCompare(b.fecha || ''); });
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          calEventos.map(function (e, i) {
+          orden.map(function (e, i) {
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(e.titulo) + '</strong>' + (e.fecha ? '<br><span style="font-size:.82rem;color:var(--gray-500);">\uD83D\uDCC5 ' + escapeHtml(e.fecha) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+              '<div><strong>' + escapeHtml(e.titulo) + '</strong>' + (e.fecha ? '<br><span style="font-size:.82rem;color:var(--gray-500);">📅 ' + escapeHtml(e.fecha) + ' <span class="badge ' + (badge[e.tipo] || 'badge-gray') + '" style="font-size:.68rem;">' + e.tipo + '</span>' + (e.materia ? ' · ' + escapeHtml(e.materia) : '') + '</span>' : '') + '</div>' +
+              (e.origen ? '' : '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" data-origen="calendario" style="background:var(--red);color:#fff;">🗑️</button>') +
+              '</div>';
           }).join('') + '</div>';
-        el.querySelectorAll('.seccion-del').forEach(function (btn) {
+        el.querySelectorAll('.seccion-del[data-origen="calendario"]').forEach(function (btn) {
           btn.addEventListener('click', function () {
-            calEventos.splice(parseInt(this.dataset.idx), 1);
-            guardarSeccion('calEventos', calEventos);
+            var idx = parseInt(this.dataset.idx);
+            window.eventosAPI.borrar(calEventos[idx].id);
+            calEventos.splice(idx, 1);
             renderCalendario();
             mostrarToast('Evento eliminado.', 'success');
           });
         });
+        var btnExport = document.createElement('button');
+        btnExport.className = 'btn btn-outline btn-sm';
+        btnExport.textContent = '📅 Exportar .ics';
+        btnExport.style.marginTop = '.5rem';
+        btnExport.onclick = exportarICS;
+        el.appendChild(btnExport);
       }
+      function exportarICS() {
+        var evs = (calEventos || []).concat(window.eventosAPI ? window.eventosAPI.listar('tarea') : []).concat(typeof examenes !== 'undefined' ? examenes : []);
+        var lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Cherry-Bomb//Calendario ES//'];
+        evs.forEach(function (e) {
+          if (!e.fecha) return;
+          var uid = e.id || 'e' + Date.now();
+          lines.push('BEGIN:VEVENT');
+          lines.push('UID:' + uid);
+          lines.push('DTSTART;VALUE=DATE:' + e.fecha.replace(/-/g,''));
+          lines.push('DTEND;VALUE=DATE:' + e.fecha.replace(/-/g,''));
+          lines.push('SUMMARY:' + escapeHtmlICS(e.titulo));
+          if (e.materia) lines.push('DESCRIPTION:Materia: ' + escapeHtmlICS(e.materia));
+          lines.push('END:VEVENT');
+        });
+        lines.push('END:VCALENDAR');
+        var blob = new Blob([lines.join('\\r\\n')], { type: 'text/calendar' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'calendario-cherrybomb.ics'; a.click();
+        URL.revokeObjectURL(url);
+        mostrarToast('Calendario exportado a .ics.', 'success');
+      }
+      function escapeHtmlICS(s) { return String(s || '').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n'); }
       $('btn-cal-add').addEventListener('click', function () {
         if (!exigirPermiso('crear')) return;
         dialogPrompt('T\u00EDtulo del evento:', 'Nuevo evento').then(function (titulo) {
           if (!titulo) return;
           dialogPrompt('Fecha (ej: 2026-07-20):', 'Fecha').then(function (fecha) {
-            calEventos.push({ titulo: titulo.trim(), fecha: (fecha || '').trim() });
-            guardarSeccion('calEventos', calEventos);
+            var ev = window.eventosAPI.agregar({
+              titulo: titulo.trim(),
+              tipo: 'calendario',
+              fecha: (fecha || '').trim(),
+              estado: 'pendiente',
+              prioridad: 'media',
+              recordatorio: false
+            });
+            calEventos.push(ev);
             renderCalendario();
             mostrarToast('Evento creado.', 'success');
           });
@@ -3409,6 +3645,35 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             mostrarToast('Fila eliminada.', 'success');
           });
         });
+        // Clase actual / siguiente (clases en línea)
+        var hoyBox = $('horario-clase-hoy');
+        if (!hoyBox) {
+          hoyBox = document.createElement('div');
+          hoyBox.id = 'horario-clase-hoy';
+          el.parentNode.insertBefore(hoyBox, el);
+        }
+        if (clasesItems.length) {
+          var ahora = new Date();
+          var enVivo = null, prox = null, mejor = null;
+          clasesItems.forEach(function (c) {
+            var ini = claseFecha(c);
+            if (!ini) return;
+            var st = claseEstado(c);
+            if (st.tipo === 'en_vivo' && !enVivo) enVivo = c;
+            if (st.tipo === 'futura' && (prox === null || ini < mejor)) { prox = c; mejor = ini; }
+          });
+          var target = enVivo || prox;
+          if (target) {
+            var st = claseEstado(target);
+            var pl = clasePlataforma(target.enlace);
+            hoyBox.innerHTML = '<div style="padding:.6rem .75rem;background:var(--blue-50);border-radius:10px;border:1px solid var(--blue-200);margin-bottom:.7rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;">' +
+              '<div style="flex:1;min-width:0;"><strong>' + escapeHtml(target.titulo) + '</strong><br>' +
+              '<span style="font-size:.8rem;color:var(--gray-600);">' + (enVivo ? '🔴 En vivo ahora' : '⏭️ Siguiente clase') + ' · ' + escapeHtml(st.texto) + ' · ' + escapeHtml(pl.n) + '</span></div>' +
+              (target.enlace && st.abierto ? '<button class="btn btn-sm btn-primary" onclick="window.open(\'' + escapeHtml(target.enlace) + '\',\'_blank\',\'noopener\')">Entrar ahora</button>' : '') +
+              '</div>';
+            hoyBox.style.display = 'block';
+          } else { hoyBox.style.display = 'none'; }
+        } else { hoyBox.style.display = 'none'; }
       }
 
       var editandoIdx = -1;
@@ -3442,6 +3707,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
       $('he-cancelar').addEventListener('click', cerrarPanelHorario);
+        window.horarioDetectarChoque = detectarChoqueHorario;
+
       $('he-guardar').addEventListener('click', function () {
         var hora = $('he-hora').value.trim();
         if (!hora) { mostrarToast('La hora es obligatoria.', 'error'); return; }
@@ -3451,6 +3718,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         var jueves = $('he-jueves').value.trim();
         var viernes = $('he-viernes').value.trim();
         var datos = { hora: hora, Lunes: lunes, Martes: martes, 'Miércoles': miercoles, Jueves: jueves, Viernes: viernes };
+        var choques = detectarChoqueHorario(horarioItems, datos);
+        if (choques.length) {
+          mostrarToast('Choque de horario: ' + choques.join('; '), 'error');
+          return;
+        }
         if (editandoIdx >= 0) {
           horarioItems[editandoIdx] = datos;
         } else {
@@ -5036,109 +5308,152 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
          =================================================================== */
       (function () {
         var POMO_KEY = 'cherrybombPomodoro';
-        var POMO_STUDY = 25 * 60;
-        var POMO_SHORT = 5 * 60;
-        var POMO_LONG = 15 * 60;
+        var SESIONES_KEY = 'sesionesEstudio';
         var fase = 'preparacion';
-        var tiempo = POMO_STUDY;
+        var tiempo = 25 * 60;
         var tiempoInicio = null;
         var intervalo = null;
         var ciclos = 0;
         var pausado = false;
+        var materiaActual = 'general';
 
-        function guardarEstado(){
-          try{localStorage.setItem(POMO_KEY, JSON.stringify({fase: fase, ciclos: ciclos, pausado: pausado}));}catch(e){ /* ignore */ }
+        function durs() {
+          return {
+            estudio: Math.max(1, parseInt($('pomodoro-dur-estudio') && $('pomodoro-dur-estudio').value, 10) || 25) * 60,
+            descansoCorto: Math.max(1, parseInt($('pomodoro-dur-corto') && $('pomodoro-dur-corto').value, 10) || 5) * 60,
+            descansoLargo: Math.max(1, parseInt($('pomodoro-dur-largo') && $('pomodoro-dur-largo').value, 10) || 15) * 60
+          };
         }
-        function cargarEstado(){
-          try{
+        function T(f) { return durs()[f] || 0; }
+
+        function guardarEstado() {
+          try { localStorage.setItem(POMO_KEY, JSON.stringify({ fase: fase, ciclos: ciclos, pausado: pausado })); } catch (e) { /* ignore */ }
+        }
+        function cargarEstado() {
+          try {
             var s = JSON.parse(localStorage.getItem(POMO_KEY) || 'null');
-            if(s){ if(s.fase) fase = s.fase; if(typeof s.ciclos === 'number') ciclos = s.ciclos; if(typeof s.pausado === 'boolean') pausado = s.pausado; }
-          }catch(e){ /* ignore */ }
+            if (s) { if (s.fase) fase = s.fase; if (typeof s.ciclos === 'number') ciclos = s.ciclos; if (typeof s.pausado === 'boolean') pausado = s.pausado; }
+          } catch (e) { /* ignore */ }
+        }
+        function guardarSesion(min, tipo) {
+          try {
+            var arr = JSON.parse(localStorage.getItem(SESIONES_KEY) || '[]');
+            if (!Array.isArray(arr)) arr = [];
+            arr.push({ materia: $('pomodoro-materia') ? $('pomodoro-materia').value : 'general', tipo: tipo, minutos: min, fecha: new Date().toISOString() });
+            localStorage.setItem(SESIONES_KEY, JSON.stringify(arr));
+          } catch (e) { /* ignore */ }
         }
 
-        var TIMER_MAP = { estudio: POMO_STUDY, descansoCorto: POMO_SHORT, descansoLargo: POMO_LONG, preparacion: 0 };
         var faseActual = fase;
-
-        function aplicarFase(nuevaFase){
+        function aplicarFase(nuevaFase) {
           fase = nuevaFase;
           faseActual = nuevaFase;
-          var t = TIMER_MAP[fase] || 0;
+          var t = T(fase) || 0;
           tiempo = t;
           tiempoInicio = Date.now();
-          if(intervalo) clearInterval(intervalo);
+          if (intervalo) clearInterval(intervalo);
           pausado = false;
           var disp = $('pomodoro-timer-display');
           var ph = $('pomodoro-phase');
           var prog = $('pomodoro-progress');
           var cyc = $('pomodoro-cycles');
-          if(disp) disp.textContent = formatear(t);
-          if(ph){
-            var nombres = { preparacion:'Fase preparatoria', estudio:'⏳ Bloque de estudio', descansoCorto:'☕ Descanso corto (5 min)', descansoLargo:'🌿 Descanso largo (15 min)' };
+          if (disp) disp.textContent = formatear(t);
+          if (ph) {
+            var nombres = { preparacion: 'Fase preparatoria', estudio: '⏳ Bloque de estudio', descansoCorto: '☕ Descanso corto', descansoLargo: '🌿 Descanso largo' };
             ph.textContent = nombres[fase] || fase;
-            ph.style.color = fase==='estudio' ? 'var(--primary)' : fase==='descansoCorto' ? 'var(--amber-ink)' : fase==='descansoLargo' ? 'var(--purple-ink)' : 'var(--gray-500)';
+            ph.style.color = fase === 'estudio' ? 'var(--primary)' : fase === 'descansoCorto' ? 'var(--amber-ink)' : fase === 'descansoLargo' ? 'var(--purple-ink)' : 'var(--gray-500)';
           }
-          if(cyc) cyc.textContent = ciclos;
-          if(prog) prog.style.width = '0%';
-          if(fase !== 'preparacion' && !(fase==='estudio' && t<=0)){
+          if (cyc) cyc.textContent = ciclos;
+          if (prog) prog.style.width = '0%';
+          if (fase !== 'preparacion' && !(fase === 'estudio' && t <= 0)) {
             intervalo = setInterval(actualizarTimer, 250);
           }
           guardarEstado();
         }
 
-        function actualizarTimer(){
-          if(pausado) return;
-          var t = TIMER_MAP[faseActual] || 0;
+        function tocarSonido() {
+          try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 0.8);
+            ctx.close();
+          } catch (e) { /* audio no disponible */ }
+        }
+
+        function actualizarTimer() {
+          if (pausado) return;
+          var t = T(faseActual) || 0;
           var transcurrido = Math.floor((Date.now() - tiempoInicio) / 1000);
           var restante = Math.max(0, t - transcurrido);
           tiempo = restante;
           var disp = $('pomodoro-timer-display');
           var prog = $('pomodoro-progress');
-          if(disp) disp.textContent = formatear(restante);
-          if(prog && t > 0){
-            var pct = ((t - restante) / t) * 100;
-            prog.style.width = pct + '%';
-          }
-          if(restante <= 0){
+          if (disp) disp.textContent = formatear(restante);
+          if (prog && t > 0) { var pct = ((t - restante) / t) * 100; prog.style.width = pct + '%'; }
+          if (restante <= 0) {
             clearInterval(intervalo);
             intervalo = null;
             onFaseFinalizada();
           }
         }
 
-        function onFaseFinalizada(){
-          if(faseActual === 'estudio'){
+        function onFaseFinalizada() {
+          if (faseActual === 'estudio') {
             ciclos++;
+            guardarSesion(T('estudio') / 60, 'estudio');
+            tocarSonido();
             var esCicloPar = (ciclos % 2) === 0;
             aplicarFase(esCicloPar ? 'descansoLargo' : 'descansoCorto');
-            mostrarToast('¡Bloque completado! ' + (esCicloPar ? 'Tiempo de descanso largo.' : 'Tiempo de descanso corto.'), 'success');
+            mostrarToast('¡Bloque completado! ' + (esCicloPar ? 'Descanso largo.' : 'Descanso corto.'), 'success');
             return;
           }
+          tocarSonido();
           aplicarFase('estudio');
           mostrarToast('¡Bienvenido de vuelta! Nuevo bloque de estudio.', 'success');
         }
 
-        function formatear(seg){
+        function formatear(seg) {
           var m = Math.floor(seg / 60);
           var s = seg % 60;
-          return (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+          return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
         }
 
+        // Al volver a la pestaña, recalcular desde la hora de inicio para no desfase
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden && intervalo) {
+            tiempoInicio = Date.now() - (tiempo * 1000);
+          }
+        });
+
         cargarEstado();
-        if(faseActual === 'preparacion'){
+        if (faseActual === 'preparacion') {
           aplicarFase('estudio');
-        } else if(faseActual === 'estudio' || faseActual === 'descansoCorto' || faseActual === 'descansoLargo'){
-          if(TIMER_MAP[faseActual] <= 0){ aplicarFase('estudio'); }
+        } else if (faseActual === 'estudio' || faseActual === 'descansoCorto' || faseActual === 'descansoLargo') {
+          if (T(faseActual) <= 0) { aplicarFase('estudio'); }
         }
 
         $('btn-pomodoro-start').addEventListener('click', function () {
-          if(faseActual === 'preparacion'){ aplicarFase('estudio'); return; }
-          if(pausado){ pausado = false; tiempoInicio = Date.now() - (TIMER_MAP[faseActual] - tiempo) * 1000; intervalo = setInterval(actualizarTimer, 250); }
+          if (faseActual === 'preparacion') { aplicarFase('estudio'); return; }
+          if (pausado) {
+            pausado = false;
+            tiempoInicio = Date.now() - (T(faseActual) - tiempo) * 1000;
+            intervalo = setInterval(actualizarTimer, 250);
+          }
         });
         $('btn-pomodoro-pause').addEventListener('click', function () {
           pausado = true;
-          if(intervalo){ clearInterval(intervalo); intervalo = null; }
+          if (intervalo) { clearInterval(intervalo); intervalo = null; }
         });
         $('btn-pomodoro-reset').addEventListener('click', function () { aplicarFase('estudio'); });
+
+        window.pomoRestante = pomodoroRestante;
 
         window.addEventListener('beforeunload', guardarEstado);
       })();
@@ -5403,4 +5718,20 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         renderMigrationBannerInInicio();
       }
 
+      window.migrarLocalStorage = function (grupoDefaultId) {
+        if (!usuarioActual || usuarioActual.rol !== 'admin') {
+          mostrarToast('Solo el administrador puede migrar.', 'error'); return;
+        }
+        var payload = {
+          grupo_default_id: grupoDefaultId || null,
+          estudiantes_db: JSON.parse(localStorage.getItem('estudiantes_db') || '[]'),
+          bachillerato_tareas: JSON.parse(localStorage.getItem('bachillerato_tareas') || '[]'),
+          bachillerato_examenes: JSON.parse(localStorage.getItem('bachillerato_examenes') || '[]')
+        };
+        apiFetch('/api/matricula/migrar-localstorage', payload).then(function (r) {
+          mostrarToast('Migración OK: ' + r.estudiantes + ' est, ' + r.tareas + ' tareas, ' + r.examenes + ' exámenes.', 'success');
+        }).catch(function (e) {
+          mostrarToast('Error migración: ' + e.message, 'error');
+        });
+      };
     })();

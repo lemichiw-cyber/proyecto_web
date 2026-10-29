@@ -14,6 +14,7 @@
     estudiantes: 'estudiantes_db',
     planificaciones: 'planificaciones',
     actividades: 'actividades',
+    eventos: 'eventos',
     mat_solicitudes: 'cherrybombMatSolicitudes'
   };
 

@@ -92,45 +92,26 @@
     var manana = new Date(hoy);
     manana.setDate(manana.getDate() + 1);
 
-    // Encontrar el estudiante actual
-    var est = getEstudianteActual();
-    var estId = est ? est.id : null;
-
-    // Si es estudiante, buscar sus tareas pendientes con fecha próxima
-    if (estId) {
-      var misInscripciones = inscripciones.filter(function (i) {
-        return i.estudianteId === estId && i.estado === 'aprobado';
-      });
-      var misAulaIds = misInscripciones.map(function (i) { return i.aulaId; });
-
-      tareas.forEach(function (t) {
-        if (!t.fecha || !t.aulaId) return;
-        if (misAulaIds.indexOf(t.aulaId) === -1) return;
-
-        // Verificar si ya entregó
-        var yaEntrego = entregas.some(function (e) { return e.tareaIdx === tareas.indexOf(t); });
-        if (yaEntrego) return;
-
-        // Verificar si la fecha es mañana
+    // Estudiante: tareas del modelo único con fecha próxima (24 h)
+    if (window.eventosAPI) {
+      window.eventosAPI.listar('tarea').forEach(function (t) {
+        if (!t.fecha) return;
         var fechaTarea = new Date(t.fecha + 'T23:59:59');
         var diffMs = fechaTarea - hoy;
         var diffHoras = diffMs / (1000 * 60 * 60);
-
         if (diffHoras > 0 && diffHoras <= 24) {
           var reminderKey = 'tarea_' + t.id + '_' + t.fecha;
           if (!reminders[reminderKey]) {
-            var aulaObj = aulas.find(function (a) { return a.id === t.aulaId; });
-            var aulaLabel = aulaObj ? aulaObj.nombre : '';
             send(
               'La tarea vence mañana',
-              '"' + t.titulo + '"' + (aulaLabel ? ' en ' + aulaLabel : '') + ' — fecha límite: ' + t.fecha,
+              '"' + t.titulo + '" — fecha límite: ' + t.fecha,
               'reminder-' + t.id
             );
             reminders[reminderKey] = Date.now();
-            localStorage.setItem(REMINDER_KEY, JSON.stringify(reminders));
           }
         }
       });
+      localStorage.setItem(REMINDER_KEY, JSON.stringify(reminders));
     }
 
     // Si es docente, notificar sobre entregas pendientes en sus aulas

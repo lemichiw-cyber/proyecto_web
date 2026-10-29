@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import accounts, admin, albums, artists, debug, library, playlists, search, songs
+from api import accounts, admin, albums, artists, debug, library, matricula, playlists, search, songs, tareas_examenes
 from api.deps import get_service
 
 load_dotenv()
@@ -79,6 +79,8 @@ app.include_router(playlists.router)
 app.include_router(library.router)
 app.include_router(admin.router)
 app.include_router(accounts.router)          # <-- nuevo
+app.include_router(matricula.router)         # <-- matrícula por grupo
+app.include_router(tareas_examenes.router)   # <-- tareas/exámenes por grupo
 
 
 @app.get("/", tags=["meta"])
