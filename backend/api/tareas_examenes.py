@@ -169,6 +169,14 @@ class ExamenIn(BaseModel):
                 raise ValueError(f"Pregunta {i + 1}: respuesta correcta obligatoria")
             if tipo == "abierta" and not str(p.get("texto", "")).strip():
                 raise ValueError(f"Pregunta {i + 1}: texto obligatorio")
+            if tipo == "casilla" and not isinstance(p.get("correctas"), list):
+                raise ValueError(f"Pregunta {i + 1}: 'correctas' debe ser lista de índices")
+            if tipo == "ordenar" and not isinstance(p.get("orden"), list):
+                raise ValueError(f"Pregunta {i + 1}: 'orden' debe ser lista de índices")
+            if tipo == "emparejar" and not isinstance(p.get("pares"), list):
+                raise ValueError(f"Pregunta {i + 1}: 'pares' debe ser lista de pares")
+            if tipo == "texto_largo" and not str(p.get("respuesta", "")).strip():
+                raise ValueError(f"Pregunta {i + 1}: respuesta esperada obligatoria")
         return v
 
 def _grupos_validos(docente_id, grupo_ids):

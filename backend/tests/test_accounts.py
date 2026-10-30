@@ -139,3 +139,35 @@ def test_examen_pregunta_abierta():
         ],
     )
     assert ex.preguntas[0]["tipo"] == "abierta"
+
+
+def test_examen_nuevos_tipos():
+    """ExamenIn acepta casilla, ordenar, emparejar y texto_largo."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    ex = ExamenIn(
+        titulo="Variados",
+        materia="software",
+        tiempo=20,
+        preguntas=[
+            {"texto": "¿Cuáles son lenguajes?", "tipo": "casilla", "opciones": ["JS", "Python", "HTML"], "correctas": [0, 1, 2]},
+            {"texto": "Ordená pasos", "tipo": "ordenar", "opciones": ["A", "B", "C"], "orden": [2, 0, 1]},
+            {"texto": "Emparejá", "tipo": "emparejar", "pares": [["HTML", "Marcado"], ["CSS", "Estilos"]]},
+            {"texto": "Explicá", "tipo": "texto_largo", "respuesta": "Respuesta esperada larga"},
+        ],
+    )
+    assert ex.preguntas[0]["tipo"] == "casilla"
+    assert ex.preguntas[1]["tipo"] == "ordenar"
+    assert ex.preguntas[2]["tipo"] == "emparejar"
+    assert ex.preguntas[3]["tipo"] == "texto_largo"
+
+
+def test_examen_casilla_sin_correctas_rechazado():
+    """ExamenIn rechaza casilla sin correctas."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    with pytest.raises(Exception):
+        ExamenIn(
+            titulo="Mal",
+            materia="ciencias",
+            tiempo=10,
+            preguntas=[{"texto": "¿x?", "tipo": "casilla", "opciones": ["A", "B"]}],
+        )

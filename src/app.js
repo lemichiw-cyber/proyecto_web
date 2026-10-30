@@ -1754,6 +1754,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
                 '<option value="vf">Verdadero/Falso</option>' +
                 '<option value="completar">Completar</option>' +
                 '<option value="abierta">Abierta</option>' +
+                '<option value="casilla">Casilla Múltiple</option>' +
+                '<option value="ordenar">Ordenar</option>' +
+                '<option value="emparejar">Emparejar</option>' +
+                '<option value="texto_largo">Texto Largo</option>' +
               '</select>' +
               '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red-ink);font-size:1.2rem;padding:0 4px;">×</button>' +
             '</div>' +
@@ -1788,6 +1792,27 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           body.innerHTML =
             '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Pregunta abierta (el docente califica la respuesta libre):</div>' +
             '<input type="text" placeholder="Pista de respuesta esperada (opcional)" data-idx="' + idx + '" data-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'casilla') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Seleccioná todas las opciones correctas:</div>' +
+            '<div class="opt-row"><span class="opt-label">A)</span><input type="text" placeholder="Opción A" data-idx="' + idx + '" data-opt="0"><input type="checkbox" name="casilla-' + idx + '" data-opt="0"></div>' +
+            '<div class="opt-row"><span class="opt-label">B)</span><input type="text" placeholder="Opción B" data-idx="' + idx + '" data-opt="1"><input type="checkbox" name="casilla-' + idx + '" data-opt="1"></div>' +
+            '<div class="opt-row"><span class="opt-label">C)</span><input type="text" placeholder="Opción C" data-idx="' + idx + '" data-opt="2"><input type="checkbox" name="casilla-' + idx + '" data-opt="2"></div>';
+        } else if (tipo === 'ordenar') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Arrástrá para ordenar (usa las flechas arriba/abajo):</div>' +
+            '<div class="opt-row"><span class="opt-label">1</span><input type="text" placeholder="Opción 1" data-idx="' + idx + '" data-opt="0"></div>' +
+            '<div class="opt-row"><span class="opt-label">2</span><input type="text" placeholder="Opción 2" data-idx="' + idx + '" data-opt="1"></div>' +
+            '<div class="opt-row"><span class="opt-label">3</span><input type="text" placeholder="Opción 3" data-idx="' + idx + '" data-opt="2"></div>';
+        } else if (tipo === 'emparejar') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Emparejá cada concepto con su definición:</div>' +
+            '<div class="opt-row"><span class="opt-label">A</span><input type="text" placeholder="Concepto" data-idx="' + idx + '" data-opt="0"><input type="text" placeholder="Definición" data-idx="' + idx + '" data-opt="1"></div>' +
+            '<div class="opt-row"><span class="opt-label">B</span><input type="text" placeholder="Concepto" data-idx="' + idx + '" data-opt="3"><input type="text" placeholder="Definición" data-idx="' + idx + '" data-opt="4"></div>';
+        } else if (tipo === 'texto_largo') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Escribí la respuesta esperada (se califica por palabras clave):</div>' +
+            '<textarea placeholder="Respuesta esperada..." data-idx="' + idx + '" data-resp="" style="width:100%;min-height:70px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></textarea>';
         }
       };
 
@@ -1831,6 +1856,54 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           } else if (tipo === 'abierta') {
             var respInput = item.querySelector('input[data-resp]');
             q.respuesta = respInput ? respInput.value.trim() : '';
+          } else if (tipo === 'texto_largo') {
+            var respInput = item.querySelector('textarea[data-resp]');
+            q.respuesta = respInput ? respInput.value.trim() : '';
+            if (!q.respuesta) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': escribí la respuesta esperada.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+          } else if (tipo === 'casilla') {
+            var correctas = [];
+            item.querySelectorAll('input[name="casilla-' + idx + '"]:checked').forEach(function (cb) {
+              correctas.push(parseInt(cb.dataset.opt, 10));
+            });
+            var opts = [];
+            item.querySelectorAll('input[data-opt]').forEach(function (inp) { opts.push(inp.value.trim()); });
+            if (!opts.every(Boolean) || correctas.length === 0) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': completá opciones y seleccioná al menos una correcta.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.opciones = opts;
+            q.correctas = correctas;
+          } else if (tipo === 'ordenar') {
+            var opts = [];
+            item.querySelectorAll('input[data-opt]').forEach(function (inp) { opts.push(inp.value.trim()); });
+            if (!opts.every(Boolean)) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': completá todas las opciones.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.opciones = opts;
+            q.orden = [0, 1, 2];
+          } else if (tipo === 'emparejar') {
+            var pares = [];
+            var rows = item.querySelectorAll('.opt-row');
+            var ok = true;
+            rows.forEach(function (row) {
+              var c = row.querySelector('input[data-opt="0"], input[data-opt="3"]');
+              var d = row.querySelector('input[data-opt="1"], input[data-opt="4"]');
+              if (!c || !d || !c.value.trim() || !d.value.trim()) ok = false;
+              pares.push([c ? c.value.trim() : '', d ? d.value.trim() : '']);
+            });
+            if (!ok || pares.length < 2) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': completá al menos 2 pares.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.pares = pares;
           }
           preguntas.push(q);
         });
@@ -2131,6 +2204,29 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             html += '<div style="margin-top:.4rem;"><input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta..." style="width:100%;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></div>';
           } else if (q.tipo === 'abierta') {
             html += '<div style="margin-top:.4rem;"><textarea class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta libre..." style="width:100%;min-height:80px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></textarea></div>';
+          } else if (q.tipo === 'casilla') {
+            html += '<div style="margin-top:.4rem;color:var(--gray-500);font-size:.85rem;">Seleccioná todas las correctas:</div>' +
+              q.opciones.map(function (opt, oi) {
+                return '<label class="opt-row"><input type="checkbox" name="exam-resp-' + qi + '" value="' + oi + '"> <span>' + String.fromCharCode(65 + oi) + ') ' + escapeHtml(opt) + '</span></label>';
+              }).join('');
+          } else if (q.tipo === 'ordenar') {
+            html += '<div style="margin-top:.4rem;color:var(--gray-500);font-size:.85rem;">Ordenerá las opciones (el orden guardado es la respuesta correcta):</div>' +
+              q.opciones.map(function (opt, oi) {
+                return '<div class="opt-row"><span class="opt-label">' + (oi + 1) + '.</span><input type="text" class="exam-fill-input" data-qi="' + qi + '" value="' + escapeHtml(opt) + '" readonly style="width:100%;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;background:var(--gray-50);"></div>';
+              }).join('') +
+              '<div style="margin-top:.5rem;color:var(--gray-500);font-size:.8rem;">(Usá las flechas del teclado o arrastrá para reordenar antes de responder)</div>';
+          } else if (q.tipo === 'emparejar') {
+            html += '<div style="margin-top:.4rem;color:var(--gray-500);font-size:.85rem;">Emparejá concepto con definición:</div>' +
+              q.pares.map(function (par, pi) {
+                return '<div class="opt-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;">' +
+                  '<span class="opt-label">' + String.fromCharCode(65 + pi) + '</span>' +
+                  '<input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Concepto ' + (pi + 1) + '" value="' + escapeHtml(par[0]) + '" style="flex:1;padding:.4rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;">' +
+                  ' <span style="color:var(--gray-500);">↔</span> ' +
+                  '<input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Definición ' + (pi + 1) + '" value="' + escapeHtml(par[1]) + '" style="flex:1;padding:.4rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;">' +
+                  '</div>';
+              }).join('');
+          } else if (q.tipo === 'texto_largo') {
+            html += '<div style="margin-top:.4rem;"><textarea class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta desarrollada..." style="width:100%;min-height:100px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></textarea></div>';
           }
           html += '</div>';
           return html;
@@ -2184,9 +2280,15 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function examRecolectarRespuestas() {
         if (!examEnCurso) return [];
         return examEnCurso.examen.preguntas.map(function (q, qi) {
-          if (q.tipo === 'completar') {
+          if (q.tipo === 'completar' || q.tipo === 'texto_largo' || q.tipo === 'abierta') {
             var fill = document.querySelector('.exam-fill-input[data-qi="' + qi + '"]');
-            return fill ? fill.value.trim().toLowerCase() : '';
+            return fill ? fill.value.trim() : '';
+          } else if (q.tipo === 'casilla') {
+            var checks = document.querySelectorAll('input[name="exam-resp-' + qi + '"]:checked');
+            return Array.from(checks).map(function (c) { return parseInt(c.value, 10); });
+          } else if (q.tipo === 'ordenar' || q.tipo === 'emparejar') {
+            var fills = document.querySelectorAll('.exam-fill-input[data-qi="' + qi + '"]');
+            return Array.from(fills).map(function (f) { return f.value.trim(); });
           } else {
             var radios = document.querySelectorAll('input[name="exam-resp-' + qi + '"]');
             for (var j = 0; j < radios.length; j++) {
@@ -2199,16 +2301,29 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
 
       function examTextoRespuesta(q, valor) {
         if (valor === null || valor === undefined || valor === '') return 'Sin responder';
-        if (q.tipo === 'completar') return String(valor);
+        if (q.tipo === 'completar' || q.tipo === 'texto_largo' || q.tipo === 'abierta') return String(valor);
         if (q.tipo === 'vf') return Number(valor) === 1 ? 'Verdadero' : 'Falso';
         if (q.tipo === 'multiple') return String.fromCharCode(65 + Number(valor)) + ') ' + ((q.opciones || [])[Number(valor)] || '');
+        if (q.tipo === 'casilla') {
+          var idxs = Array.isArray(valor) ? valor : [valor];
+          return idxs.map(function (n) { return String.fromCharCode(65 + n) + ') ' + ((q.opciones || [])[n] || ''); }).join(', ');
+        }
+        if (q.tipo === 'ordenar' || q.tipo === 'emparejar') {
+          return Array.isArray(valor) ? valor.join(' → ') : String(valor);
+        }
         return String(valor);
       }
 
       function examTextoCorrecta(q) {
-        if (q.tipo === 'completar') return q.respuesta || '—';
+        if (q.tipo === 'completar' || q.tipo === 'texto_largo') return q.respuesta || '—';
         if (q.tipo === 'vf') return Number(q.correcta) === 1 ? 'Verdadero' : 'Falso';
         if (q.tipo === 'multiple') return String.fromCharCode(65 + Number(q.correcta)) + ') ' + ((q.opciones || [])[Number(q.correcta)] || '');
+        if (q.tipo === 'casilla') {
+          var idxs = Array.isArray(q.correctas) ? q.correctas : [];
+          return idxs.map(function (n) { return String.fromCharCode(65 + n) + ') ' + ((q.opciones || [])[n] || ''); }).join(', ');
+        }
+        if (q.tipo === 'ordenar') return (q.opciones || []).join(' → ');
+        if (q.tipo === 'emparejar') return (q.pares || []).map(function (par) { return par[0] + ' ↔ ' + par[1]; }).join('; ');
         return '—';
       }
 
@@ -2224,9 +2339,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           var dada = respuestas[i];
           var ok = false;
           if (dada !== null && dada !== '' && dada !== undefined) {
-            ok = (q.tipo === 'completar')
+            ok = (q.tipo === 'completar' || q.tipo === 'texto_largo')
               ? dada === (q.respuesta || '').toLowerCase()
-              : q.tipo === 'abierta'
+              : q.tipo === 'abierta' || q.tipo === 'casilla' || q.tipo === 'ordenar' || q.tipo === 'emparejar'
                 ? null  // pendiente de calificación docente
                 : dada === q.correcta;
           }
@@ -2234,7 +2349,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           detalle.push({ ok: ok, dada: dada, q: q });
         });
 
-        var totalCerradas = preguntas.filter(function (q) { return q.tipo !== 'abierta'; }).length;
+        var totalCerradas = preguntas.filter(function (q) { return q.tipo !== 'abierta' && q.tipo !== 'casilla' && q.tipo !== 'ordenar' && q.tipo !== 'emparejar' && q.tipo !== 'texto_largo'; }).length;
         var total = totalCerradas > 0 ? totalCerradas : preguntas.length;
         var porcentaje = total > 0 ? Math.round(correctas / total * 100) : 0;
         var notaMin = examNotaMin(examEnCurso.examen);
