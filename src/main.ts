@@ -1,5 +1,6 @@
 import './styles.css';
 import './data.js';
+import './data/eventos.js';
 import './notifications.js';
 import './app.js';
 

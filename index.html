@@ -1857,15 +1857,8 @@ unicode: "eb6d"
                   <option value="ingles">Inglés</option>
                 </select>
               </div>
-              <div class="form-group" style="flex:1;min-width:120px;"><label>Grupo</label>
-                <select id="tarea-grupo" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
-                  <option value="1A">1° Semestre A</option>
-                  <option value="1B">1° Semestre B</option>
-                  <option value="2A">2° Semestre A</option>
-                  <option value="2B">2° Semestre B</option>
-                  <option value="3A">3° Semestre A</option>
-                  <option value="3B">3° Semestre B</option>
-                </select>
+              <div class="form-group" style="flex:1;min-width:120px;"><label>Grupo(s)</label>
+                <div id="tarea-grupos" style="display:flex;flex-direction:wrap;gap:.4rem;font-size:.78rem;"></div>
               </div>
               <div class="form-group" style="flex:1;min-width:120px;"><label>Fecha límite</label><input type="date" id="tarea-fecha" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
             </div>
@@ -2439,6 +2432,7 @@ unicode: "ea98"
               <div class="form-group" style="max-width:150px;"><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
               <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-barajar"> Barajar preguntas</label></div>
             </div>
+            <div id="exam-grupos-wrap" style="margin-top:.6rem;"><label style="font-weight:600;display:block;font-size:.85rem;margin-bottom:.3rem;">Grupo(s) destino</label><div id="exam-grupos" style="display:flex;flex-wrap:wrap;gap:.4rem;font-size:.78rem;"></div></div>
             <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
             <div class="flex-between" style="margin-bottom:.75rem;">
               <h3 style="font-size:.9rem;margin:0;"><!--
@@ -3431,6 +3425,23 @@ unicode: "ea5e"
             <div style="display:flex;align-items:center;gap:.3rem;background:var(--purple-light);padding:.3rem .6rem;border-radius:99px;"><span style="font-weight:700;color:var(--purple-ink);">15:00</span> Descanso largo</div>
           </div>
           <div style="margin-top:1rem;font-size:.78rem;color:var(--text-secondary);">Ciclos completados: <span id="pomodoro-cycles" style="font-weight:700;color:var(--primary);">0</span></div>
+          <div style="margin-top:.9rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;align-items:center;font-size:.82rem;">
+            <label style="display:flex;align-items:center;gap:.3rem;">Materia
+              <select id="pomodoro-materia" style="padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;">
+                <option value="general">General</option>
+                <option value="matematicas">Matemáticas</option>
+                <option value="fisica">Física</option>
+                <option value="quimica">Química</option>
+                <option value="biologia">Biología</option>
+                <option value="literatura">Literatura</option>
+                <option value="historia">Historia</option>
+                <option value="ingles">Inglés</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;">Estudio <input id="pomodoro-dur-estudio" type="number" min="1" max="180" value="25" style="width:45px;padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"> min</label>
+            <label style="display:flex;align-items:center;gap:.3rem;">Desc. corto <input id="pomodoro-dur-corto" type="number" min="1" max="60" value="5" style="width:45px;padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"> min</label>
+            <label style="display:flex;align-items:center;gap:.3rem;">Desc. largo <input id="pomodoro-dur-largo" type="number" min="1" max="120" value="15" style="width:45px;padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"> min</label>
+          </div>
         </div>
       </div>
     </section>

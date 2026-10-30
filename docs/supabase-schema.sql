@@ -202,3 +202,119 @@ CREATE POLICY "Admin ve solicitudes" ON mat_solicitudes FOR SELECT USING (
   EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
 );
 CREATE POLICY "Cualquiera envía solicitud" ON mat_solicitudes FOR INSERT WITH CHECK (true);
+
+-- =====================================================
+-- GRUPOS / MATRÍCULA (separación por año y sección)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS grupos (
+  id SERIAL PRIMARY KEY,
+  anio TEXT NOT NULL,
+  seccion TEXT NOT NULL,
+  ciclo_escolar TEXT NOT NULL,
+  UNIQUE(anio, seccion, ciclo_escolar)
+);
+
+ALTER TABLE grupos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "grupos_select_docente_admin" ON grupos FOR SELECT USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director','coordinador'))
+  OR EXISTS (SELECT 1 FROM docente_grupo dg WHERE dg.grupo_id = grupos.id AND dg.docente_id = auth.uid())
+);
+CREATE POLICY "grupos_select_estudiante_propio" ON grupos FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM estudiantes e
+    JOIN perfiles p ON p.email = e.email
+    WHERE p.id = auth.uid() AND e.grupo_id = grupos.id
+  )
+);
+CREATE POLICY "grupos_insert_admin" ON grupos FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+CREATE POLICY "grupos_update_admin" ON grupos FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+CREATE POLICY "grupos_delete_admin" ON grupos FOR DELETE USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+
+CREATE TABLE IF NOT EXISTS docente_grupo (
+  docente_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  grupo_id INTEGER REFERENCES grupos(id) ON DELETE CASCADE,
+  materia TEXT NOT NULL,
+  PRIMARY KEY (docente_id, grupo_id, materia)
+);
+
+ALTER TABLE docente_grupo ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "docente_grupo_select" ON docente_grupo FOR SELECT USING (
+  auth.uid() = docente_id
+  OR EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+CREATE POLICY "docente_grupo_insert" ON docente_grupo FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+  OR auth.uid() = docente_id
+);
+CREATE POLICY "docente_grupo_delete" ON docente_grupo FOR DELETE USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+
+-- estudiantes: añadir grupo_id (migración compatible, nullable)
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS grupo_id INTEGER REFERENCES grupos(id);
+
+DROP POLICY IF EXISTS "Docentes ven estudiantes" ON estudiantes;
+DROP POLICY IF EXISTS "Admin gestiona estudiantes" ON estudiantes;
+CREATE POLICY "estudiantes_select_docente_admin" ON estudiantes FOR SELECT USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('docente','admin','director','coordinador'))
+);
+CREATE POLICY "estudiantes_select_own" ON estudiantes FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM perfiles p
+    JOIN estudiantes e ON e.email = p.email
+    WHERE p.id = auth.uid() AND e.id = estudiantes.id
+  )
+);
+CREATE POLICY "estudiantes_insert_admin" ON estudiantes FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+CREATE POLICY "estudiantes_update_admin" ON estudiantes FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+
+-- asignaciones: un item (tarea/examen) asignado a uno o varios grupos
+CREATE TABLE IF NOT EXISTS asignaciones (
+  id SERIAL PRIMARY KEY,
+  tipo TEXT NOT NULL CHECK (tipo IN ('tarea','examen')),
+  item_id INTEGER NOT NULL,
+  grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(tipo, item_id, grupo_id)
+);
+
+ALTER TABLE asignaciones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "asignaciones_select" ON asignaciones FOR SELECT USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+  OR EXISTS (
+    SELECT 1 FROM docente_grupo dg
+    WHERE dg.grupo_id = asignaciones.grupo_id AND dg.docente_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM estudiantes e
+    JOIN perfiles p ON p.email = e.email
+    WHERE p.id = auth.uid() AND e.grupo_id = asignaciones.grupo_id
+  )
+);
+CREATE POLICY "asignaciones_insert_docente" ON asignaciones FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM docente_grupo dg
+    WHERE dg.grupo_id = asignaciones.grupo_id AND dg.docente_id = auth.uid()
+  )
+  OR EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+CREATE POLICY "asignaciones_delete_admin" ON asignaciones FOR DELETE USING (
+  EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin','director'))
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_estudiantes_grupo ON estudiantes(grupo_id);
+CREATE INDEX IF NOT EXISTS idx_docente_grupo_docente ON docente_grupo(docente_id);
+CREATE INDEX IF NOT EXISTS idx_docente_grupo_grupo ON docente_grupo(grupo_id);
+CREATE INDEX IF NOT EXISTS idx_asignaciones_item ON asignaciones(tipo, item_id);
+CREATE INDEX IF NOT EXISTS idx_asignaciones_grupo ON asignaciones(grupo_id);
