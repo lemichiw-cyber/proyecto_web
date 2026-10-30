@@ -17,7 +17,9 @@ import os
 import pathlib
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
+
+from api.admin import require_admin
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
@@ -84,11 +86,13 @@ class AccountCreate(BaseModel):
     nombre: str = Field(..., min_length=1, description="Nombre para mostrar")
     semestre: str | None = Field(None, description="Semestre (opcional)")
 
-    @validator("email")
+    @field_validator("email")
+    @classmethod
     def email_lower(cls, v: str) -> str:
         return v.strip().lower()
 
-    @validator("rol")
+    @field_validator("rol")
+    @classmethod
     def rol_valido(cls, v: str) -> str:
         if v not in ROLES_VALIDOS_BACKEND:
             raise ValueError(f"Rol inválido. Use uno de: {', '.join(sorted(ROLES_VALIDOS_BACKEND))}")
@@ -105,9 +109,52 @@ class AccountUpdate(BaseModel):
 # ------------------------------------------------------------
 # Utilidades
 # ------------------------------------------------------------
+try:
+    import bcrypt as _bcrypt
+except ImportError:  # pragma: no cover - fallback si falta la dependencia
+    _bcrypt = None
+
+
 def _hash_password(password: str) -> str:
+    """Hash con bcrypt (salt por password). Si bcrypt no está instalado,
+    cae a pbkdf2_hmac con salt aleatorio — NUNCA a SHA-256 pelado."""
+    if _bcrypt is not None:
+        return _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
     import hashlib
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    import hmac as _hmac
+    import os as _os
+    salt = _os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
+    return "pbkdf2$" + salt.hex() + "$" + dk.hex()
+
+
+def _verify_password(password: str, stored: str | None) -> bool:
+    """Verifica contra bcrypt o, para cuentas viejas, contra SHA-256
+    (hash migrable)."""
+    if not stored:
+        return False
+    if stored.startswith("pbkdf2$"):
+        import hashlib
+        salt_hex, dk_hex = stored.split("$")[1:3]
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt_hex), 200_000)
+        return _hmac_compare(dk.hex(), dk_hex)
+    if stored.startswith("$2"):
+        if _bcrypt is None:
+            return False
+        try:
+            return _bcrypt.checkpw(password.encode("utf-8"), stored.encode("utf-8"))
+        except ValueError:
+            return False
+    # Hash legacy SHA-256 (hex de 64)
+    import hashlib
+    if _hmac_compare(hashlib.sha256(password.encode("utf-8")).hexdigest(), stored):
+        return True
+    return False
+
+
+def _hmac_compare(a: str, b: str) -> bool:
+    import hmac as _hmac
+    return _hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
 
 
 def _account_exists(email: str, accounts: dict) -> bool:
@@ -119,10 +166,14 @@ def _account_exists(email: str, accounts: dict) -> bool:
 # ------------------------------------------------------------
 
 @router.get("/", response_model=dict)
-def list_accounts(role_filter: str | None = None) -> dict:
+def list_accounts(
+    role_filter: str | None = None,
+    _email: str = Depends(require_admin),
+) -> dict:
     """Listar todas las cuentas, opcionalmente filtradas por rol.
 
-    Nunca expone password_hash (el frontend solo necesita rol/nombre/...).
+    Solo admin (expone email/rol/nombre de todo el colegio).
+    Nunca expone password_hash.
     """
     accounts = _load_accounts()
     public = {
@@ -140,7 +191,10 @@ def create_account(payload: AccountCreate, request: Request) -> dict:
     """Crear una nueva cuenta de usuario.
 
     - El email debe ser único.
-    - La contraseña se guarda como hash SHA-256.
+    - El rol se IGNORA del cliente: siempre se fuerza "estudiante" (un
+      usuario anónimo no puede autoasignarse admin/docente). Solo un admin
+      autenticado puede cambiar roles vía PUT.
+    - La contraseña se guarda como hash bcrypt.
     - En el primer registro (cuando no existe admin@bachillerato.edu),
       el email y la contraseña del primer usuario se convierten en el admin
       semilla (igual que el comportamiento actual con localStorage).
@@ -162,11 +216,11 @@ def create_account(payload: AccountCreate, request: Request) -> dict:
     account = {
         "email": email,
         "password_hash": hashed,
-        "rol": payload.rol,
+        "rol": "estudiante",  # SIEMPRE estudiante en el registro público
         "nombre": payload.nombre,
         "activo": True,
         "semestre": payload.semestre,
-        "creado": __import__("datetime").datetime.utcnow().isoformat(),
+        "creado": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
     }
 
     accounts[email] = account
@@ -195,23 +249,14 @@ def update_account(
     email: str,
     payload: AccountUpdate,
     request: Request,
+    _email_admin: str = Depends(require_admin),
 ) -> dict:
-    """Actualizar rol y/or activo de una cuenta. Solo admin puede hacerlo.
-
-    En el frontend, la dependencia `require_admin` (del modulo admin de Sakura
-    Player) se reutiliza aquí mediante un fetch con token Bearer.
-    """
+    """Actualizar rol y/or activo de una cuenta. Solo admin."""
     accounts = _load_accounts()
 
     target = email.strip().lower()
     if not _account_exists(target, accounts):
         raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
-
-    # Verificación de rol admin: el frontend debe enviar el token admin en el header
-    # FastAPI no tiene la dependencia 'require_admin' cosida aquí directamente;
-    # el caller (frontend) debe poner el header X-Admin-Token o similar.
-    # Por ahora confiamos en que el backend recibe la petición del frontend
-    # autenticado como admin (el mismo flujo que usa /api/admin/me).
 
     # Actualizar campos no nulos
     if payload.rol is not None:
@@ -231,7 +276,7 @@ def update_account(
 
 
 @router.delete("/{email}", status_code=204)
-def delete_account(email: str, request: Request) -> None:
+def delete_account(email: str, request: Request, _email_admin: str = Depends(require_admin)) -> None:
     """Borrar una cuenta. Solo admin.
 
     Devuelve 204 sin contenido. Si la cuenta es la última admin, se impede.

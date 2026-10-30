@@ -35,8 +35,19 @@ from api.deps import get_service
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-ADMIN_EMAIL = os.getenv("SAKURA_ADMIN_EMAIL", "sakuraenterprise2@gmail.com").strip().lower()
-ADMIN_PASSWORD = os.getenv("SAKURA_ADMIN_PASSWORD", "MLRTJAH")
+# Credenciales admin: SOLO por variable de entorno. Sin valores, el modo
+# administrador queda desactivado (login responde 403) en lugar de usar
+# un default hardcodeado que cualquiera podría adivinar.
+ADMIN_EMAIL = os.getenv("SAKURA_ADMIN_EMAIL", "").strip().lower()
+ADMIN_PASSWORD = os.getenv("SAKURA_ADMIN_PASSWORD", "")
+ADMIN_ENABLED = bool(ADMIN_EMAIL and ADMIN_PASSWORD)
+
+
+def _admin_disabled() -> HTTPException:
+    return HTTPException(
+        status_code=403,
+        detail="Modo administrador desactivado: defíní SAKURA_ADMIN_EMAIL y SAKURA_ADMIN_PASSWORD",
+    )
 
 _TOKEN_TTL = 24 * 3600          # 24 horas
 _MAX_ATTEMPTS = 5               # intentos fallidos...
@@ -55,6 +66,8 @@ def _secret() -> bytes:
     configured = os.getenv("SAKURA_ADMIN_TOKEN_SECRET", "").strip()
     if configured:
         return configured.encode("utf-8")
+    if not ADMIN_PASSWORD:
+        raise _admin_disabled()
     return hashlib.sha256(("sakura-admin:" + ADMIN_PASSWORD).encode("utf-8")).digest()
 
 
@@ -150,6 +163,8 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 def login(payload: LoginRequest, request: Request) -> dict:
     """Valida credenciales y devuelve un token de sesión (24 h)."""
+    if not ADMIN_ENABLED:
+        raise _admin_disabled()
     ip = _client_ip(request)
     if _is_locked(ip):
         raise HTTPException(

@@ -70,7 +70,8 @@ app.add_middleware(
 )
 
 # Routers
-app.include_router(debug.router)
+if os.getenv("SAKURA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
+    app.include_router(debug.router)
 app.include_router(search.router)
 app.include_router(songs.router)
 app.include_router(artists.router)
