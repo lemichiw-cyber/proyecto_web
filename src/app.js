@@ -1789,7 +1789,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       function examGetPreguntas() {
         var items = document.querySelectorAll('#exam-q-list .pregunta-item');
         var preguntas = [];
-        items.forEach(function (item) {
+        items.forEach(function (item, i) {
           var idx = item.querySelector('.pregunta-textarea').dataset.idx;
           var texto = item.querySelector('.pregunta-textarea').value.trim();
           if (!texto) return;
@@ -1800,14 +1800,29 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var optB = item.querySelector('input[data-opt="1"]').value.trim();
             var optC = item.querySelector('input[data-opt="2"]').value.trim();
             var correcta = item.querySelector('input[name="correcta-' + idx + '"]:checked');
-            q.opciones = [optA || '—', optB || '—', optC || '—'];
-            q.correcta = correcta ? parseInt(correcta.value, 10) : 0;
+            if (!optA || !optB || !optC || !correcta) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': completa todas las opciones y marcá la correcta.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.opciones = [optA, optB, optC];
+            q.correcta = parseInt(correcta.value, 10);
           } else if (tipo === 'vf') {
             var correctaVf = item.querySelector('input[name="correcta-' + idx + '"]:checked');
-            q.correcta = correctaVf ? parseInt(correctaVf.value, 10) : 1;
+            if (!correctaVf) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': seleccioná Verdadero o Falso.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.correcta = parseInt(correctaVf.value, 10);
           } else if (tipo === 'completar') {
             var respInput = item.querySelector('input[data-resp]');
             q.respuesta = respInput ? respInput.value.trim() : '';
+            if (!q.respuesta) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': escribí la respuesta correcta.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
           }
           preguntas.push(q);
         });
@@ -1815,6 +1830,11 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
       }
 
       function examGuardar() {
+        try {
+          var preguntas = examGetPreguntas();
+        } catch (e) {
+          return;
+        }
         var titulo = $('exam-titulo').value.trim();
         var tiempo = parseInt($('exam-tiempo').value, 10) || 60;
         var notamin = parseInt($('exam-notamin').value, 10);
@@ -1823,8 +1843,6 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(notamin) || notamin < 1 || notamin > 100) { $('exam-guardar-msg').textContent = '⚠️ La nota mínima va de 1 a 100.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        var preguntas = examGetPreguntas();
-        if (preguntas.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Agrega al menos 1 pregunta.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var grupo_ids = gruposSeleccionados();
         if (grupo_ids.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Selecciona al menos un grupo.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var ex = { titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, grupo_ids: grupo_ids, creado: new Date().toISOString() };

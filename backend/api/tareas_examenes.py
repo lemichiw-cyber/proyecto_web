@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 try:
     import psycopg2
@@ -115,6 +115,42 @@ class ExamenIn(BaseModel):
     intentos: int = 3
     barajar: bool = False
     grupo_ids: list[int] = Field(default_factory=list)
+
+    @field_validator("tiempo")
+    @classmethod
+    def _tiempo_positivo(cls, v: int) -> int:
+        if v < 1 or v > 480:
+            raise ValueError("El tiempo debe estar entre 1 y 480 minutos")
+        return v
+
+    @field_validator("notamin")
+    @classmethod
+    def _notamin_rango(cls, v: int) -> int:
+        if v < 0 or v > 100:
+            raise ValueError("La nota mínima debe estar entre 0 y 100")
+        return v
+
+    @field_validator("intentos")
+    @classmethod
+    def _intentos_positivo(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("Los intentos deben ser al menos 1")
+        return v
+
+    @field_validator("preguntas")
+    @classmethod
+    def _preguntas_validas(cls, v: list) -> list:
+        if not v:
+            raise ValueError("El examen debe tener al menos una pregunta")
+        for i, p in enumerate(v):
+            if not isinstance(p, dict) or not str(p.get("texto", "")).strip():
+                raise ValueError(f"Pregunta {i + 1}: texto obligatorio")
+            tipo = str(p.get("tipo", "multiple"))
+            if tipo == "completar" and not str(p.get("respuesta", "")).strip():
+                raise ValueError(f"Pregunta {i + 1}: respuesta correcta obligatoria")
+            if tipo in ("multiple", "vf") and p.get("correcta") is None:
+                raise ValueError(f"Pregunta {i + 1}: respuesta correcta obligatoria")
+        return v
 
 def _grupos_validos(docente_id, grupo_ids):
     """Devuelve True si todos los grupo_ids pertenecen al docente."""

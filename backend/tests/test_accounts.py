@@ -84,3 +84,30 @@ def test_login_admin_desactivado_sin_variables(monkeypatch):
         json={"email": "x@y.z", "password": "whatever"},
     )
     assert r.status_code == 403, r.text
+
+
+def test_examen_sin_respuesta_devuelve_422():
+    """ExamenIn rechaza pregunta múltiple sin correcta."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    with pytest.raises(Exception) as exc:
+        ExamenIn(
+            titulo="Examen inválido",
+            tiempo=10,
+            preguntas=[{"texto": "¿2+2?", "tipo": "multiple", "opciones": ["3", "4", "5"]}],
+        )
+    assert "correcta" in str(exc.value) or "Pregunta 1" in str(exc.value)
+
+
+def test_examen_valido_devuelve_modelo():
+    """ExamenIn acepta examen completo con respuestas."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    ex = ExamenIn(
+        titulo="Examen válido",
+        tiempo=10,
+        preguntas=[
+            {"texto": "¿2+2?", "tipo": "multiple", "opciones": ["3", "4", "5"], "correcta": 1},
+            {"texto": "¿Tierra plana?", "tipo": "vf", "correcta": 0},
+        ],
+    )
+    assert ex.titulo == "Examen válido"
+    assert len(ex.preguntas) == 2
