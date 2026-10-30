@@ -107,14 +107,31 @@ class TareaIn(BaseModel):
     fecha: str = ""
     grupo_ids: list[int] = Field(default_factory=list)
 
+MATERIAS_VALIDAS = {
+    "emprendedurismo", "matematica", "metodos de investigacion",
+    "software", "ciencias", "ingles", "ingles tecnico",
+}
+
+
 class ExamenIn(BaseModel):
     titulo: str = Field(..., min_length=1)
+    materia: str = Field(..., description="Materia del examen")
     tiempo: int = 60
     preguntas: list = Field(default_factory=list)
     notamin: int = 60
     intentos: int = 3
     barajar: bool = False
     grupo_ids: list[int] = Field(default_factory=list)
+
+    @field_validator("materia")
+    @classmethod
+    def _materia_valida(cls, v: str) -> str:
+        m = v.strip().lower()
+        if m not in MATERIAS_VALIDAS:
+            raise ValueError(
+                "Materia inválida. Use una de: " + ", ".join(sorted(MATERIAS_VALIDAS))
+            )
+        return m
 
     @field_validator("tiempo")
     @classmethod
@@ -150,6 +167,8 @@ class ExamenIn(BaseModel):
                 raise ValueError(f"Pregunta {i + 1}: respuesta correcta obligatoria")
             if tipo in ("multiple", "vf") and p.get("correcta") is None:
                 raise ValueError(f"Pregunta {i + 1}: respuesta correcta obligatoria")
+            if tipo == "abierta" and not str(p.get("texto", "")).strip():
+                raise ValueError(f"Pregunta {i + 1}: texto obligatorio")
         return v
 
 def _grupos_validos(docente_id, grupo_ids):

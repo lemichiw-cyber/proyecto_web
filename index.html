@@ -2425,6 +2425,16 @@ unicode: "ea98"
  Crear nuevo examen</h3>
             <div class="form-row">
               <div class="form-group"><label>Título del examen <strong>*</strong></label><input type="text" id="exam-titulo" placeholder="Ej: Examen de Cálculo Diferencial"></div>
+              <div class="form-group"><label>Materia <strong>*</strong></label><select id="exam-materia" style="width:100%;padding:.55rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;">
+                <option value="">Seleccioná una materia</option>
+                <option value="emprendedurismo">Emprendedurismo</option>
+                <option value="matematica">Matemática</option>
+                <option value="metodos de investigacion">Métodos de Investigación</option>
+                <option value="software">Software</option>
+                <option value="ciencias">Ciencias</option>
+                <option value="ingles">Inglés</option>
+                <option value="ingles tecnico">Inglés Técnico</option>
+              </select></div>
               <div class="form-group" style="max-width:160px;"><label>Tiempo (minutos) <strong>*</strong></label><input type="number" id="exam-tiempo" min="1" max="180" value="60"></div>
             </div>
             <div class="form-row" style="margin-top:.25rem;">

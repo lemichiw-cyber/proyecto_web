@@ -1753,6 +1753,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
                 '<option value="multiple">Opción Múltiple</option>' +
                 '<option value="vf">Verdadero/Falso</option>' +
                 '<option value="completar">Completar</option>' +
+                '<option value="abierta">Abierta</option>' +
               '</select>' +
               '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red-ink);font-size:1.2rem;padding:0 4px;">×</button>' +
             '</div>' +
@@ -1783,6 +1784,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           body.innerHTML =
             '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Escribí la respuesta correcta (sin distinguir mayúsculas):</div>' +
             '<input type="text" placeholder="Ej: Buenos Aires" data-idx="' + idx + '" data-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'abierta') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Pregunta abierta (el docente califica la respuesta libre):</div>' +
+            '<input type="text" placeholder="Pista de respuesta esperada (opcional)" data-idx="' + idx + '" data-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
         }
       };
 
@@ -1823,6 +1828,9 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
               $('exam-guardar-msg').style.color = 'var(--red)';
               throw new Error('pregunta_invalida');
             }
+          } else if (tipo === 'abierta') {
+            var respInput = item.querySelector('input[data-resp]');
+            q.respuesta = respInput ? respInput.value.trim() : '';
           }
           preguntas.push(q);
         });
@@ -1836,16 +1844,18 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           return;
         }
         var titulo = $('exam-titulo').value.trim();
+        var materia = $('exam-materia').value.trim();
         var tiempo = parseInt($('exam-tiempo').value, 10) || 60;
         var notamin = parseInt($('exam-notamin').value, 10);
         var intentos = parseInt($('exam-intentos').value, 10);
         var barajar = $('exam-barajar') ? !!$('exam-barajar').checked : false;
         if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
+        if (!materia) { $('exam-guardar-msg').textContent = '⚠️ Seleccioná una materia.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(notamin) || notamin < 1 || notamin > 100) { $('exam-guardar-msg').textContent = '⚠️ La nota mínima va de 1 a 100.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var grupo_ids = gruposSeleccionados();
         if (grupo_ids.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Selecciona al menos un grupo.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        var ex = { titulo: titulo, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, grupo_ids: grupo_ids, creado: new Date().toISOString() };
+        var ex = { titulo: titulo, materia: materia, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, grupo_ids: grupo_ids, creado: new Date().toISOString() };
         examenes.push(ex);
         examGuardarStorage();
         apiGuardarExamen(ex);
@@ -2119,6 +2129,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
                     '<label class="opt-row"><input type="radio" name="exam-resp-' + qi + '" value="0"> <span>❌ Falso</span></label>';
           } else if (q.tipo === 'completar') {
             html += '<div style="margin-top:.4rem;"><input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta..." style="width:100%;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></div>';
+          } else if (q.tipo === 'abierta') {
+            html += '<div style="margin-top:.4rem;"><textarea class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta libre..." style="width:100%;min-height:80px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></textarea></div>';
           }
           html += '</div>';
           return html;
@@ -2214,13 +2226,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
           if (dada !== null && dada !== '' && dada !== undefined) {
             ok = (q.tipo === 'completar')
               ? dada === (q.respuesta || '').toLowerCase()
-              : dada === q.correcta;
+              : q.tipo === 'abierta'
+                ? null  // pendiente de calificación docente
+                : dada === q.correcta;
           }
-          if (ok) correctas++;
+          if (ok === true) correctas++;
           detalle.push({ ok: ok, dada: dada, q: q });
         });
 
-        var total = preguntas.length;
+        var totalCerradas = preguntas.filter(function (q) { return q.tipo !== 'abierta'; }).length;
+        var total = totalCerradas > 0 ? totalCerradas : preguntas.length;
         var porcentaje = total > 0 ? Math.round(correctas / total * 100) : 0;
         var notaMin = examNotaMin(examEnCurso.examen);
         var aprobado = porcentaje >= notaMin;
@@ -2243,10 +2258,10 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
         if (fb) {
           fb.innerHTML = '<div style="font-weight:700;margin:1rem 0 .5rem;">Retroalimentación</div>' +
             detalle.map(function (d, i) {
-              return '<div style="padding:.5rem .65rem;border-radius:8px;margin-bottom:.4rem;font-size:.85rem;background:' + (d.ok ? 'rgba(46,204,113,.14)' : 'rgba(231,76,60,.14)') + ';">' +
-                '<strong>' + (d.ok ? '✅' : '❌') + ' ' + (i + 1) + '. ' + escapeHtml(d.q.texto) + '</strong>' +
+              return '<div style="padding:.5rem .65rem;border-radius:8px;margin-bottom:.4rem;font-size:.85rem;background:' + (d.ok === true ? 'rgba(46,204,113,.14)' : d.ok === false ? 'rgba(231,76,60,.14)' : 'rgba(108,117,125,.14)') + ';">' +
+                '<strong>' + (d.ok === true ? '✅' : d.ok === false ? '❌' : '⏳') + ' ' + (i + 1) + '. ' + escapeHtml(d.q.texto) + '</strong>' +
                 '<div style="color:var(--gray-600);">Tu respuesta: ' + escapeHtml(examTextoRespuesta(d.q, d.dada)) + '</div>' +
-                (d.ok ? '' : '<div style="color:var(--green-ink);">Respuesta correcta: ' + escapeHtml(examTextoCorrecta(d.q)) + '</div>') +
+                (d.ok === true ? '' : d.ok === false ? '<div style="color:var(--green-ink);">Respuesta correcta: ' + escapeHtml(examTextoCorrecta(d.q)) + '</div>' : '<div style="color:var(--gray-600);">Pendiente de calificación por el docente.</div>') +
               '</div>';
             }).join('') +
             '<div style="font-size:.83rem;color:var(--gray-500);margin-top:.5rem;">Intento ' + intento + ' de ' + intentosMax +

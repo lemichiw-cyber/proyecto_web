@@ -103,6 +103,7 @@ def test_examen_valido_devuelve_modelo():
     from api.tareas_examenes import ExamenIn  # noqa: WPS433
     ex = ExamenIn(
         titulo="Examen válido",
+        materia="matematica",
         tiempo=10,
         preguntas=[
             {"texto": "¿2+2?", "tipo": "multiple", "opciones": ["3", "4", "5"], "correcta": 1},
@@ -110,4 +111,31 @@ def test_examen_valido_devuelve_modelo():
         ],
     )
     assert ex.titulo == "Examen válido"
+    assert ex.materia == "matematica"
     assert len(ex.preguntas) == 2
+
+
+def test_examen_materia_invalida():
+    """ExamenIn rechaza materia no permitida."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    with pytest.raises(Exception):
+        ExamenIn(
+            titulo="Examen",
+            materia="historia",
+            tiempo=10,
+            preguntas=[{"texto": "¿x?", "tipo": "abierta"}],
+        )
+
+
+def test_examen_pregunta_abierta():
+    """ExamenIn acepta tipo 'abierta' sin respuesta predefinida."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    ex = ExamenIn(
+        titulo="Redacción",
+        materia="emprendedurismo",
+        tiempo=30,
+        preguntas=[
+            {"texto": "¿Qué es un plan de negocios?", "tipo": "abierta"},
+        ],
+    )
+    assert ex.preguntas[0]["tipo"] == "abierta"
