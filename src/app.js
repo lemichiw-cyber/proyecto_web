@@ -683,7 +683,7 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             var f = claseFecha(c);
             return f && f.toISOString().slice(0, 10) === hoy;
           });
-          function hoyItem(titulo, tipo, extra) { return '<div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:var(--gray-50);border-radius:8px;margin-bottom:.4rem;"><strong style="font-size:.85rem;">' + escapeHtml(titulo) + '</strong><span style="font-size:.72rem;color:var(--gray-500);margin-left:auto;">' + escapeHtml(tipo) + '</span>' + (extra ? '<span style="font-size:.72rem;color:var(--gray-500);">· ' + escapeHtml(extra) + '</span>' : '') + '</div>'; }
+          var hoyItem = function (titulo, tipo, extra) { return '<div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:var(--gray-50);border-radius:8px;margin-bottom:.4rem;"><strong style="font-size:.85rem;">' + escapeHtml(titulo) + '</strong><span style="font-size:.72rem;color:var(--gray-500);margin-left:auto;">' + escapeHtml(tipo) + '</span>' + (extra ? '<span style="font-size:.72rem;color:var(--gray-500);">· ' + escapeHtml(extra) + '</span>' : '') + '</div>'; };
           var html = '<h3 style="margin:0 0 .6rem;font-size:1rem;color:var(--gray-900);display:flex;align-items:center;gap:.5rem;"><span style="font-size:1.2rem;">📅</span> Hoy</h3>';
           html += '<div style="font-size:.75rem;color:var(--gray-500);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Entregas</div>' + (entregasHoy.length ? entregasHoy.map(function(t){return hoyItem(t.titulo,'Tarea',t.materia);}).join('') : '<div style="font-size:.82rem;color:var(--gray-400);padding:.4rem .7rem;">Sin entregas hoy.</div>');
           html += '<div style="font-size:.75rem;color:var(--gray-500);margin:1rem 0 .4rem;text-transform:uppercase;letter-spacing:.04em;">Exámenes</div>' + (examenesHoy.length ? examenesHoy.map(function(e){return hoyItem(e.titulo,'Examen',e.materia||'');}).join('') : '<div style="font-size:.82rem;color:var(--gray-400);padding:.4rem .7rem;">Sin exámenes hoy.</div>');
@@ -1846,16 +1846,16 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             }
             q.correcta = parseInt(correctaVf.value, 10);
           } else if (tipo === 'completar') {
-            var respInput = item.querySelector('input[data-resp]');
-            q.respuesta = respInput ? respInput.value.trim() : '';
+            var respInputC = item.querySelector('input[data-resp]');
+            q.respuesta = respInputC ? respInputC.value.trim() : '';
             if (!q.respuesta) {
               $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': escribí la respuesta correcta.';
               $('exam-guardar-msg').style.color = 'var(--red)';
               throw new Error('pregunta_invalida');
             }
           } else if (tipo === 'abierta') {
-            var respInput = item.querySelector('input[data-resp]');
-            q.respuesta = respInput ? respInput.value.trim() : '';
+            var respInputA = item.querySelector('input[data-resp]');
+            q.respuesta = respInputA ? respInputA.value.trim() : '';
           } else if (tipo === 'texto_largo') {
             var respInput = item.querySelector('textarea[data-resp]');
             q.respuesta = respInput ? respInput.value.trim() : '';
@@ -1869,8 +1869,8 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             item.querySelectorAll('input[name="casilla-' + idx + '"]:checked').forEach(function (cb) {
               correctas.push(parseInt(cb.dataset.opt, 10));
             });
-            var opts = [];
-            item.querySelectorAll('input[data-opt]').forEach(function (inp) { opts.push(inp.value.trim()); });
+            var optsCasilla = [];
+            item.querySelectorAll('input[data-opt]').forEach(function (inp) { optsCasilla.push(inp.value.trim()); });
             if (!opts.every(Boolean) || correctas.length === 0) {
               $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': completá opciones y seleccioná al menos una correcta.';
               $('exam-guardar-msg').style.color = 'var(--red)';
@@ -1879,14 +1879,14 @@ function iconSrc(name){return ICON_DATA[name]||'icons/'+name+'.svg';}
             q.opciones = opts;
             q.correctas = correctas;
           } else if (tipo === 'ordenar') {
-            var opts = [];
-            item.querySelectorAll('input[data-opt]').forEach(function (inp) { opts.push(inp.value.trim()); });
-            if (!opts.every(Boolean)) {
+            var optsOrdenar = [];
+            item.querySelectorAll('input[data-opt]').forEach(function (inp) { optsOrdenar.push(inp.value.trim()); });
+            if (!optsOrdenar.every(Boolean)) {
               $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': completá todas las opciones.';
               $('exam-guardar-msg').style.color = 'var(--red)';
               throw new Error('pregunta_invalida');
             }
-            q.opciones = opts;
+            q.opciones = optsOrdenar;
             q.orden = [0, 1, 2];
           } else if (tipo === 'emparejar') {
             var pares = [];
