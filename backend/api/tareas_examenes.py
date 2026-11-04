@@ -72,14 +72,20 @@ def _query(sql: str, params: tuple = (), fetch: str = "all", commit: bool = Fals
     with _conn() as conn:
         with conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute(sql, params)
+            result = []
             if fetch == "one":
                 row = cur.fetchone()
-                return dict(row) if row else None
-            rows = cur.fetchall()
-            return [dict(r) for r in rows]
+                result = dict(row) if row else None
+            elif fetch == "none":
+                result = []
+            elif cur.description is not None:
+                rows = cur.fetchall()
+                result = [dict(r) for r in rows]
+            else:
+                result = []
         if commit:
             conn.commit()
-    return []
+    return result
 
 def _perfil(email: str):
     try:
@@ -177,6 +183,19 @@ class ExamenIn(BaseModel):
                 raise ValueError(f"Pregunta {i + 1}: 'pares' debe ser lista de pares")
             if tipo == "texto_largo" and not str(p.get("respuesta", "")).strip():
                 raise ValueError(f"Pregunta {i + 1}: respuesta esperada obligatoria")
+            if tipo == "vf_justificacion" and p.get("correcta") is None:
+                raise ValueError(f"Pregunta {i + 1}: respuesta correcta obligatoria")
+            if tipo == "rango":
+                resp = p.get("respuesta")
+                if not isinstance(resp, (int, float)):
+                    raise ValueError(f"Pregunta {i + 1}: 'respuesta' debe ser numérica")
+                tol = p.get("tolerancia", 0)
+                if not isinstance(tol, (int, float)) or tol < 0:
+                    raise ValueError(f"Pregunta {i + 1}: 'tolerancia' debe ser numérica ≥ 0")
+            if tipo == "cloze":
+                respuestas = p.get("respuestas")
+                if not isinstance(respuestas, list) or not respuestas or not all(str(r).strip() for r in respuestas):
+                    raise ValueError(f"Pregunta {i + 1}: 'respuestas' debe ser lista no vacía")
         return v
 
 def _grupos_validos(docente_id, grupo_ids):

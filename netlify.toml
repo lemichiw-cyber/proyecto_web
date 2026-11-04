@@ -177,7 +177,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "SAMEORIGIN"
-    # Content-Security-Policy-Report-Only for observation without blocking.
-    # A strict CSP would break inline styles/scripts used by the app.
-    # Enable report-only to collect violations before enforcing.
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.onrender.com https://*.googlevideo.com; media-src 'self' https://*.googlevideo.com; worker-src 'self' blob:; manifest-src 'self';"
+    # Content-Security-Policy en enforce. 'unsafe-inline' y 'unsafe-eval'
+    # se mantienen porque la app usa estilos inline y manejadores onclick;
+    # se relajan solo cuando se limpie el monolito de app.js.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.onrender.com https://*.googlevideo.com; media-src 'self' https://*.googlevideo.com; worker-src 'self' blob:; manifest-src 'self';"

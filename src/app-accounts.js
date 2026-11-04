@@ -48,7 +48,7 @@ export function obtenerCuenta(email) {
   return db[key] || null;
 }
 
-export function crearCuenta(email, nombre, rol, password) {
+export function crearCuenta(email, nombre, rol, _password) {
   const key = normalizaEmail(email);
   if (!key) return { ok: false, msg: 'Falta el correo.' };
   if (obtenerCuenta(key)) return { ok: false, msg: 'Ese correo ya est\u00e1 registrado. Inici\u00e1 sesi\u00f3n.' };

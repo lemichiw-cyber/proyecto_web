@@ -41,8 +41,8 @@
     if (!isSupported() || Notification.permission !== 'granted') return;
     var opts = {
       body: body,
-      icon: '/proyecto_web/icons/icon-192.png',
-      badge: '/proyecto_web/icons/icon-72.png',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
       silent: false,
       tag: tag || 'cherrybomb-' + Date.now()
     };
@@ -287,6 +287,86 @@
     });
   }
 
+  /* ---- Push API (VAPID) ---- */
+  var VAPID_PUBLIC_KEY = (typeof VITE_VAPID_PUBLIC_KEY !== "undefined" ? VITE_VAPID_PUBLIC_KEY : "");
+  var API_BASE = (function () {
+    var v = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "") || "";
+    return v.replace(/\/+$/, "");
+  })();
+  var pushSubscription = null;
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  async function suscribirPush() {
+    if (!("PushManager" in window)) {
+      mostrarToastPush("Push no soportado en este navegador.", "error");
+      return;
+    }
+    if (!VAPID_PUBLIC_KEY) {
+      mostrarToastPush("VAPID public key no configurada (VITE_VAPID_PUBLIC_KEY).", "error");
+      return;
+    }
+    try {
+      var registration = await navigator.serviceWorker.ready;
+      var options = {
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      };
+      var subscription = await registration.pushManager.subscribe(options);
+      pushSubscription = subscription;
+      var email = window.usuarioActual ? window.usuarioActual.email : "";
+      try {
+        await fetch(API_BASE + "/api/push/suscribir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, subscription: subscription }),
+        });
+      } catch (e) {
+        // backend no disponible: guardar localmente
+        try {
+          var subs = JSON.parse(localStorage.getItem("cherrybombPushSubs") || "[]");
+          subs.push({ email: email, subscription: subscription });
+          localStorage.setItem("cherrybombPushSubs", JSON.stringify(subs));
+        } catch (e2) { /* ignore */ }
+      }
+      mostrarToastPush("Notificaciones push activadas.", "success");
+    } catch (err) {
+      if (Notification.permission === "denied") {
+        mostrarToastPush("Permiso de notificaciones denegado.", "error");
+      } else {
+        mostrarToastPush("No se pudo activar push: " + String(err.message || err), "error");
+      }
+    }
+  }
+
+  function enviarPush(titulo, cuerpo, tag) {
+    if (!pushSubscription) return Promise.resolve();
+    var payload = JSON.stringify({ title: titulo, body: cuerpo, tag: tag });
+    return fetch(API_BASE + "/api/push/enviar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: pushSubscription, payload: payload }),
+    }).catch(function () { /* ignore */ });
+  }
+
+  function mostrarToastPush(msg, tipo) {
+    // Reusa el toast de app.js si existe; si no, solo consola.
+    if (typeof mostrarToast === "function") {
+      mostrarToast(msg, tipo);
+    } else {
+      console.log("[" + tipo + "] " + msg);
+    }
+  }
+
   /* ---- API pública ---- */
   window.CherryBombNotifications = {
     requestPermission: requestPermission,
@@ -299,6 +379,8 @@
     isSupported: isSupported,
     getPermission: getPermission,
     getEstudianteActual: getEstudianteActual,
-    getPendingItems: getPendingItems
+    getPendingItems: getPendingItems,
+    suscribirPush: suscribirPush,
+    enviarPush: enviarPush,
   };
 })();

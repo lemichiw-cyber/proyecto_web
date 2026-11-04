@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import accounts, admin, albums, artists, debug, library, matricula, playlists, search, songs, tareas_examenes
+from api import accounts, admin, albums, artists, actividades, auth, debug, library, matricula, playlists, push, search, songs, tareas_examenes
 from api.deps import get_service
 
 load_dotenv()
@@ -69,6 +69,15 @@ app.add_middleware(
     allow_private_network=True,
 )
 
+# Headers de seguridad en toda respuesta del backend.
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 # Routers
 if os.getenv("SAKURA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
     app.include_router(debug.router)
@@ -80,6 +89,9 @@ app.include_router(playlists.router)
 app.include_router(library.router)
 app.include_router(admin.router)
 app.include_router(accounts.router)          # <-- nuevo
+app.include_router(auth.router)              # <-- auth (login/register/me/logout)
+app.include_router(push.router)              # <-- push (suscripciones y envío)
+app.include_router(actividades.router)       # <-- actividades (Postgres/Supabase)
 app.include_router(matricula.router)         # <-- matrícula por grupo
 app.include_router(tareas_examenes.router)   # <-- tareas/exámenes por grupo
 

@@ -171,3 +171,45 @@ def test_examen_casilla_sin_correctas_rechazado():
             tiempo=10,
             preguntas=[{"texto": "¿x?", "tipo": "casilla", "opciones": ["A", "B"]}],
         )
+
+
+def test_examen_tipos_auto_calificables():
+    """ExamenIn acepta vf_justificacion, rango y cloze."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    ex = ExamenIn(
+        titulo="Auto-calificables",
+        materia="ciencias",
+        tiempo=15,
+        preguntas=[
+            {"texto": "¿El agua hierve a 100°C?", "tipo": "vf_justificacion", "correcta": 1, "justificacion": "A nivel del mar"},
+            {"texto": "¿Cuánto es √144?", "tipo": "rango", "respuesta": 12, "tolerancia": 0},
+            {"texto": "Completa: El Sol es una ___ y la Tierra un ___.", "tipo": "cloze", "respuestas": ["estrella", "planeta"]},
+        ],
+    )
+    assert ex.preguntas[0]["tipo"] == "vf_justificacion"
+    assert ex.preguntas[1]["tipo"] == "rango"
+    assert ex.preguntas[2]["tipo"] == "cloze"
+
+
+def test_examen_rango_invalido_rechazado():
+    """ExamenIn rechaza rango con respuesta no numérica."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    with pytest.raises(Exception):
+        ExamenIn(
+            titulo="Mal rango",
+            materia="matematica",
+            tiempo=10,
+            preguntas=[{"texto": "¿x?", "tipo": "rango", "respuesta": "doce"}],
+        )
+
+
+def test_examen_cloze_vacio_rechazado():
+    """ExamenIn rechaza cloze sin respuestas."""
+    from api.tareas_examenes import ExamenIn  # noqa: WPS433
+    with pytest.raises(Exception):
+        ExamenIn(
+            titulo="Mal cloze",
+            materia="ingles",
+            tiempo=10,
+            preguntas=[{"texto": "Fill: I ___ happy", "tipo": "cloze", "respuestas": []}],
+        )

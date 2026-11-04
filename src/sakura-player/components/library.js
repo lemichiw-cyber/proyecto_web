@@ -6,7 +6,7 @@
 import { player } from '../player/player.js';
 import { library } from '../library/library.js';
 import * as catalogo from '../api/catalogo.js';
-import { icon, coverHtml, trackRow, emptyState, escapeHtml } from './ui.js';
+import { icon, coverHtml, trackRow, emptyState, escapeHtml, confirmDialog } from './ui.js';
 
 const SECTIONS = [
   { id: 'songs', label: 'Canciones', icon: 'music' },
@@ -47,7 +47,6 @@ export class LibraryView {
       this._load(content);
     });
     this.root.querySelector('#sp-lib-clear-history').addEventListener('click', async () => {
-      const { confirmDialog } = await import('./ui.js');
       if (await confirmDialog('¿Vaciar el historial de reproducción?')) {
         library.clearHistory();
         this._load(content);

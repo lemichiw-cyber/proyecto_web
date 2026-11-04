@@ -39,16 +39,24 @@ def _conn():
     return psycopg2.connect(DATABASE_URL)
 
 
-def _query(sql: str, params: tuple = (), fetch: str = "all"):
+def _query(sql: str, params: tuple = (), fetch: str = "all", commit: bool = False):
     with _conn() as conn:
         with conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute(sql, params)
+            result = []
             if fetch == "one":
                 row = cur.fetchone()
-                return dict(row) if row else None
-            rows = cur.fetchall()
-            return [dict(r) for r in rows]
-        conn.commit()
+                result = dict(row) if row else None
+            elif fetch == "none":
+                result = []
+            elif cur.description is not None:
+                rows = cur.fetchall()
+                result = [dict(r) for r in rows]
+            else:
+                result = []
+        if commit:
+            conn.commit()
+    return result
 
 
 def _perfil(email: str):
@@ -193,6 +201,7 @@ def inscribir(payload: InscribirIn, email: str = Depends(_require_email)):
     _query(
         "UPDATE estudiantes SET grupo_id = %s WHERE email = %s",
         (payload.grupo_id, payload.email),
+        commit=True,
     )
     return {"ok": True, "email": payload.email, "grupo_id": payload.grupo_id}
 

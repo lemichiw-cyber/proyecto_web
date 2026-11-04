@@ -34,7 +34,7 @@ describe('Fase 6 — migración al modelo único de eventos', () => {
     storage._store.set('calEventos', JSON.stringify([{ titulo: 'Evento C', fecha: '2026-11-05' }]));
     storage._store.set('bachillerato_tareas', JSON.stringify([{ titulo: 'Tarea D', materia: 'matematicas', fecha: '2026-11-06' }]));
 
-    const n = window.eventosAPI.migrarLegacy();
+    window.eventosAPI.migrarLegacy();
     const todas = window.eventosAPI.listar();
     const tareas = window.eventosAPI.listar('tarea');
     const agendas = window.eventosAPI.listar('agenda');

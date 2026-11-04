@@ -29,30 +29,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       cleanupOutdatedCaches: true,
-      // No includeAssets for favicon.ico/robots.txt (don't exist in public/)
-      manifest: {
-        name: 'Cherry-Bomb - Plataforma Educativa',
-        short_name: 'Cherry-Bomb',
-        description: 'Organizador personal para estudiantes: agenda, tareas, Pomodoro y música.',
-        lang: 'es',
-        dir: 'ltr',
-        categories: ['education', 'music', 'productivity'],
-        theme_color: '#2563eb',
-        background_color: '#ffffff',
-        display: 'standalone',
-        start_url: './',
-        scope: './',
-        icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf,otf}'],
         // La app es una SPA: cualquier navegación cae en el index precacheado.
         navigateFallback: 'index.html',
+        importScripts: ['public/push-listener.js'],
         runtimeCaching: [
           {
             // Música de los temas ya descargada: disponible sin conexión.
@@ -84,6 +65,25 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+        ],
+      },
+      manifest: {
+        name: 'Cherry-Bomb - Plataforma Educativa',
+        short_name: 'Cherry-Bomb',
+        description: 'Organizador personal para estudiantes: agenda, tareas, Pomodoro y música.',
+        lang: 'es',
+        dir: 'ltr',
+        categories: ['education', 'music', 'productivity'],
+        theme_color: '#2563eb',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: './',
+        scope: './',
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),
