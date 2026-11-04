@@ -5797,6 +5797,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var modalLogin = $('modal-login');
         if (modalLogin) { modalLogin.classList.add('open'); lockBody(); }
       }
+      window.clickLogin = clickLogin;
 
       document.addEventListener('click', function (e) {
         var el = e.target && e.target.closest ? e.target.closest('[data-onclick]') : null;
@@ -5818,7 +5819,15 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           fn.apply(window, args);
         }
       }, true);
-    })();
+
+      /* Exponer funciones referenciadas por data-onclick en el HTML al scope global */
+      window.clickLogin = clickLogin;
+      window.mostrarApp = mostrarApp;
+      window.abrirTemas = abrirTemas;
+      window.cerrarTemas = cerrarTemas;
+      window.cerrarModalTexto = cerrarModalTexto;
+      window.seleccionarTema = seleccionarTema;
+      })();
 
     /* ===================================================================
        DELEGADOR data-onclick — el HTML usa atributos como
