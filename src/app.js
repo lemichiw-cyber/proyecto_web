@@ -5788,4 +5788,65 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           mostrarToast('Error migración: ' + e.message, 'error');
         });
       };
+      /* ===================================================================
+         DELEGADOR data-onclick — el HTML usa atributos como
+         data-onclick="funcion+arg1+arg2". Este delegador las resuelve
+         llamando a window[funcion](arg1, arg2, ...).
+         =================================================================== */
+      function clickLogin() {
+        var modalLogin = $('modal-login');
+        if (modalLogin) { modalLogin.classList.add('open'); lockBody(); }
+      }
+
+      document.addEventListener('click', function (e) {
+        var el = e.target && e.target.closest ? e.target.closest('[data-onclick]') : null;
+        if (!el) return;
+        var spec = el.getAttribute('data-onclick');
+        if (!spec) return;
+        var parts = spec.split('+');
+        var fnName = parts[0];
+        var args = parts.slice(1).map(function (a) {
+          if (a === 'null') return null;
+          if (a === 'true') return true;
+          if (a === 'false') return false;
+          return a;
+        });
+        var fn = window[fnName];
+        if (typeof fn === 'function') {
+          e.preventDefault();
+          e.stopPropagation();
+          fn.apply(window, args);
+        }
+      }, true);
     })();
+
+    /* ===================================================================
+       DELEGADOR data-onclick — el HTML usa atributos como
+       data-onclick="funcion+arg1+arg2". Este delegador las resuelve
+       llamando a window[funcion](arg1, arg2, ...).
+       =================================================================== */
+    function clickLogin() {
+      var modalLogin = $('modal-login');
+      if (modalLogin) { modalLogin.classList.add('open'); lockBody(); }
+    }
+
+    document.addEventListener('click', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-onclick]') : null;
+      if (!el) return;
+      var spec = el.getAttribute('data-onclick');
+      if (!spec) return;
+      var parts = spec.split('+');
+      var fnName = parts[0];
+      var args = parts.slice(1).map(function (a) {
+        if (a === 'null') return null;
+        if (a === 'true') return true;
+        if (a === 'false') return false;
+        return a;
+      });
+      var fn = window[fnName];
+      if (typeof fn === 'function') {
+        e.preventDefault();
+        e.stopPropagation();
+        fn.apply(window, args);
+      }
+    }, true);
