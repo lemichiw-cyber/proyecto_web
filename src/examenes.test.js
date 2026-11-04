@@ -133,3 +133,61 @@ describe('Exámenes — Evaluación y Formato de Respuestas', () => {
     });
   });
 });
+
+describe('Tipo: codigo (bloque de código)', () => {
+  const qCodigoAuto = {
+    texto: 'Escribí un programa que imprima Hola',
+    tipo: 'codigo',
+    lenguaje: 'python',
+    salida_esperada: 'Hola',
+  };
+  const qCodigoManual = {
+    texto: 'Diseñá una clase Persona',
+    tipo: 'codigo',
+    lenguaje: 'java',
+  };
+
+  it('autocalifica código cuando hay salida esperada', () => {
+    expect(evaluarRespuesta(qCodigoAuto, 'Hola')).toBe(true);
+    expect(evaluarRespuesta(qCodigoAuto, 'Hola\n')).toBe(true);
+    expect(evaluarRespuesta(qCodigoAuto, 'Adios')).toBe(false);
+  });
+
+  it('devuelve null (manual) cuando no hay salida esperada', () => {
+    expect(evaluarRespuesta(qCodigoManual, 'class Persona {}')).toBe(null);
+  });
+
+  it('formatea textoRespuesta y textoCorrecta', () => {
+    expect(textoRespuesta(qCodigoAuto, 'Hola mundo')).toBe('(python) Hola mundo');
+    expect(textoCorrecta(qCodigoAuto)).toBe('salida esperada: Hola');
+    expect(textoCorrecta(qCodigoManual)).toBe('calificación manual');
+  });
+});
+
+describe('Tipo: video e imagen (multimedia, calificación manual)', () => {
+  const qVideo = { texto: 'Mirá el video', tipo: 'video', url: 'https://ejemplo.com/v.mp4' };
+  const qImagen = { texto: 'Etiquetá la imagen', tipo: 'imagen', url: 'https://ejemplo.com/img.png' };
+
+  it('devuelven null (calificación manual)', () => {
+    expect(evaluarRespuesta(qVideo, 'algo')).toBe(null);
+    expect(evaluarRespuesta(qImagen, 'algo')).toBe(null);
+  });
+
+  it('formatea textoRespuesta y textoCorrecta', () => {
+    expect(textoRespuesta(qVideo, 'archivo')).toBe('Archivo adjunto');
+    expect(textoRespuesta(qVideo, null)).toBe('Sin responder');
+    expect(textoCorrecta(qVideo)).toBe('https://ejemplo.com/v.mp4');
+    expect(textoCorrecta(qImagen)).toBe('https://ejemplo.com/img.png');
+  });
+
+  it('no cuentan como preguntas cerradas en el resultado', () => {
+    const res = calcularResultadoExamen(
+      [qVideo, qImagen, { tipo: 'vf', correcta: 1 }],
+      [null, null, 1],
+      60
+    );
+    expect(res.total).toBe(1);
+    expect(res.correctas).toBe(1);
+    expect(res.porcentaje).toBe(100);
+  });
+});

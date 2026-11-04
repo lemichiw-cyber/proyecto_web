@@ -25,6 +25,13 @@ export function textoRespuesta(q, valor) {
   if (q.tipo === 'completar' || q.tipo === 'texto_largo' || q.tipo === 'abierta') {
     return String(valor);
   }
+  if (q.tipo === 'codigo') {
+    if (valor === null || valor === undefined || valor === '') return 'Sin responder';
+    return `(${q.lenguaje}) ${String(valor).slice(0, 60)}${String(valor).length > 60 ? '...' : ''}`;
+  }
+  if (q.tipo === 'video' || q.tipo === 'imagen') {
+    return valor ? 'Archivo adjunto' : 'Sin responder';
+  }
   if (q.tipo === 'vf') {
     return Number(valor) === 1 ? 'Verdadero' : 'Falso';
   }
@@ -59,6 +66,12 @@ export function textoCorrecta(q) {
   }
   if (q.tipo === 'completar' || q.tipo === 'texto_largo') {
     return q.respuesta || '—';
+  }
+  if (q.tipo === 'codigo') {
+    return q.salida_esperada ? `salida esperada: ${q.salida_esperada}` : 'calificación manual';
+  }
+  if (q.tipo === 'video' || q.tipo === 'imagen') {
+    return q.url || '—';
   }
   if (q.tipo === 'vf') {
     return Number(q.correcta) === 1 ? 'Verdadero' : 'Falso';
@@ -119,6 +132,13 @@ export function evaluarRespuesta(q, dada) {
   if (q.tipo === 'abierta' || q.tipo === 'ordenar' || q.tipo === 'emparejar') {
     return null; // pendiente de calificación docente
   }
+  if (q.tipo === 'video' || q.tipo === 'imagen') {
+    return null; // calificación manual (multimedia)
+  }
+  if (q.tipo === 'codigo') {
+    if (!q.salida_esperada) return null; // calificación manual si no hay salida esperada
+    return String(dada || '').trim() === String(q.salida_esperada).trim();
+  }
   return Number(dada) === Number(q.correcta);
 }
 
@@ -140,6 +160,8 @@ export function calcularResultadoExamen(preguntas, respuestas, notaMin = 60) {
 
   const totalCerradas = preguntas.filter(
     (q) => q.tipo !== 'abierta' && q.tipo !== 'ordenar' && q.tipo !== 'emparejar'
+      && q.tipo !== 'video' && q.tipo !== 'imagen'
+      && !(q.tipo === 'codigo' && !q.salida_esperada)
   ).length;
 
   const total = totalCerradas > 0 ? totalCerradas : preguntas.length;

@@ -196,6 +196,12 @@ class ExamenIn(BaseModel):
                 respuestas = p.get("respuestas")
                 if not isinstance(respuestas, list) or not respuestas or not all(str(r).strip() for r in respuestas):
                     raise ValueError(f"Pregunta {i + 1}: 'respuestas' debe ser lista no vacía")
+            if tipo == "codigo":
+                if not str(p.get("lenguaje", "")).strip():
+                    raise ValueError(f"Pregunta {i + 1}: 'lenguaje' obligatorio para código")
+            if tipo in ("video", "imagen"):
+                if not str(p.get("url", "")).strip():
+                    raise ValueError(f"Pregunta {i + 1}: 'url' obligatoria para {tipo}")
         return v
 
 def _grupos_validos(docente_id, grupo_ids):
