@@ -2,6 +2,7 @@ import './styles.css';
 import './data.js';
 import './data/eventos.js';
 import './notifications.js';
+import './global-delegator.js';
 import './app.js';
 
 /* ------------------------------------------------------------------
