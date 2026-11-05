@@ -1,14 +1,16 @@
 /* ===================================================================
    auth.ts — Autenticación contra backend /api/auth con fallback local.
    - Intenta login/register/me/logout contra el backend FastAPI.
-   - Si el backend no responde (error de red), cae a cuentas locales
-     (app-accounts.js) para que la app siga funcionando sin servidor.
+   - Si el backend no responde o no está disponible, cae a cuentas
+     locales (app-accounts.js / localStorage) para que la app siga
+     funcionando sin servidor.
    =================================================================== */
 import {
   obtenerCuenta,
   crearCuenta,
   normalizaEmail,
   cuentaActiva,
+  verificarPassword,
 } from "./app-accounts.js";
 
 const API_BASE = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "").replace(/\/+$/, "");
@@ -59,6 +61,14 @@ function _api(path: string, body: any): Promise<Response> {
   });
 }
 
+interface AuthResult {
+  ok: boolean;
+  email: string;
+  rol: string;
+  nombre: string;
+  local: boolean;
+}
+
 export function isAuthenticated(): boolean {
   return !!token || !!usuario;
 }
@@ -75,16 +85,11 @@ export function setUser(u: { email: string; rol: string; nombre: string } | null
   _guardarSesion(token, u);
 }
 
-interface AuthResult {
-  ok: boolean;
-  email: string;
-  rol: string;
-  nombre: string;
-  local: boolean;
-}
-
+/* ---------- Login ---------- */
 export async function login(email: string, password: string): Promise<AuthResult> {
   const e = normalizaEmail(email);
+
+  // 1) Intentar backend
   try {
     const r = await _api("/api/auth/login", { email: e, password: password });
     if (!r.ok) {
@@ -95,8 +100,12 @@ export async function login(email: string, password: string): Promise<AuthResult
     _guardarSesion(data.token, { email: e, rol: data.rol, nombre: data.nombre });
     return { ok: true, email: e, rol: data.rol, nombre: data.nombre, local: false };
   } catch (err) {
+    // 2) Fallback local: verificar cuenta y contraseña en localStorage
     const cuenta = obtenerCuenta(e);
     if (!cuenta || !cuentaActiva(cuenta)) {
+      throw new Error("Credenciales inválidas.");
+    }
+    if (!verificarPassword(password, cuenta)) {
       throw new Error("Credenciales inválidas.");
     }
     _guardarSesion(null, { email: e, rol: cuenta.rol, nombre: cuenta.nombre });
@@ -104,6 +113,7 @@ export async function login(email: string, password: string): Promise<AuthResult
   }
 }
 
+/* ---------- Registro ---------- */
 export async function register(
   email: string,
   nombre: string,
@@ -111,6 +121,15 @@ export async function register(
   rol?: string,
 ): Promise<AuthResult> {
   const e = normalizaEmail(email);
+
+  // Validación previa local (evita llamadas innecesarias al backend)
+  if (!e) throw new Error("Falta el correo.");
+  if (!password || password.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
+  if (obtenerCuenta(e)) {
+    throw new Error("Ese correo ya está registrado. Iniciá sesión.");
+  }
+
+  // 1) Intentar backend
   try {
     const r = await _api("/api/auth/register", {
       email: e,
@@ -126,6 +145,7 @@ export async function register(
     _guardarSesion(data.token, { email: e, rol: data.rol, nombre: data.nombre });
     return { ok: true, email: e, rol: data.rol, nombre: data.nombre, local: false };
   } catch (err) {
+    // 2) Fallback local: crear cuenta en localStorage
     const res = crearCuenta(e, nombre, rol || "estudiante", password);
     if (!res.ok || !res.cuenta) throw new Error(res.msg);
     _guardarSesion(null, { email: e, rol: res.cuenta.rol, nombre: res.cuenta.nombre });

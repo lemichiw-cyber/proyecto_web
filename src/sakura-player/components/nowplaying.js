@@ -9,6 +9,12 @@ import { library } from '../library/library.js';
 import { formatTime } from '../library/local-files.js';
 import { icon, escapeHtml, toast, emptyState } from './ui.js';
 
+function openLyricsView() {
+  const sp = window.getSakuraPlayer ? window.getSakuraPlayer() : null;
+  if (sp) { sp.view = 'lyrics'; sp._renderView(); }
+  else toast('Vista de letras no disponible', 'info');
+}
+
 const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 export class NowPlayingView {
@@ -91,6 +97,7 @@ export class NowPlayingView {
           '<div id="np-secondary" class="sp-now-secondary">' +
             '<button class="sp-btn sp-btn-icon' + (fav ? ' sp-btn-active' : '') + '" id="np-fav" title="Favorito" aria-label="Agregar a favoritos" aria-pressed="' + !!fav + '">' + icon(fav ? 'heartFill' : 'heart') + '</button>' +
             '<button class="sp-btn sp-btn-icon" id="np-queue" title="Ver cola" aria-label="Ver cola de reproducción">' + icon('queue') + '</button>' +
+            '<button class="sp-btn sp-btn-icon" id="np-lyrics" title="Letras sincronizadas" aria-label="Ver letras sincronizadas">' + icon('lyrics') + '</button>' +
             '<button class="sp-btn sp-btn-icon" id="np-mute" title="Silencio (M)" aria-label="Silenciar">' + icon(s.muted ? 'mute' : 'volume') + '</button>' +
             '<input type="range" class="sp-slider" id="np-vol" min="0" max="100" value="' + Math.round(s.volume * 100) + '" style="width:96px;" aria-label="Volumen">' +
             '<button class="sp-btn" id="np-speed" title="Velocidad de reproducción" aria-label="Velocidad de reproducción" style="font-variant-numeric:tabular-nums;">' + player.rate.toFixed(2).replace(/0$/, '') + 'x</button>' +
@@ -141,6 +148,9 @@ export class NowPlayingView {
         ? document.querySelector('#sp-nav [data-view="queue"]') : null;
       if (btn) btn.click();
       else toast('La cola está en la vista Cola', 'info');
+    });
+    q('#np-lyrics').addEventListener('click', () => {
+      openLyricsView();
     });
     q('#np-mute').addEventListener('click', (e) => {
       player.toggleMute();

@@ -8,7 +8,7 @@ export const ROLES_VALIDOS = ['estudiante', 'docente', 'coordinador', 'director'
 export const ROL_REGISTRO = 'estudiante';
 export const ADMIN_EMAIL = 'admin@bachillerato.edu';
 
-let cuentasBackend = null;
+export let cuentasBackend = null;
 
 export function normalizaEmail(e) { return String(e || '').trim().toLowerCase(); }
 
@@ -48,10 +48,32 @@ export function obtenerCuenta(email) {
   return db[key] || null;
 }
 
-export function crearCuenta(email, nombre, rol, _password) {
+/* ---------- Hash de contraseña local (misma lógica que src/app.js) ---------- */
+export function hashPasswordLocal(password) {
+  if (!password || password.length < 6) return '';
+  var s = String(password) + ':CHERRYBOMB_HASH';
+  for (var i = 0; i < 500; i++) {
+    var h = 0;
+    for (var j = 0; j < s.length; j++) {
+      h = ((h << 5) - h) + s.charCodeAt(j);
+      h = h & h;
+    }
+    s = h.toString(16) + ':' + s;
+    if (s.length > 200) s = s.substring(0, 200);
+  }
+  return s;
+}
+
+export function verificarPassword(password, cuenta) {
+  if (!cuenta || !cuenta.passwordHash) return false;
+  return hashPasswordLocal(String(password || '')) === cuenta.passwordHash;
+}
+
+export function crearCuenta(email, nombre, rol, password) {
   const key = normalizaEmail(email);
   if (!key) return { ok: false, msg: 'Falta el correo.' };
   if (obtenerCuenta(key)) return { ok: false, msg: 'Ese correo ya est\u00e1 registrado. Inici\u00e1 sesi\u00f3n.' };
+  if (!password || password.length < 6) return { ok: false, msg: 'La contraseña debe tener al menos 6 caracteres.' };
 
   const rango = ROLES_VALIDOS.indexOf(rol) !== -1 ? rol : ROL_REGISTRO;
   const nuevo = {
@@ -61,6 +83,7 @@ export function crearCuenta(email, nombre, rol, _password) {
     semestre: rango === ROL_REGISTRO ? '1' : '',
     activo: true,
     creado: new Date().toISOString(),
+    passwordHash: hashPasswordLocal(password),
   };
   const db = leerCuentas();
   db[key] = nuevo;

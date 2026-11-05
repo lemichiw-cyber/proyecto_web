@@ -1,7 +1,5 @@
 /* ===================================================================
-   Sakura Player — Búsqueda en el catálogo curado
-   Filtra el catálogo incluido en la página (sin backend). La caja de
-   búsqueda también acepta pegar un enlace o ID de YouTube.
+   Sakura Player — Búsqueda en YouTube Music (backend) o catálogo local
    =================================================================== */
 
 import { api, debounce, friendlyError } from '../api/client.js';
@@ -23,18 +21,20 @@ export class SearchView {
     this.results = { songs: [], artists: [], albums: [], playlists: [] };
     this.tab = 'songs';
     this.loading = false;
+    this._usingBackend = false;
   }
 
   render() {
     return '<div style="display:flex;flex-direction:column;gap:1rem;">' +
       '<div style="position:relative;" role="search">' +
         '<span style="position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--player-text-secondary);">' + icon('search') + '</span>' +
-        '<input id="sp-search-input" class="sp-input" style="width:100%;padding-left:2.4rem;" type="search" placeholder="Buscar en el catálogo o pegar un enlace de YouTube..." autocomplete="off">' +
+        '<input id="sp-search-input" class="sp-input" style="width:100%;padding-left:2.4rem;" type="search" placeholder="Buscar en YouTube Music o pegar un enlace..." autocomplete="off">' +
       '</div>' +
-      '<div style="display:flex;gap:.4rem;flex-wrap:wrap;" id="sp-search-tabs">' +
+      '<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;" id="sp-search-tabs">' +
         TABS.map((t) => '<button class="sp-tab' + (t.id === this.tab ? ' active' : '') + '" data-tab="' + t.id + '">' + t.label + '</button>').join('') +
+        '<span id="sp-backend-indicator" style="font-size:.7rem;padding:.2rem .5rem;border-radius:4px;border:1px solid var(--player-border);color:var(--player-text-secondary);margin-left:.4rem;">Backend: --</span>' +
       '</div>' +
-      '<div id="sp-search-results" aria-live="polite"></div>' +
+      '<div id="sp-search-results" class="sp-search-results" aria-live="polite"></div>' +
     '</div>';
   }
 
@@ -42,6 +42,7 @@ export class SearchView {
     const input = this.root.querySelector('#sp-search-input');
     const results = this.root.querySelector('#sp-search-results');
     const tabs = this.root.querySelector('#sp-search-tabs');
+    const backendIndicator = this.root.querySelector('#sp-backend-indicator');
 
     let controller = null;
     const execute = async (q) => {
@@ -49,17 +50,19 @@ export class SearchView {
         this.results = { songs: [], artists: [], albums: [], playlists: [] };
         this._lastQuery = null;
         this._renderResults(results);
+        this._updateBackendIndicator(backendIndicator);
         return;
       }
-      // El catálogo vive en la página: la búsqueda no usa red. Se mantiene
-      // AbortController para cancelar la búsqueda anterior si el usuario
-      // sigue tipeando (y para no pisar resultados viejos).
       if (controller) controller.abort();
       controller = new AbortController();
       this._controller = controller;
       this.loading = true;
-      results.innerHTML = '<div style="font-size:.8rem;color:var(--player-text-secondary);padding:.6rem .2rem;">Buscando en el catálogo…</div>';
+      results.innerHTML = '<div style="font-size:.8rem;color:var(--player-text-secondary);padding:.6rem .2rem;">Buscando…</div>';
       try {
+        const disponible = await api.backendDisponible();
+        this._usingBackend = disponible;
+        this._updateBackendIndicator(backendIndicator, disponible);
+
         this.results = (await api.search(q.trim(), 'all', 20, controller.signal)) ||
           { songs: [], artists: [], albums: [], playlists: [] };
         this._lastQuery = q.trim();
@@ -87,7 +90,24 @@ export class SearchView {
       this._renderResults(results);
     });
 
+    this._updateBackendIndicator(backendIndicator);
     this._renderResults(results);
+  }
+
+  _updateBackendIndicator(el, disponible) {
+    if (!el) return;
+    if (disponible === undefined) {
+      el.textContent = 'Backend: verificando…';
+      el.style.color = 'var(--player-text-secondary)';
+      return;
+    }
+    if (disponible) {
+      el.textContent = 'Backend: conectado';
+      el.style.color = 'var(--player-success)';
+    } else {
+      el.textContent = 'Backend: catálogo local';
+      el.style.color = 'var(--player-text-muted)';
+    }
   }
 
   destroy() {
@@ -101,8 +121,8 @@ export class SearchView {
     const items = this.results[this.tab] || [];
     if (!items.length) {
       container.innerHTML = this._lastQuery
-        ? emptyState('search', 'Sin resultados', 'No se encontró nada para «' + escapeHtml(this._lastQuery) + '» en el catálogo.')
-        : emptyState('search', 'Buscá una canción', 'Escribí al menos 2 caracteres, o pegá un enlace o ID de YouTube para reproducir cualquier video.');
+        ? emptyState('search', 'Sin resultados', 'No se encontró nada para «' + escapeHtml(this._lastQuery) + '».')
+        : emptyState('search', 'Buscá una canción', 'Escribí al menos 2 caracteres para buscar en YouTube Music.');
       return;
     }
     if (this.tab === 'songs') {
@@ -185,8 +205,6 @@ export class SearchView {
         : '<div style="font-size:.78rem;color:var(--player-text-secondary);padding:.4rem .5rem;">No tenés playlists locales.</div>') +
       '<button class="sp-btn" style="width:100%;justify-content:flex-start;margin-top:.3rem;" data-new>＋ Nueva playlist</button>';
     document.body.appendChild(menu);
-    // Cierre único: borraba el menú pero dejaba el listener de document
-    // colgado si se elegía una opción (closeMenu quita ambos)
     const closeMenu = () => { menu.remove(); document.removeEventListener('click', close); };
     const close = (e) => { if (!menu.contains(e.target)) closeMenu(); };
     setTimeout(() => document.addEventListener('click', close), 0);

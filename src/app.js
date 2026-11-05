@@ -24,6 +24,8 @@ import {
   obtenerCuenta,
   crearCuenta,
   cambiarRangoCuenta,
+  hashPasswordLocal,
+  cuentasBackend,
 } from "./app-accounts";
 
 import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoCheckboxes, gruposSeleccionados } from "./api-client";
@@ -659,35 +661,47 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           }
         }
         if (app === 'sakura-player') {
-          // Carga diferida: el reproductor (y sus 13 temas) pesa bastante
-          // y no debe retrasar el primer render de la plataforma.
+          var playerRoot = $('sakura-player-root');
+          var section = $('app-sakura-player');
+
+          // Asegurar que el contenedor tenga contenido visible incluso si el JS falla
+          if (playerRoot && !playerRoot.children.length) {
+            playerRoot.innerHTML = '<div id="sp-loading" style="padding:2rem;text-align:center;color:var(--player-text-secondary);">Cargando reproductor…</div>';
+          }
+
+          function montarSakura() {
+            if (!window.mountSakuraPlayer) {
+              console.warn('[SakuraPlayer] mountSakuraPlayer no disponible aún, reintentando…');
+              setTimeout(montarSakura, 200);
+              return;
+            }
+            try {
+              window.mountSakuraPlayer();
+              console.log('[SakuraPlayer] Montado correctamente');
+            } catch (err) {
+              console.error('[SakuraPlayer] Error al montar:', err);
+              if (playerRoot) playerRoot.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--player-error);">Error cargando el reproductor. Recargá la página.</div>';
+            }
+          }
+
           if (window.mountSakuraPlayer) {
-            window.mountSakuraPlayer();
+            montarSakura();
+          } else if (!window.__sakuraPlayerImport) {
+            var ts = new Date().getTime();
+            window.__sakuraPlayerImport = import('./sakura-player/sakura-player.js?t=' + ts)
+              .then(function (mod) {
+                window.mountSakuraPlayer = mod.mountSakuraPlayer;
+                window.getSakuraPlayer = mod.getSakuraPlayer;
+                montarSakura();
+              })
+              .catch(function (err) {
+                console.error('[SakuraPlayer] Error cargando módulo:', err);
+                window.__sakuraPlayerImport = null;
+                if (playerRoot) playerRoot.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--player-error);">No se pudo cargar el reproductor. Recargá la página e intentá de nuevo.</div>';
+                mostrarToast('No se pudo cargar el reproductor.', 'error');
+              });
           } else {
-            var playerRoot = $('sakura-player-root');
-            if (playerRoot && !playerRoot.children.length) {
-              playerRoot.innerHTML = '<div class="app-loading" role="status">Cargando reproductor…</div>';
-            }
-            if (!window.__sakuraPlayerImport) {
-              window.__sakuraPlayerImport = import('./sakura-player/sakura-player.js')
-                .then(function (mod) {
-                  window.mountSakuraPlayer = mod.mountSakuraPlayer;
-                  window.getSakuraPlayer = mod.getSakuraPlayer;
-                  return mod;
-                })
-                .catch(function (err) {
-                  console.error('[SakuraPlayer] Error cargando módulo:', err);
-                  window.__sakuraPlayerImport = null;
-                  if (playerRoot) playerRoot.innerHTML = '<div class="app-loading app-loading-error">No se pudo cargar el reproductor. Recargá la página e intentá de nuevo.</div>';
-                  mostrarToast('No se pudo cargar el reproductor.', 'error');
-                });
-            }
-            window.__sakuraPlayerImport.then(function () {
-              var section = $('app-sakura-player');
-              if (section && !section.classList.contains('hidden') && window.mountSakuraPlayer) {
-                window.mountSakuraPlayer();
-              }
-            });
+            window.__sakuraPlayerImport.then(montarSakura);
           }
         }
       };
@@ -752,18 +766,28 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       $('form-registro').addEventListener('submit', async function (e) {
         e.preventDefault();
         var err = $('reg-error');
-        function fallo(msg) { err.textContent = msg; err.hidden = false; mostrarToast(msg, 'error'); }
+        function fallo(msg) { err.textContent = msg; err.hidden = false; mostrarToast(msg, 'error'); console.log('[registro] ERROR:', msg); }
         var nom = $('reg-nombre').value.trim();
         var email = $('reg-email').value.trim();
         var rolSel = $('reg-rol') ? $('reg-rol').value : ROL_REGISTRO;
         var p1 = $('reg-pass').value;
         var p2 = $('reg-pass2').value;
+
+        console.log('[registro] Intento:', { email: email, rol: rolSel, passLen: p1.length });
+
         if (!nom) return fallo('Poné tu nombre completo.');
         if (!email || p1.length < 6) return fallo('Correo y contraseña válidos (mín. 6 caracteres).');
         if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
         if (ROLES_VALIDOS.indexOf(rolSel) === -1) return fallo('Elegí un rol válido.');
+
+        // Verificación local previa: si el email ya existe, avisar sin llamar al backend
+        if (obtenerCuenta(email)) {
+          return fallo('Ese correo ya está registrado. Iniciá sesión.');
+        }
+
         try {
           var data = await apiRegister(email, nom, p1, rolSel);
+          console.log('[registro] Éxito:', data);
           err.hidden = true;
           $('form-registro').reset();
           if ($('reg-rol')) $('reg-rol').value = ROL_REGISTRO;
@@ -771,6 +795,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           loginSuccess(data.email, data.rol, data.nombre);
           mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[data.rol] || data.rol) + '.', 'success');
         } catch (err) {
+          console.log('[registro] Excepción:', err);
           fallo(String(err.message || err));
         }
       });
@@ -819,10 +844,81 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         mostrarToast('Sesión cerrada.', 'success');
       });
 
+      /* ---- Olvidé mi contraseña: flujo real de recuperación local ---- */
       $('link-olvide').addEventListener('click', function (e) {
-        e.preventDefault(); modalLogin.classList.remove('open');
-        mostrarToast('Te enviamos un enlace de recuperación al correo.', 'success');
+        e.preventDefault();
+        modalLogin.classList.remove('open');
+        _flujoOlvideContrasena();
       });
+
+      async function _flujoOlvideContrasena() {
+        // Paso 1: pedir el correo
+        const email = await _pedirTextoDialog('Recuperar contraseña', 'Ingresá tu correo institucional:', 'correo@bachillerato.edu', 'email');
+        if (!email) return;
+        const e = normalizaEmail(email);
+        const cuenta = obtenerCuenta(e);
+        if (!cuenta || !cuentaActiva(cuenta)) {
+          mostrarToast('No existe una cuenta con ese correo.', 'error');
+          return;
+        }
+        // Paso 2: pedir nueva contraseña y confirmación
+        const p1 = await _pedirTextoDialog('Nueva contraseña', 'Escribí tu nueva contraseña (mín. 6 caracteres):', '', 'password');
+        if (!p1) return;
+        if (p1.length < 6) { mostrarToast('La contraseña debe tener al menos 6 caracteres.', 'error'); return; }
+        const p2 = await _pedirTextoDialog('Confirmar contraseña', 'Repetí la nueva contraseña:', '', 'password');
+        if (!p2) return;
+        if (p1 !== p2) { mostrarToast('Las contraseñas no coinciden.', 'error'); return; }
+
+        // Actualizar el hash de la cuenta
+        const db = leerCuentas();
+        if (!db[e]) { mostrarToast('No se pudo actualizar la cuenta.', 'error'); return; }
+        db[e].passwordHash = hashPasswordLocal(p1);
+        guardarCuentas(db);
+        mostrarToast('Contraseña actualizada correctamente. Ya podés iniciar sesión.', 'success');
+      }
+
+      function _pedirTextoDialog(titulo, mensaje, placeholder, tipo) {
+        return new Promise(function (resolve) {
+          dialogOverlay.classList.add('open');
+          $('dialog-content').innerHTML =
+            '<div class="modal-dialog-icon">✉️</div>' +
+            '<div class="modal-dialog-title">' + escapeHtml(titulo) + '</div>' +
+            '<div class="modal-dialog-msg" style="margin-bottom:.75rem;">' + escapeHtml(mensaje) + '</div>';
+          const inputWrap = $('dialog-input-wrap');
+          const inputEl = $('dialog-input');
+          inputWrap.classList.remove('hidden');
+          inputEl.type = tipo || 'text';
+          inputEl.placeholder = placeholder || '';
+          inputEl.value = '';
+          inputEl.disabled = false;
+          $('dialog-buttons').innerHTML =
+            '<button class="btn btn-outline" id="dialog-cancel-btn">Cancelar</button>' +
+            '<button class="btn btn-primary" id="dialog-ok-btn">Aceptar</button>';
+
+          function limpiar() {
+            dialogOverlay.classList.remove('open');
+            inputWrap.classList.add('hidden');
+            document.removeEventListener('keydown', onKey);
+          }
+          function onKey(ev) {
+            if (ev.key === 'Enter') okClick();
+            else if (ev.key === 'Escape') cancelClick();
+          }
+          function okClick() {
+            resolve(inputEl.value.trim());
+            limpiar();
+          }
+          function cancelClick() {
+            resolve(null);
+            limpiar();
+          }
+          $('dialog-ok-btn').onclick = okClick;
+          $('dialog-cancel-btn').onclick = cancelClick;
+          document.addEventListener('keydown', onKey);
+          // enfocar el input tras un tick
+          setTimeout(function () { try { inputEl.focus(); } catch (e) { /* noop */ } }, 50);
+        });
+      }
 
 
       /* ===== CUSTOM DIALOG ===== */
@@ -1605,6 +1701,15 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
                 '<option value="vf_justificacion">V/F con Justificación</option>' +
                 '<option value="rango">Numérico (rango)</option>' +
                 '<option value="cloze">Completar huecos</option>' +
+                '<option value="mat_ecuacion">Matemática: Ecuación</option>' +
+                '<option value="mat_geometria">Matemática: Geometría</option>' +
+                '<option value="mat_funcion">Matemática: Función</option>' +
+                '<option value="ciencia_formula">Ciencia: Fórmula</option>' +
+                '<option value="ciencia_ecuacion">Ciencia: Ecuación Química</option>' +
+                '<option value="ciencia_diagrama">Ciencia: Diagrama</option>' +
+                '<option value="sw_codigo_funcion">Software: Escribir Función</option>' +
+                '<option value="sw_depuracion">Software: Depuración</option>' +
+                '<option value="sw_arquitectura">Software: Arquitectura</option>' +
               '</select>' +
               '<button type="button" onclick="this.closest(\'.pregunta-item\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red-ink);font-size:1.2rem;padding:0 4px;">×</button>' +
             '</div>' +
@@ -1678,6 +1783,51 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           body.innerHTML =
             '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">En la pregunta usa <strong>___</strong> (3 guiones bajos) para cada hueco. Ingresá aquí las respuestas en orden:</div>' +
             '<input type="text" placeholder="Respuestas separadas por coma (ej: estrella, planeta)" data-idx="' + idx + '" data-cloze-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'mat_ecuacion') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Ecuación matemática. Escribí la solución numérica o expresión esperada:</div>' +
+            '<input type="text" placeholder="Ej: x = 5  o  42" data-idx="' + idx + '" data-mat-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">' +
+            '<div style="margin-top:.3rem;font-size:.75rem;color:var(--gray-500);">Tolerancia numérica opcional (para aceptar respuestas cercanas):</div>' +
+            '<input type="number" step="any" min="0" placeholder="0" data-idx="' + idx + '" data-mat-tol="" value="0" style="width:120px;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'mat_geometria') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Problema de geometría. Escribí el resultado con unidades (ej: 25 cm²):</div>' +
+            '<input type="text" placeholder="Ej: 78.5 cm²" data-idx="' + idx + '" data-mat-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'mat_funcion') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Función matemática. Escribí la expresión esperada (ej: 2x + 3):</div>' +
+            '<input type="text" placeholder="Ej: f(x) = x² + 1" data-idx="' + idx + '" data-mat-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'ciencia_formula') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Fórmula química o física. Escribí la fórmula esperada (ej: H₂O, E=mc²):</div>' +
+            '<input type="text" placeholder="Ej: NaCl" data-idx="' + idx + '" data-ciencia-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'ciencia_ecuacion') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Ecuación química. Escribí la ecuación balanceada (ej: 2H₂ + O₂ → 2H₂O):</div>' +
+            '<input type="text" placeholder="Ej: CH₄ + 2O₂ → CO₂ + 2H₂O" data-idx="' + idx + '" data-ciencia-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'ciencia_diagrama') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Diagrama. Escribí las etiquetas o respuestas esperadas separadas por coma:</div>' +
+            '<input type="text" placeholder="Ej: núcleo, citoplasma, membrana" data-idx="' + idx + '" data-ciencia-resp="" style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">';
+        } else if (tipo === 'sw_codigo_funcion') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Escribí una función. Seleccioná el lenguaje y la salida esperada:</div>' +
+            '<select style="width:100%;padding:.45rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;margin-bottom:.3rem;">' +
+            '<option value="javascript">JavaScript</option>' +
+            '<option value="python">Python</option>' +
+            '<option value="java">Java</option>' +
+            '<option value="cpp">C++</option>' +
+            '<option value="php">PHP</option>' +
+            '</select>' +
+            '<textarea placeholder="Salida esperada o descripción de lo que debe hacer la función..." data-idx="' + idx + '" data-sw-resp="" style="width:100%;min-height:70px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></textarea>';
+        } else if (tipo === 'sw_depuracion') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Depuración de código. Escribí el error encontrado o la corrección esperada:</div>' +
+            '<textarea placeholder="Describí el bug y cómo corregirlo..." data-idx="' + idx + '" data-sw-resp="" style="width:100%;min-height:70px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></textarea>';
+        } else if (tipo === 'sw_arquitectura') {
+          body.innerHTML =
+            '<div style="padding:.4rem 0;font-size:.85rem;color:var(--gray-500);">Arquitectura de software. Escribí el diseño esperado (diagrama de texto, componentes, etc.):</div>' +
+            '<textarea placeholder="Describí la arquitectura esperada..." data-idx="' + idx + '" data-sw-resp="" style="width:100%;min-height:100px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></textarea>';
         }
       };
 
@@ -1775,6 +1925,40 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               throw new Error('pregunta_invalida');
             }
             q.respuestas = respuestasCloze;
+          } else if (tipo === 'mat_ecuacion' || tipo === 'mat_funcion' || tipo === 'mat_geometria') {
+            var matInp = item.querySelector('input[data-mat-resp]');
+            var matTol = item.querySelector('input[data-mat-tol]');
+            var mVal = matInp ? matInp.value.trim() : '';
+            if (!mVal) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': escribí la respuesta matemática.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.respuesta = mVal;
+            var tVal = matTol ? matTol.value.trim() : '0';
+            q.tolerancia = (tVal !== '' && !isNaN(Number(tVal))) ? Math.max(0, parseFloat(tVal)) : 0;
+          } else if (tipo === 'ciencia_formula' || tipo === 'ciencia_ecuacion' || tipo === 'ciencia_diagrama') {
+            var ciInp = item.querySelector('input[data-ciencia-resp]');
+            var cVal = ciInp ? ciInp.value.trim() : '';
+            if (!cVal) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': escribí la respuesta científica.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.respuesta = cVal;
+          } else if (tipo === 'sw_codigo_funcion' || tipo === 'sw_depuracion' || tipo === 'sw_arquitectura') {
+            var swInp = item.querySelector('textarea[data-sw-resp], input[data-sw-resp]');
+            var sVal = swInp ? swInp.value.trim() : '';
+            if (!sVal) {
+              $('exam-guardar-msg').textContent = '⚠️ Pregunta ' + (i + 1) + ': escribí la respuesta de software.';
+              $('exam-guardar-msg').style.color = 'var(--red)';
+              throw new Error('pregunta_invalida');
+            }
+            q.respuesta = sVal;
+            if (tipo === 'sw_codigo_funcion') {
+              var langSel = item.querySelector('select');
+              q.lenguaje = langSel ? langSel.value : 'javascript';
+            }
           } else if (tipo === 'ordenar') {
             var optsOrdenar = [];
             item.querySelectorAll('input[data-opt]').forEach(function (inp) { optsOrdenar.push(inp.value.trim()); });
@@ -2148,6 +2332,12 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
                 }).join('') +
               '</div>';
             }
+          } else if (q.tipo === 'mat_ecuacion' || q.tipo === 'mat_geometria' || q.tipo === 'mat_funcion') {
+            html += '<div style="margin-top:.4rem;"><input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí la respuesta matemática..." style="width:100%;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></div>';
+          } else if (q.tipo === 'ciencia_formula' || q.tipo === 'ciencia_ecuacion' || q.tipo === 'ciencia_diagrama') {
+            html += '<div style="margin-top:.4rem;"><input type="text" class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí la fórmula o respuesta científica..." style="width:100%;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.9rem;"></div>';
+          } else if (q.tipo === 'sw_codigo_funcion' || q.tipo === 'sw_depuracion' || q.tipo === 'sw_arquitectura') {
+            html += '<div style="margin-top:.4rem;"><textarea class="exam-fill-input" data-qi="' + qi + '" placeholder="Escribí tu respuesta de software..." style="width:100%;min-height:100px;padding:.5rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;font-family:monospace;font-size:.9rem;"></textarea></div>';
           }
           html += '</div>';
           return html;
@@ -2209,7 +2399,10 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function examRecolectarRespuestas() {
         if (!examEnCurso) return [];
         return examEnCurso.examen.preguntas.map(function (q, qi) {
-          if (q.tipo === 'completar' || q.tipo === 'texto_largo' || q.tipo === 'abierta' || q.tipo === 'rango') {
+          if (q.tipo === 'completar' || q.tipo === 'texto_largo' || q.tipo === 'abierta' || q.tipo === 'rango'
+              || q.tipo === 'mat_ecuacion' || q.tipo === 'mat_geometria' || q.tipo === 'mat_funcion'
+              || q.tipo === 'ciencia_formula' || q.tipo === 'ciencia_ecuacion' || q.tipo === 'ciencia_diagrama'
+              || q.tipo === 'sw_codigo_funcion' || q.tipo === 'sw_depuracion' || q.tipo === 'sw_arquitectura') {
             var fill = document.querySelector('.exam-fill-input[data-qi="' + qi + '"]');
             return fill ? fill.value.trim() : '';
           } else if (q.tipo === 'vf_justificacion') {
@@ -3176,6 +3369,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       };
       var foroAbierto = -1;      // índice del tema abierto en pantalla
       var foroResponderA = null; // id del mensaje al que se responde (null = al tema)
+      var foroPagina = 1;        // página actual de paginación
+      var foroPorPagina = 5;     // temas por página
+      var foroOrden = 'reciente'; // ordenamiento: 'reciente' o 'populares'
 
       // Migración de los foros viejos ({titulo, desc}) al formato con hilos
       (function migrarForos() {
@@ -3219,10 +3415,22 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
         return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
       }
+      function enlacesAutomaticos(texto) {
+        if (!texto) return '';
+        return texto.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
+          var display = url.length > 50 ? url.substring(0, 47) + '...' : url;
+          return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--blue-ink);text-decoration:underline;word-break:break-all;">' + escapeHtml(display) + '</a>';
+        });
+      }
       function foroPuedeBorrar(autor) {
         var yo = foroYo();
         if (yo && autor && autor.email && autor.email === yo.email) return true;
         return tienePermiso('eliminar');
+      }
+      function foroPuedeEditar(autor) {
+        var yo = foroYo();
+        if (yo && autor && autor.email && autor.email === yo.email) return true;
+        return tienePermiso('editar');
       }
       function foroBadgeRol(rol) {
         var c = (typeof ROLES_BADGE !== 'undefined' && ROLES_BADGE[rol]) || 'badge-blue';
@@ -3273,8 +3481,19 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         }).sort(function (a, b) {
           var pa = a.f.fijado ? 1 : 0, pb = b.f.fijado ? 1 : 0;
           if (pa !== pb) return pb - pa;
+          if (foroOrden === 'populares') {
+            var ca = foroCuentaRespuestas(a.f), cb = foroCuentaRespuestas(b.f);
+            if (ca !== cb) return cb - ca;
+          }
           return String(b.f.creada).localeCompare(String(a.f.creada));
         });
+
+        // Paginación
+        var totalPaginas = Math.ceil(visibles.length / foroPorPagina);
+        if (foroPagina > totalPaginas) foroPagina = totalPaginas || 1;
+        var inicio = (foroPagina - 1) * foroPorPagina;
+        var fin = inicio + foroPorPagina;
+        var paginaVisibles = visibles.slice(inicio, fin);
 
         if (visibles.length === 0) {
           el.innerHTML = foros.length === 0
@@ -3283,7 +3502,20 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           return;
         }
 
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' + visibles.map(function (x) {
+        // Controles superiores: paginación, orden y exportar CSV
+        var controlesSup = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem;">' +
+          '<div style="font-size:.75rem;color:var(--gray-500);">Mostrando ' + (inicio + 1) + ' a ' + Math.min(fin, visibles.length) + ' de ' + visibles.length + '</div>' +
+          '<button class="btn btn-sm btn-outline foro-pagina-anterior" style="font-size:.75rem;">\u25C4 Anterior</button>' +
+          '<span style="font-size:.75rem;color:var(--gray-700);font-weight:600;">P\u00e1gina ' + foroPagina + ' de ' + totalPaginas + '</span>' +
+          '<button class="btn btn-sm btn-outline foro-pagina-siguiente" style="font-size:.75rem;">Siguiente \u25BA</button>' +
+          '<select id="foro-orden" style="font-size:.75rem;padding:.2rem .4rem;border:1px solid var(--gray-300);border-radius:6px;">' +
+            '<option value="reciente" ' + (foroOrden === 'reciente' ? 'selected' : '') + '>M\u00e1s recientes</option>' +
+            '<option value="populares" ' + (foroOrden === 'populares' ? 'selected' : '') + '>M\u00e1s populares</option>' +
+          '</select>' +
+          (tienePermiso('eliminar') ? '<button class="btn btn-sm btn-outline foro-exportar" style="font-size:.75rem;color:var(--gray-800);">\uD83D\uDCCE Exportar CSV</button>' : '') +
+        '</div>';
+
+        el.innerHTML = controlesSup + '<div style="display:flex;flex-direction:column;gap:.5rem;">' + paginaVisibles.map(function (x) {
           var f = x.f;
           var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
           var meta = [];
@@ -3307,7 +3539,69 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
                 '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + x.i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button>' +
               '</div>' +
             '</div></div>';
-        }).join('') + '</div>';
+        }).join('') + '</div>' +
+        '<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem;justify-content:space-between;">' +
+          '<div style="font-size:.7rem;color:var(--gray-500);">Total: ' + visibles.length + ' tema' + (visibles.length !== 1 ? 's' : '') + '</div>' +
+          '<button class="btn btn-sm btn-outline foro-pagina-anterior2" style="font-size:.75rem;">\u25C4 Anterior</button>' +
+          '<span style="font-size:.75rem;color:var(--gray-700);font-weight:600;">P\u00e1gina ' + foroPagina + ' de ' + totalPaginas + '</span>' +
+          '<button class="btn btn-sm btn-outline foro-pagina-siguiente2" style="font-size:.75rem;">Siguiente \u25BA</button>' +
+        '</div>';
+
+        el.querySelectorAll('.foro-abrir').forEach(function (b) {
+          b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
+        });
+        el.querySelectorAll('.foro-estado').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (!exigirPermiso('editar')) return;
+            var f = foros[parseInt(this.dataset.idx, 10)];
+            if (!f) return;
+            f.estado = f.estado === 'resuelto' ? 'abierto' : 'resuelto';
+            foroGuardar();
+            renderForos();
+            mostrarToast(f.estado === 'resuelto' ? 'Tema marcado como resuelto.' : 'Tema reabierto.', 'success');
+          });
+        });
+        el.querySelectorAll('.seccion-del').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (!exigirPermiso('eliminar')) return;
+            foros.splice(parseInt(this.dataset.idx, 10), 1);
+            foroGuardar();
+            renderForos();
+            mostrarToast('Tema eliminado.', 'success');
+          });
+        });
+
+        // Listeners paginación
+        el.querySelectorAll('.foro-pagina-anterior, .foro-pagina-anterior2').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (foroPagina > 1) {
+              foroPagina--;
+              renderForos();
+            }
+          });
+        });
+        el.querySelectorAll('.foro-pagina-siguiente, .foro-pagina-siguiente2').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (foroPagina < totalPaginas) {
+              foroPagina++;
+              renderForos();
+            }
+          });
+        });
+        var ordenSelect = $('foro-orden');
+        if (ordenSelect) {
+          ordenSelect.addEventListener('change', function () {
+            foroOrden = ordenSelect.value;
+            foroPagina = 1;
+            renderForos();
+          });
+        }
+        var btnExportar = el.querySelector('.foro-exportar');
+        if (btnExportar) {
+          btnExportar.addEventListener('click', function () {
+            foroExportarCSV(visibles);
+          });
+        }
 
         el.querySelectorAll('.foro-abrir').forEach(function (b) {
           b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
@@ -3343,6 +3637,26 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         if (!det) return;
         if (!f) { foroAbierto = -1; renderForos(); return; }
 
+        // Marcar como leído los mensajes al ver el detalle
+        var yo = foroYo();
+        if (yo && yo.email) {
+          if (!f.leidosPor) f.leidosPor = [];
+          if (f.leidosPor.indexOf(yo.email) < 0) f.leidosPor.push(yo.email);
+          if (f.mensajes) {
+            f.mensajes.forEach(function (m) {
+              if (!m.leidosPor) m.leidosPor = [];
+              if (m.leidosPor.indexOf(yo.email) < 0) m.leidosPor.push(yo.email);
+              if (m.respuestas) {
+                m.respuestas.forEach(function (r) {
+                  if (!r.leidosPor) r.leidosPor = [];
+                  if (r.leidosPor.indexOf(yo.email) < 0) r.leidosPor.push(yo.email);
+                });
+              }
+            });
+          }
+          foroGuardar();
+        }
+
         var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
         var yo = foroYo();
         var cerrado = f.estado === 'cerrado';
@@ -3354,14 +3668,31 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
 
         var mensajes = f.mensajes.map(function (m) {
           var respuestas = (m.respuestas || []).map(function (r) {
-            return '<div style="margin:.4rem 0 0 .9rem;padding:.45rem .6rem;background:var(--gray-50);border-left:3px solid var(--gray-200);border-radius:0 8px 8px 0;">' +
+            var aceptada = r.aceptada ? ' <span class="badge badge-green" style="font-size:.65rem;margin-left:.4rem;">✓ Aceptada</span>' : '';
+            var puedeAceptar = (yo && f.autor && f.autor.email === yo.email) && !r.aceptada;
+            return '<div style="margin:.4rem 0 0 .9rem;padding:.45rem .6rem;background:' + (r.aceptada ? 'rgba(46,204,113,.08)' : 'var(--gray-50)') + ';border-left:3px solid ' + (r.aceptada ? 'var(--green-ink)' : 'var(--gray-200)') + ';border-radius:0 8px 8px 0;">' +
               '<div style="display:flex;justify-content:space-between;gap:.5rem;">' +
                 '<strong style="font-size:.82rem;">' + escapeHtml(r.autor ? r.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(r.autor ? r.autor.rol : '') + '</strong>' +
-                '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(r.fecha) + '</span>' +
+                '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(r.fecha) + '</span>' + aceptada +
               '</div>' +
-              '<p style="font-size:.85rem;margin:.2rem 0 0;">' + escapeHtml(r.texto) + '</p>' +
-              '<div style="display:flex;justify-content:flex-end;gap:.4rem;margin-top:.3rem;">' +
+              '<p style="font-size:.85rem;margin:.2rem 0 0;">' + escapeHtml(enlacesAutomaticos(r.texto)) + '</p>' +
+              (r.archivos && r.archivos.length ? '<div style="margin:.3rem 0;display:flex;gap:.4rem;flex-wrap:wrap;">' + r.archivos.map(function (arch) {
+              return '<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;background:var(--gray-50);padding:.3rem .5rem;border-radius:6px;">' +
+                '<span>\uD83D\uDCCE</span>' + escapeHtml(arch.nombre) +
+                '</div>';
+            }).join('') + '</div>' : '') +
+            '<div style="display:flex;gap:.4rem;margin-top:.3rem;">' +
+                (puedeAceptar ? '<button class="btn btn-sm btn-outline foro-aceptar" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--green-ink);font-size:.72rem;">Marcar como respuesta</button>' : '') +
+                (foroPuedeEditar(r.autor) ? '<button class="btn btn-sm btn-outline foro-editar-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--blue-ink);font-size:.72rem;">Editar</button>' : '') +
                 (foroPuedeBorrar(r.autor) ? '<button class="btn btn-sm btn-outline foro-del-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.72rem;">Eliminar</button>' : '') +
+                '<div style="flex:1;display:flex;gap:.3rem;justify-content:flex-end;">' +
+                (r.reacciones ? Object.keys(r.reacciones).map(function (emoji) {
+                  var count = r.reacciones[emoji];
+                  var yoReacciono = r.reacciones[emoji].usuarios && r.reacciones[emoji].usuarios.indexOf(yo && yo.email) >= 0;
+                  return '<button class="btn btn-sm btn-outline foro-reaccionar" data-mid="' + m.id + '" data-rid="' + r.id + '" data-emoji="' + escapeHtml(emoji) + '" style="font-size:.8rem;background:' + (yoReacciono ? 'var(--blue-200)' : 'transparent') + ';border-color:' + (yoReacciono ? 'var(--blue-ink)' : 'var(--gray-300)') + ';">' + emoji + ' <span style="font-size:.65rem;">' + count + '</span></button>';
+                }).join('') : '') +
+              '</div>' +
+              (tienePermiso('eliminar') || (yo && r.autor && r.autor.email === yo.email) ? '<button class="btn btn-sm btn-outline foro-reportar" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.7rem;">\u26A0 Reportar</button>' : '') +
               '</div></div>';
           }).join('');
 
@@ -3370,10 +3701,24 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               '<strong style="font-size:.88rem;">' + escapeHtml(m.autor ? m.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(m.autor ? m.autor.rol : '') + '</strong>' +
               '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(m.fecha) + '</span>' +
             '</div>' +
-            '<p style="font-size:.88rem;margin:.35rem 0 .4rem;white-space:pre-wrap;">' + escapeHtml(m.texto) + '</p>' +
+            '<p style="font-size:.88rem;margin:.35rem 0 .4rem;white-space:pre-wrap;">' + escapeHtml(enlacesAutomaticos(m.texto)) + '</p>' +
+            (m.archivos && m.archivos.length ? '<div style="margin:.3rem 0;display:flex;gap:.4rem;flex-wrap:wrap;">' + m.archivos.map(function (arch) {
+              return '<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;background:var(--gray-50);padding:.3rem .5rem;border-radius:6px;">' +
+                '<span>\uD83D\uDCCE</span>' + escapeHtml(arch.nombre) +
+                '</div>';
+            }).join('') + '</div>' : '') +
             '<div style="display:flex;gap:.5rem;">' +
               (cerrado ? '' : '<button class="btn btn-sm btn-outline foro-responder" data-mid="' + m.id + '" style="font-size:.75rem;">\u21A9 Responder</button>') +
+              (foroPuedeEditar(m.autor) ? '<button class="btn btn-sm btn-outline foro-editar-msg" data-mid="' + m.id + '" style="color:var(--blue-ink);font-size:.75rem;">Editar</button>' : '') +
               (foroPuedeBorrar(m.autor) ? '<button class="btn btn-sm btn-outline foro-del-msg" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.75rem;">Eliminar</button>' : '') +
+              '<div style="flex:1;display:flex;gap:.3rem;justify-content:flex-end;">' +
+                (m.reacciones ? Object.keys(m.reacciones).map(function (emoji) {
+                  var count = m.reacciones[emoji];
+                  var yoReacciono = m.reacciones[emoji].usuarios && m.reacciones[emoji].usuarios.indexOf(yo && yo.email) >= 0;
+                  return '<button class="btn btn-sm btn-outline foro-reaccionar" data-mid="' + m.id + '" data-emoji="' + escapeHtml(emoji) + '" style="font-size:.8rem;background:' + (yoReacciono ? 'var(--blue-200)' : 'transparent') + ';border-color:' + (yoReacciono ? 'var(--blue-ink)' : 'var(--gray-300)') + ';">' + emoji + ' <span style="font-size:.65rem;">' + count + '</span></button>';
+                }).join('') : '') +
+              '</div>' +
+              (tienePermiso('eliminar') || (yo && m.autor && m.autor.email === yo.email) ? '<button class="btn btn-sm btn-outline foro-reportar" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.7rem;">\u26A0 Reportar</button>' : '') +
             '</div>' + respuestas + '</div>';
         }).join('');
         if (!f.mensajes.length) {
@@ -3402,6 +3747,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
                 ? '<div style="margin-top:.9rem;">' +
                     '<div id="foro-respuesta-a" class="hidden" style="font-size:.78rem;color:var(--gray-500);margin-bottom:.3rem;"></div>' +
                     '<textarea id="foro-texto" rows="3" placeholder="Escrib\u00ED tu respuesta..." aria-label="Tu respuesta" style="width:100%;padding:.55rem .7rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>' +
+                    '<input type="file" id="foro-archivo" accept="image/*,.pdf,.doc,.docx,.txt" style="width:100%;padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.8rem;margin-top:.3rem;" multiple>' +
+                    '<div id="foro-archivos-seleccionados" style="font-size:.75rem;color:var(--gray-500);margin-top:.3rem;"></div>' +
                     '<div style="display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end;">' +
                       '<button class="btn btn-primary btn-sm" id="foro-publicar">Publicar respuesta</button>' +
                     '</div>' +
@@ -3469,6 +3816,133 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           });
         });
 
+        det.querySelectorAll('.foro-editar-msg').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var idx = f.mensajes.findIndex(function (m) { return m.id === this.dataset.mid; }, this);
+            var m = idx >= 0 ? f.mensajes[idx] : null;
+            if (!m) return;
+            if (!foroPuedeEditar(m.autor)) { mostrarToast('No pod\u00E9s editar este mensaje.', 'error'); return; }
+            var nuevoTexto = prompt('Editar mensaje:', m.texto);
+            if (nuevoTexto === null) return;
+            if (!nuevoTexto.trim()) { mostrarToast('El mensaje no puede estar vac\u00EDo.', 'error'); return; }
+            m.texto = nuevoTexto.trim();
+            m.editado = true;
+            m.editadoFecha = new Date().toISOString();
+            foroGuardar();
+            renderForoDetalle();
+            mostrarToast('Mensaje editado.', 'success');
+          });
+        });
+
+        det.querySelectorAll('.foro-editar-resp').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
+            if (!m) return;
+            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
+            if (ridx < 0) return;
+            if (!foroPuedeEditar(m.respuestas[ridx].autor)) { mostrarToast('No pod\u00E9s editar esta respuesta.', 'error'); return; }
+            var nuevoTexto = prompt('Editar respuesta:', m.respuestas[ridx].texto);
+            if (nuevoTexto === null) return;
+            if (!nuevoTexto.trim()) { mostrarToast('La respuesta no puede estar vac\u00EDa.', 'error'); return; }
+            m.respuestas[ridx].texto = nuevoTexto.trim();
+            m.respuestas[ridx].editado = true;
+            m.respuestas[ridx].editadoFecha = new Date().toISOString();
+            foroGuardar();
+            renderForoDetalle();
+            mostrarToast('Respuesta editada.', 'success');
+          });
+        });
+
+        det.querySelectorAll('.foro-aceptar').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
+            if (!m) return;
+            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
+            if (ridx < 0) return;
+            if (!yo || !f.autor || f.autor.email !== yo.email) { mostrarToast('Solo el autor del tema puede aceptar una respuesta.', 'error'); return; }
+            // Quitar aceptada de otras respuestas de este mensaje
+            if (m.respuestas) m.respuestas.forEach(function (r) { r.aceptada = false; });
+            m.respuestas[ridx].aceptada = true;
+            foroGuardar();
+            renderForoDetalle();
+            mostrarToast('Respuesta marcada como aceptada.', 'success');
+          });
+        });
+
+        det.querySelectorAll('.foro-reaccionar').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var mid = this.dataset.mid;
+            var rid = this.dataset.rid;
+            var emoji = this.dataset.emoji;
+            var yo2 = foroYo();
+            if (!yo2) { mostrarToast('Inici\u00E9 sesi\u00F3n para reaccionar.', 'error'); return; }
+            var mensaje;
+            var esRespuesta = !!rid;
+            if (esRespuesta) {
+              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
+              if (!mensaje || !mensaje.respuestas) return;
+              var r = mensaje.respuestas.find(function (r) { return r.id === rid; });
+              if (!r) return;
+              if (!r.reacciones) r.reacciones = {};
+              if (!r.reacciones[emoji]) r.reacciones[emoji] = { count: 0, usuarios: [] };
+              var reaccion = r.reacciones[emoji];
+              var idx = reaccion.usuarios.indexOf(yo2.email);
+              if (idx >= 0) {
+                reaccion.usuarios.splice(idx, 1);
+                reaccion.count--;
+              } else {
+                reaccion.usuarios.push(yo2.email);
+                reaccion.count++;
+              }
+            } else {
+              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
+              if (!mensaje) return;
+              if (!mensaje.reacciones) mensaje.reacciones = {};
+              if (!mensaje.reacciones[emoji]) mensaje.reacciones[emoji] = { count: 0, usuarios: [] };
+              var reaccion = mensaje.reacciones[emoji];
+              var idx = reaccion.usuarios.indexOf(yo2.email);
+              if (idx >= 0) {
+                reaccion.usuarios.splice(idx, 1);
+                reaccion.count--;
+              } else {
+                reaccion.usuarios.push(yo2.email);
+                reaccion.count++;
+              }
+            }
+            foroGuardar();
+            renderForoDetalle();
+          });
+        });
+
+        det.querySelectorAll('.foro-reportar').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var mid = this.dataset.mid;
+            var rid = this.dataset.rid;
+            var yo2 = foroYo();
+            if (!yo2) { mostrarToast('Inici\u00E9 sesi\u00F3n para reportar.', 'error'); return; }
+            var mensaje;
+            var esRespuesta = !!rid;
+            if (esRespuesta) {
+              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
+              if (!mensaje || !mensaje.respuestas) return;
+              var r = mensaje.respuestas.find(function (r) { return r.id === rid; });
+              if (!r) return;
+              if (!r.reportes) r.reportes = [];
+              if (r.reportes.indexOf(yo2.email) >= 0) { mostrarToast('Ya reportaste este mensaje.', 'info'); return; }
+              r.reportes.push(yo2.email);
+            } else {
+              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
+              if (!mensaje) return;
+              if (!mensaje.reportes) mensaje.reportes = [];
+              if (mensaje.reportes.indexOf(yo2.email) >= 0) { mostrarToast('Ya reportaste este tema.', 'info'); return; }
+              mensaje.reportes.push(yo2.email);
+            }
+            foroGuardar();
+            renderForoDetalle();
+            mostrarToast('Mensaje reportado. El docente/admin ser\u00E1 notificado.', 'success');
+          });
+        });
+
         var publicar = $('foro-publicar');
         if (publicar) publicar.addEventListener('click', function () {
           var yo2 = foroYo();
@@ -3477,11 +3951,27 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           var texto = t ? t.value.trim() : '';
           if (!texto) { mostrarToast('Escrib\u00ED una respuesta.', 'error'); return; }
           var ahora = new Date().toISOString();
+          // Detectar menciones @usuario
+          var menciones = [];
+          var matches = texto.match(/@([a-zA-Z0-9._-]+)/g);
+          if (matches) {
+            matches.forEach(function (m) {
+              var nombre = m.slice(1);
+              if (menciones.indexOf(nombre) < 0) menciones.push(nombre);
+            });
+          }
+          var archivosArchivados = archivosSeleccionados.map(function (a) {
+            return { nombre: a.name, tipo: a.type, tamano: a.size, fecha: ahora, url: URL.createObjectURL(a) };
+          });
+          var nuevoItem = { id: 'm' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, respuestas: [], leidosPor: [], reacciones: [], archivos: archivosArchivados.length ? archivosArchivados : undefined };
+          if (menciones.length > 0) nuevoItem.mencionados = menciones;
           if (foroResponderA) {
             var destino = f.mensajes.find(function (m) { return m.id === foroResponderA; });
             if (destino) {
               destino.respuestas = destino.respuestas || [];
-              destino.respuestas.push({ id: 'r' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora });
+              var nuevaResp = { id: 'r' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, leidosPor: [], reacciones: {}, archivos: archivosArchivados.length ? archivosArchivados : undefined };
+              if (menciones.length > 0) nuevaResp.mencionados = menciones;
+              destino.respuestas.push(nuevaResp);
               foroGuardar();
               foroResponderA = null;
               renderForoDetalle();
@@ -3489,10 +3979,13 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               return;
             }
           }
-          f.mensajes.push({ id: 'm' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, respuestas: [] });
+          f.mensajes.push(nuevoItem);
           foroGuardar();
           renderForoDetalle();
           mostrarToast('Respuesta publicada.', 'success');
+          archivosSeleccionados = [];
+          if (archivoEl) archivoEl.value = '';
+          if (archivosSel) archivosSel.innerHTML = '';
         });
         var textoEl = $('foro-texto');
         if (textoEl) textoEl.addEventListener('input', function () {
@@ -3502,9 +3995,65 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
             if (hint) hint.classList.add('hidden');
           }
         });
+        var archivoEl = $('foro-archivo');
+        var archivosSel = $('foro-archivos-seleccionados');
+        var archivosSeleccionados = [];
+        if (archivoEl) {
+          archivoEl.addEventListener('change', function () {
+            archivosSeleccionados = Array.from(this.files || []);
+            if (archivosSel) {
+              archivosSel.innerHTML = archivosSeleccionados.map(function (a) {
+                return '<span style="font-size:.7rem;background:var(--blue-50);color:var(--blue-ink);padding:.15rem .4rem;border-radius:4px;margin-right:.3rem;">' + escapeHtml(a.name) + ' (' + Math.round(a.size / 1024) + ' KB)</span>';
+              }).join('');
+            }
+          });
+        }
       }
 
       function foroGuardar() { guardarSeccion('foros', foros); }
+
+      function foroPerfilParticipante(email) {
+        var yo = foroYo();
+        var perfil = foros.reduce(function (acc, f) {
+          if (f.autor && f.autor.email === email) acc.temas++;
+          (f.mensajes || []).forEach(function (m) {
+            if (m.autor && m.autor.email === email) acc.respuestas++;
+            (m.respuestas || []).forEach(function (r) {
+              if (r.autor && r.autor.email === email) acc.respuestas++;
+            });
+          });
+          return acc;
+        }, { temas: 0, respuestas: 0 });
+        var temasCreados = foros.filter(function (f) { return f.autor && f.autor.email === email; });
+        return { temas: perfil.temas, respuestas: perfil.respuestas, temasLista: temasCreados };
+      }
+
+
+      function foroExportarCSV(temas) {
+        var filas = ['T\u00edtulo,Descripci\u00f3n,Autor,Materia,Estado,Fecha,Respuestas'];
+        temas.forEach(function (x) {
+          var f = x.f;
+          var titulo = escapeHtml(f.titulo || '').replace(/"/g, '""');
+          var desc = escapeHtml(f.desc || '').replace(/"/g, '""');
+          var autor = escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00f3nimo').replace(/"/g, '""');
+          var materia = f.materia ? escapeHtml(foroNombreMateria(f.materia)).replace(/"/g, '""') : '';
+          var estado = f.estado || 'abierto';
+          var fecha = fechaCorta(f.creada) || '';
+          var respuestas = foroCuentaRespuestas(f);
+          filas.push('"' + titulo + '","' + desc + '","' + autor + '","' + materia + '","' + estado + '","' + fecha + '",' + respuestas);
+        });
+        var csv = filas.join('\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'foros_' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        mostrarToast('Foros exportados a CSV.', 'success');
+      }
 
       $('btn-foro-add').addEventListener('click', function () {
         if (!exigirPermiso('participar')) return;

@@ -35,6 +35,15 @@ export function textoRespuesta(q, valor) {
   if (q.tipo === 'vf') {
     return Number(valor) === 1 ? 'Verdadero' : 'Falso';
   }
+  if (q.tipo === 'mat_ecuacion' || q.tipo === 'mat_geometria' || q.tipo === 'mat_funcion') {
+    return String(valor || '');
+  }
+  if (q.tipo === 'ciencia_formula' || q.tipo === 'ciencia_ecuacion' || q.tipo === 'ciencia_diagrama') {
+    return String(valor || '');
+  }
+  if (q.tipo === 'sw_codigo_funcion' || q.tipo === 'sw_depuracion' || q.tipo === 'sw_arquitectura') {
+    return String(valor || '');
+  }
   if (q.tipo === 'multiple') {
     return String.fromCharCode(65 + Number(valor)) + ') ' + ((q.opciones || [])[Number(valor)] || '');
   }
@@ -75,6 +84,15 @@ export function textoCorrecta(q) {
   }
   if (q.tipo === 'vf') {
     return Number(q.correcta) === 1 ? 'Verdadero' : 'Falso';
+  }
+  if (q.tipo === 'mat_ecuacion' || q.tipo === 'mat_geometria' || q.tipo === 'mat_funcion') {
+    return q.respuesta || '—';
+  }
+  if (q.tipo === 'ciencia_formula' || q.tipo === 'ciencia_ecuacion' || q.tipo === 'ciencia_diagrama') {
+    return q.respuesta || '—';
+  }
+  if (q.tipo === 'sw_codigo_funcion' || q.tipo === 'sw_depuracion' || q.tipo === 'sw_arquitectura') {
+    return q.respuesta || q.salida_esperada || 'calificación manual';
   }
   if (q.tipo === 'multiple') {
     return String.fromCharCode(65 + Number(q.correcta)) + ') ' + ((q.opciones || [])[Number(q.correcta)] || '');
@@ -119,6 +137,29 @@ export function evaluarRespuesta(q, dada) {
       rEsperadas.length === rDadas.length &&
       rEsperadas.every((exp, ri) => exp === rDadas[ri]);
   }
+  if (q.tipo === 'mat_ecuacion' || q.tipo === 'mat_funcion' || q.tipo === 'mat_geometria') {
+    const esperado = String(q.respuesta || '').trim().toLowerCase();
+    const dado = String(dada || '').trim().toLowerCase();
+    if (!dado) return false;
+    // Comparación exacta o numérica con tolerancia para ecuaciones
+    if (esperado === dado) return true;
+    const nEsperado = parseFloat(esperado);
+    const nDado = parseFloat(dado);
+    if (!isNaN(nEsperado) && !isNaN(nDado)) {
+      const tol = Number(q.tolerancia) || 0;
+      return Math.abs(nDado - nEsperado) <= tol;
+    }
+    return false;
+  }
+  if (q.tipo === 'ciencia_formula' || q.tipo === 'ciencia_ecuacion' || q.tipo === 'ciencia_diagrama') {
+    const esperado = String(q.respuesta || '').trim().toLowerCase();
+    const dado = String(dada || '').trim().toLowerCase();
+    return esperado === dado;
+  }
+  if (q.tipo === 'sw_codigo_funcion' || q.tipo === 'sw_depuracion' || q.tipo === 'sw_arquitectura') {
+    if (!q.salida_esperada) return null; // calificación manual
+    return String(dada || '').trim() === String(q.salida_esperada).trim();
+  }
   if (q.tipo === 'vf_justificacion') {
     return typeof dada === 'object' && dada !== null && Number(dada.vf) === Number(q.correcta);
   }
@@ -162,6 +203,8 @@ export function calcularResultadoExamen(preguntas, respuestas, notaMin = 60) {
     (q) => q.tipo !== 'abierta' && q.tipo !== 'ordenar' && q.tipo !== 'emparejar'
       && q.tipo !== 'video' && q.tipo !== 'imagen'
       && !(q.tipo === 'codigo' && !q.salida_esperada)
+      && !(q.tipo === 'ciencia_diagrama')
+      && !(q.tipo === 'sw_arquitectura')
   ).length;
 
   const total = totalCerradas > 0 ? totalCerradas : preguntas.length;

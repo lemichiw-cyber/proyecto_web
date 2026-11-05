@@ -202,6 +202,17 @@ class ExamenIn(BaseModel):
             if tipo in ("video", "imagen"):
                 if not str(p.get("url", "")).strip():
                     raise ValueError(f"Pregunta {i + 1}: 'url' obligatoria para {tipo}")
+            if tipo in ("mat_ecuacion", "mat_geometria", "mat_funcion"):
+                resp = p.get("respuesta")
+                if not isinstance(resp, (int, float)) and not str(resp or "").strip():
+                    raise ValueError(f"Pregunta {i + 1}: 'respuesta' obligatoria para {tipo}")
+            if tipo in ("ciencia_formula", "ciencia_ecuacion", "ciencia_diagrama"):
+                if not str(p.get("respuesta", "")).strip():
+                    raise ValueError(f"Pregunta {i + 1}: 'respuesta' obligatoria para {tipo}")
+            if tipo in ("sw_codigo_funcion", "sw_depuracion", "sw_arquitectura"):
+                resp = p.get("respuesta") or p.get("salida_esperada")
+                if not str(resp or "").strip():
+                    raise ValueError(f"Pregunta {i + 1}: respuesta esperada obligatoria para {tipo}")
         return v
 
 def _grupos_validos(docente_id, grupo_ids):

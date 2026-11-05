@@ -1,616 +1,443 @@
 /* ===================================================================
-   Sakura Player — Temas (tokens de diseño)
-   1 interfaz + 13 configuraciones visuales (12 temas de proyecto_web
-   + el tema "sakura-player"). Los componentes NUNCA usan colores
-   fijos: siempre var(--player-*).
+   Sakura Player — Estética Nothing OS 5.0
+   Limpio, minimalista, tipografía-first, bordes finos, alto contraste,
+   sin contenedores Material Design 3 genéricos.
+   Los componentes NUNCA usan colores fijos: siempre var(--player-*).
    =================================================================== */
 
+/* ---------- Tokens base (sobrescritos por cada tema) ---------- */
 .sakura-player {
-  /* Valores por defecto (los sobrescribe cada tema) */
-  --player-bg: #09040c;
-  --player-bg-secondary: #140a1e;
-  --player-bg-card: rgba(255, 255, 255, .06);
-  --player-text: #ffe4f4;
-  --player-text-secondary: #c9a0c8;
-  --player-primary: #ff4fd8;
-  --player-secondary: #9b5cff;
-  --player-accent: #36d9ff;
-  --player-accent-hover: #ff8ad8;
-  --player-border: rgba(255, 79, 216, .28);
-  --player-border-glow: rgba(255, 79, 216, .55);
-  --player-shadow: 0 8px 30px rgba(255, 79, 216, .25);
-  --player-progress: #ff4fd8;
-  --player-progress-bg: rgba(255, 255, 255, .12);
-  --player-slider: #ff4fd8;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #ff4fd8;
-  --player-visualizer: #ff4fd8;
+  --player-bg: #0a0a0a;
+  --player-bg-secondary: #141414;
+  --player-bg-card: #1a1a1a;
+  --player-text: #ffffff;
+  --player-text-secondary: #8a8a8a;
+  --player-text-muted: #525252;
+  --player-primary: #ffffff;
+  --player-secondary: #f2f2f2;
+  --player-accent: #000000;
+  --player-border: #2a2a2a;
+  --player-border-hover: #3a3a3a;
+  --player-border-focus: #ffffff;
+  --player-shadow: none;
+  --player-progress: #ffffff;
+  --player-progress-bg: #2a2a2a;
+  --player-slider: #ffffff;
+  --player-slider-bg: #2a2a2a;
+  --player-equalizer: #ffffff;
+  --player-visualizer: #ffffff;
   --player-success: #4ade80;
   --player-warning: #fbbf24;
   --player-error: #fb7185;
 
   background: var(--player-bg);
   color: var(--player-text);
-  transition: background .3s ease, color .3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background-color .2s ease, color .2s ease;
 }
 
+/* Fuente del sistema para todo */
+.sakura-player,
 .sakura-player button,
 .sakura-player input,
-.sakura-player select {
+.sakura-player select,
+.sakura-player textarea {
   font-family: inherit;
   color: inherit;
 }
 
-/* Transición suave de tokens al cambiar de tema (200–400 ms) */
+/* Transición suave al cambiar tema */
 .sakura-player,
 .sakura-player [style*="--player"] {
-  transition: background-color .3s ease, border-color .3s ease, color .3s ease, box-shadow .3s ease;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
 }
 
-/* ===================================================================
-   01 — SAKURA (rosa sakura, magenta, violeta, negro suave)
-   =================================================================== */
-[data-theme="chicawa"] .sakura-player,
-[data-theme="sakura-player"] .sakura-player {
-  --player-bg: #0b0512;
-  --player-bg-secondary: #160a20;
-  --player-bg-card: rgba(255, 183, 222, .07);
-  --player-text: #ffe9f6;
-  --player-text-secondary: #d8a8cc;
-  --player-primary: #ff4fd8;
-  --player-secondary: #9b5cff;
-  --player-accent: #ff8ad8;
-  --player-accent-hover: #ffb7e6;
-  --player-border: rgba(255, 79, 216, .3);
-  --player-border-glow: rgba(255, 79, 216, .6);
-  --player-shadow: 0 8px 30px rgba(255, 79, 216, .28);
-  --player-progress: linear-gradient(90deg, #ff4fd8, #9b5cff);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #ff4fd8;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #ff4fd8;
-  --player-visualizer: #ff4fd8;
-}
-
-/* ===================================================================
-   02 — CYBERPUNK (cyan, magenta, azul eléctrico, HUD, glitch)
-   =================================================================== */
-[data-theme="dark"] .sakura-player {
-  --player-bg: #04070d;
-  --player-bg-secondary: #081020;
-  --player-bg-card: rgba(0, 234, 255, .06);
-  --player-text: #d8f6ff;
-  --player-text-secondary: #7fa8c8;
-  --player-primary: #00eaff;
-  --player-secondary: #ff00d4;
-  --player-accent: #8a7cff;
-  --player-accent-hover: #00ffd0;
-  --player-border: rgba(0, 234, 255, .35);
-  --player-border-glow: rgba(0, 234, 255, .7);
-  --player-shadow: 0 0 24px rgba(0, 234, 255, .3);
-  --player-progress: linear-gradient(90deg, #00eaff, #ff00d4);
-  --player-progress-bg: rgba(0, 234, 255, .12);
-  --player-slider: #00eaff;
-  --player-slider-bg: rgba(0, 234, 255, .16);
-  --player-equalizer: #00eaff;
-  --player-visualizer: #00eaff;
-}
-
-/* ===================================================================
-   03 — NEON (neones intensos, alto contraste)
-   =================================================================== */
-[data-theme="frutiger"] .sakura-player {
-  --player-bg: #050509;
-  --player-bg-secondary: #0d0d18;
-  --player-bg-card: rgba(54, 217, 255, .07);
-  --player-text: #eafcff;
-  --player-text-secondary: #9fc8d8;
-  --player-primary: #36d9ff;
-  --player-secondary: #ff4fd8;
-  --player-accent: #b6ff00;
-  --player-accent-hover: #7dffce;
-  --player-border: rgba(54, 217, 255, .4);
-  --player-border-glow: rgba(54, 217, 255, .8);
-  --player-shadow: 0 0 28px rgba(54, 217, 255, .35);
-  --player-progress: linear-gradient(90deg, #36d9ff, #ff4fd8, #b6ff00);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #36d9ff;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #36d9ff;
-  --player-visualizer: #36d9ff;
-}
-
-/* ===================================================================
-   04 — OCEAN (azul, cyan, azul profundo, turquesa)
-   =================================================================== */
-[data-theme="ocean"] .sakura-player {
-  --player-bg: #04121c;
-  --player-bg-secondary: #07202f;
-  --player-bg-card: rgba(56, 189, 248, .07);
-  --player-text: #e0f4ff;
-  --player-text-secondary: #8fc0d8;
-  --player-primary: #38bdf8;
-  --player-secondary: #2dd4bf;
-  --player-accent: #7dd3fc;
-  --player-accent-hover: #5eead4;
-  --player-border: rgba(56, 189, 248, .3);
-  --player-border-glow: rgba(56, 189, 248, .55);
-  --player-shadow: 0 8px 28px rgba(56, 189, 248, .22);
-  --player-progress: linear-gradient(90deg, #0ea5e9, #2dd4bf);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #38bdf8;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #38bdf8;
-  --player-visualizer: #38bdf8;
-}
-
-/* ===================================================================
-   05 — FOREST (verde, verde oscuro, turquesa, orgánico)
-   =================================================================== */
-[data-theme="dawn"] .sakura-player {
-  --player-bg: #04120c;
-  --player-bg-secondary: #072015;
-  --player-bg-card: rgba(74, 222, 128, .07);
-  --player-text: #e6ffef;
-  --player-text-secondary: #93c8a8;
-  --player-primary: #4ade80;
-  --player-secondary: #2dd4bf;
-  --player-accent: #a3e635;
-  --player-accent-hover: #6ee7b7;
-  --player-border: rgba(74, 222, 128, .28);
-  --player-border-glow: rgba(74, 222, 128, .5);
-  --player-shadow: 0 8px 26px rgba(74, 222, 128, .2);
-  --player-progress: linear-gradient(90deg, #4ade80, #2dd4bf);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #4ade80;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #4ade80;
-  --player-visualizer: #4ade80;
-}
-
-/* ===================================================================
-   06 — SUNSET (naranja, rojo, rosa, amarillo, púrpura)
-   =================================================================== */
-[data-theme="sunset"] .sakura-player {
-  --player-bg: #160608;
-  --player-bg-secondary: #220a0e;
-  --player-bg-card: rgba(251, 146, 60, .08);
-  --player-text: #ffeede;
-  --player-text-secondary: #d8a88f;
-  --player-primary: #fb923c;
-  --player-secondary: #f43f5e;
-  --player-accent: #fbbf24;
-  --player-accent-hover: #fda4af;
-  --player-border: rgba(251, 146, 60, .32);
-  --player-border-glow: rgba(251, 146, 60, .6);
-  --player-shadow: 0 8px 28px rgba(244, 63, 94, .25);
-  --player-progress: linear-gradient(90deg, #fbbf24, #fb923c, #f43f5e);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #fb923c;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #fb923c;
-  --player-visualizer: #fb923c;
-}
-
-/* ===================================================================
-   07 — MIDNIGHT (azul oscuro, violeta, negro, azul eléctrico)
-   =================================================================== */
-[data-theme="paraiso"] .sakura-player {
-  --player-bg: #07060f;
-  --player-bg-secondary: #0d0b1e;
-  --player-bg-card: rgba(139, 92, 246, .08);
-  --player-text: #e6e4ff;
-  --player-text-secondary: #a8a0d0;
-  --player-primary: #8b5cf6;
-  --player-secondary: #3b82f6;
-  --player-accent: #60a5fa;
-  --player-accent-hover: #a78bfa;
-  --player-border: rgba(139, 92, 246, .32);
-  --player-border-glow: rgba(139, 92, 246, .6);
-  --player-shadow: 0 8px 28px rgba(139, 92, 246, .25);
-  --player-progress: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #8b5cf6;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #8b5cf6;
-  --player-visualizer: #8b5cf6;
-}
-
-/* ===================================================================
-   08 — LAVENDER (lavanda, púrpura claro, rosa suave)
-   =================================================================== */
-[data-theme="pastel"] .sakura-player,
-[data-theme="mlp"] .sakura-player,
-[data-theme="dreamcore"] .sakura-player {
-  --player-bg: #120a1c;
-  --player-bg-secondary: #1b1029;
-  --player-bg-card: rgba(196, 181, 253, .08);
-  --player-text: #f3edff;
-  --player-text-secondary: #c0b4e0;
-  --player-primary: #c4b5fd;
-  --player-secondary: #f0abfc;
-  --player-accent: #f9a8d4;
-  --player-accent-hover: #ddd6fe;
-  --player-border: rgba(196, 181, 253, .3);
-  --player-border-glow: rgba(196, 181, 253, .55);
-  --player-shadow: 0 8px 26px rgba(196, 181, 253, .22);
-  --player-progress: linear-gradient(90deg, #c4b5fd, #f0abfc);
-  --player-progress-bg: rgba(255, 255, 255, .12);
-  --player-slider: #c4b5fd;
-  --player-slider-bg: rgba(255, 255, 255, .16);
-  --player-equalizer: #c4b5fd;
-  --player-visualizer: #c4b5fd;
-}
-
-/* ===================================================================
-   09 — CRIMSON (rojo oscuro, rojo brillante, negro, bordó)
-   Solo existe como tema manual del reproductor: se ancla a su clase
-   (los bloques por [data-theme] van con :where() para que la elección
-   manual siempre pueda sobrescribirlos).
-   =================================================================== */
-.sakura-player.sp-theme-crimson {
-  --player-bg: #0e0508;
-  --player-bg-secondary: #180a0e;
-  --player-bg-card: rgba(248, 113, 113, .07);
-  --player-text: #ffe9ea;
-  --player-text-secondary: #d8a0a4;
-  --player-primary: #ef4444;
-  --player-secondary: #b91c1c;
-  --player-accent: #f87171;
-  --player-accent-hover: #fca5a5;
-  --player-border: rgba(239, 68, 68, .32);
-  --player-border-glow: rgba(239, 68, 68, .6);
-  --player-shadow: 0 8px 28px rgba(239, 68, 68, .25);
-  --player-progress: linear-gradient(90deg, #b91c1c, #ef4444);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #ef4444;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #ef4444;
-  --player-visualizer: #ef4444;
-}
-
-/* ===================================================================
-   10 — ARCTIC (blanco, azul hielo, cyan, gris claro)
-   En modo automático es el tema de [data-theme="light"]; la clase lo
-   habilita también en modo manual con cualquier tema de la app.
-   =================================================================== */
-:where([data-theme="light"]) .sakura-player,
-.sakura-player.sp-theme-arctic {
-  --player-bg: #f4f8fb;
-  --player-bg-secondary: #e6eef5;
-  --player-bg-card: #ffffff;
-  --player-text: #0f2233;
-  --player-text-secondary: #4d6a84;
-  --player-primary: #0ea5e9;
-  --player-secondary: #22d3ee;
-  --player-accent: #0369a1;
-  --player-accent-hover: #0284c7;
-  --player-border: rgba(14, 165, 233, .25);
-  --player-border-glow: rgba(14, 165, 233, .45);
-  --player-shadow: 0 8px 24px rgba(14, 165, 233, .18);
-  --player-progress: linear-gradient(90deg, #38bdf8, #22d3ee);
-  --player-progress-bg: rgba(15, 34, 51, .1);
-  --player-slider: #0ea5e9;
-  --player-slider-bg: rgba(15, 34, 51, .12);
-  --player-equalizer: #0ea5e9;
-  --player-visualizer: #0ea5e9;
-  /* Estados legibles sobre fondo claro (WCAG AA) */
-  --player-success: #15803d;
-  --player-warning: #b45309;
-  --player-error: #b91c1c;
-}
-
-/* ===================================================================
-   11 — RETRO (verde terminal, ámbar, negro, CRT)
-   También es solo tema manual del reproductor: .sp-theme-retro.
-   =================================================================== */
-.sakura-player.sp-theme-retro {
-  --player-bg: #050807;
-  --player-bg-secondary: #0a120d;
-  --player-bg-card: rgba(51, 255, 102, .06);
-  --player-text: #d8ffe0;
-  --player-text-secondary: #8fc8a0;
-  --player-primary: #33ff66;
-  --player-secondary: #ffb000;
-  --player-accent: #7dff9a;
-  --player-accent-hover: #ffd24d;
-  --player-border: rgba(51, 255, 102, .3);
-  --player-border-glow: rgba(51, 255, 102, .55);
-  --player-shadow: 0 0 22px rgba(51, 255, 102, .22);
-  --player-progress: linear-gradient(90deg, #33ff66, #ffb000);
-  --player-progress-bg: rgba(255, 255, 255, .08);
-  --player-slider: #33ff66;
-  --player-slider-bg: rgba(255, 255, 255, .12);
-  --player-equalizer: #33ff66;
-  --player-visualizer: #33ff66;
-}
-
-/* ===================================================================
-   12 — SAKURA DARK / ANIME (rosa fuerte, púrpura, azul nocturno)
-   Automático para [data-theme="sakura"] y disponible en modo manual.
-   =================================================================== */
-:where([data-theme="sakura"]) .sakura-player,
-.sakura-player.sp-theme-sakura-dark {
-  --player-bg: #0a0410;
-  --player-bg-secondary: #140a20;
-  --player-bg-card: rgba(255, 79, 216, .07);
-  --player-text: #ffe4f4;
-  --player-text-secondary: #c8a0c8;
-  --player-primary: #ff2fb3;
-  --player-secondary: #7c3aed;
-  --player-accent: #36d9ff;
-  --player-accent-hover: #ff8ad8;
-  --player-border: rgba(255, 47, 179, .35);
-  --player-border-glow: rgba(255, 47, 179, .65);
-  --player-shadow: 0 0 26px rgba(255, 47, 179, .3);
-  --player-progress: linear-gradient(90deg, #ff2fb3, #7c3aed);
-  --player-progress-bg: rgba(255, 255, 255, .1);
-  --player-slider: #ff2fb3;
-  --player-slider-bg: rgba(255, 255, 255, .14);
-  --player-equalizer: #ff2fb3;
-  --player-visualizer: #ff2fb3;
-}
-
-/* ===================================================================
-   Efectos por tema (se activan con clases en .sakura-player)
-   =================================================================== */
-
-/* Scanlines CRT */
-.sakura-player.sp-fx-scanlines .sp-visualizer-wrap {
-  position: relative;
-  overflow: hidden;
-}
-.sakura-player.sp-fx-scanlines .sp-visualizer-wrap::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px);
-  mix-blend-mode: multiply;
-}
-
-/* HUD cyberpunk */
-.sakura-player.sp-fx-hud .sp-panel {
-  border-style: solid;
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-}
-.sakura-player.sp-fx-hud .sp-panel-title {
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  font-size: .68rem;
-  color: var(--player-accent);
-  text-shadow: 0 0 8px var(--player-border-glow);
-}
-
-/* Glitch en títulos */
-.sakura-player.sp-fx-glitch .sp-track-title {
-  text-shadow: 2px 0 var(--player-secondary), -2px 0 var(--player-accent);
-}
-
-/* Pantalla CRT: viñeta, redondeo y brillo de tubo en el visualizador */
-.sakura-player.sp-fx-crt .sp-visualizer-wrap {
-  position: relative;
-  overflow: hidden;
-  border-radius: 14px;
-  box-shadow: inset 0 0 60px rgba(0, 0, 0, .55), 0 0 18px var(--player-border-glow);
-}
-.sakura-player.sp-fx-crt .sp-visualizer-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, .45) 100%);
-  z-index: 1;
-}
-
-/* Pétalos sakura */
-.sakura-player.sp-fx-petals .sp-visualizer-wrap {
-  position: relative;
-  overflow: hidden;
-}
-.sakura-player.sp-fx-petals .sp-petal {
-  position: absolute;
-  top: -12px;
-  width: 10px;
-  height: 10px;
-  background: radial-gradient(circle at 30% 30%, #fff, var(--player-primary) 60%, transparent);
-  clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
-  opacity: .7;
-  animation: spPetalFall linear infinite;
-  pointer-events: none;
-}
-@keyframes spPetalFall {
-  0% { transform: translateY(-10%) translateX(0) rotate(0deg); opacity: 0; }
-  10% { opacity: .8; }
-  100% { transform: translateY(110%) translateX(24px) rotate(320deg); opacity: 0; }
-}
-
-/* ===================================================================
-   Estructura: barra lateral en escritorio y pestañas en móvil
-   =================================================================== */
+/* ---------- Layout principal ---------- */
 .sp-layout {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
-.sp-nav {
-  padding: .6rem;
+
+.sp-layout > .sp-main {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: .25rem;
-  position: sticky;
-  top: 1rem;
 }
+
+.sp-nav {
+  width: 260px;
+  flex: none;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .sp-nav-brand {
-  display: flex; align-items: center; gap: .5rem;
-  padding: .4rem .5rem .7rem;
-}
-.sp-nav-logo { font-size: 1.1rem; }
-.sp-nav-title { font-weight: 800; font-size: .9rem; letter-spacing: .04em; }
-.sp-nav-sub { font-size: .62rem; color: var(--player-text-secondary); }
-.sp-nav-links { display: flex; flex-direction: column; gap: .2rem; }
-.sp-nav .sp-btn { justify-content: flex-start; width: 100%; }
-.sp-nav-icon { display: inline-flex; align-items: center; justify-content: center; }
-.sp-nav-offline:empty { display: none; }
-.sp-nav-offline { margin-top: .6rem; }
-.sp-main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
-.sp-visualizer-wrap { height: 120px; }
-.sp-visualizer-fallback {
-  position: absolute; inset: 0; display: none; align-items: center;
-  justify-content: center; color: var(--player-text-secondary); font-size: .78rem;
-}
-.sp-content { padding: 1.1rem; min-height: 340px; min-width: 0; }
-
-/* ===================================================================
-   Vista "Reproductor" (now playing)
-   =================================================================== */
-.sp-now {
-  display: grid;
-  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
-  gap: 1.3rem;
-  align-items: start;
-}
-.sp-now-cover { width: 100%; aspect-ratio: 1; min-width: 0; }
-.sp-now-body { min-width: 0; }
-.sp-now-title {
-  font-size: 1.35rem; font-weight: 800; line-height: 1.2;
-  margin: .45rem 0 .2rem; word-break: break-word;
-}
-.sp-now-artist {
-  font-size: .9rem; color: var(--player-text-secondary);
-  word-break: break-word;
-}
-.sp-now-progress { margin-top: 1.1rem; }
-.sp-now-times {
-  display: flex; justify-content: space-between; font-size: .72rem;
-  color: var(--player-text-secondary); margin-top: .35rem;
-  font-variant-numeric: tabular-nums;
-}
-.sp-now-controls {
-  display: flex; align-items: center; justify-content: center;
-  gap: .5rem; margin-top: .9rem; flex-wrap: wrap;
-}
-.sp-now-play { width: 54px; height: 54px; padding: 0; border-radius: 50%; }
-.sp-now-secondary {
-  display: flex; align-items: center; justify-content: center;
-  gap: .5rem; margin-top: .8rem; flex-wrap: wrap;
-}
-.sp-now-queuepos {
-  text-align: center; font-size: .7rem;
-  color: var(--player-text-secondary); margin-top: .7rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding-bottom: .8rem;
+  border-bottom: 1px solid var(--player-border);
+  margin-bottom: .6rem;
 }
 
-/* ===================================================================
-   Mini reproductor global
-   =================================================================== */
-body.sp-mini-open { padding-bottom: 78px; }
-.sp-mini { padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom)); }
-.sp-mini-inner {
-  display: flex; align-items: center; gap: .7rem;
-  max-width: 1200px; margin: 0 auto; min-width: 0;
-}
-.sp-mini-progress { position: absolute; top: -3px; left: 0; right: 0; height: 6px; }
-.sp-mini-cover { width: 44px; height: 44px; flex: none; }
-.sp-mini-meta { flex: 1; min-width: 0; }
-.sp-mini-title {
-  font-weight: 700; font-size: .85rem;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.sp-mini-artist {
-  font-size: .72rem; color: var(--player-text-secondary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.sp-mini-controls { display: flex; align-items: center; gap: .25rem; flex: none; }
-.sp-mini-play { width: 40px; height: 40px; }
-.sp-mini-time-wrap {
-  display: flex; align-items: center; justify-content: flex-end;
-  flex: none; min-width: 74px; font-size: .72rem;
-  color: var(--player-text-secondary); font-variant-numeric: tabular-nums;
-}
-.sp-mini-volume { display: flex; align-items: center; gap: .2rem; flex: none; }
-#sp-mini-vol { width: 74px; }
-.sakura-player :focus-visible { outline-color: var(--player-primary); }
-
-/* ===================================================================
-   Responsive del reproductor (móvil primero, sin perder controles)
-   =================================================================== */
-@media (max-width: 760px) {
-  .sp-layout { grid-template-columns: minmax(0, 1fr); }
-  .sp-nav {
-    position: static; padding: .45rem;
-    border-radius: 12px;
-  }
-  .sp-nav-brand { display: none; }
-  .sp-nav-links {
-    flex-direction: row; gap: .3rem; overflow-x: auto;
-    scrollbar-width: thin; padding-bottom: .1rem;
-  }
-  .sp-nav .sp-btn {
-    width: auto; flex: none; padding: .45rem .7rem;
-    white-space: nowrap;
-  }
-  .sp-visualizer-wrap { height: 86px; }
-  .sakura-player:not(.sp-playing) .sp-visualizer-wrap { display: none; }
-  .sp-content { padding: .85rem; min-height: 260px; }
-  .sp-offline-banner { font-size: .74rem; padding: .55rem .7rem; }
-  .sp-offline-banner svg { flex: none; }
+.sp-nav-logo {
+  font-size: 1.1rem;
 }
 
-@media (max-width: 640px) {
-  .sp-now { grid-template-columns: minmax(0, 1fr); gap: .9rem; justify-items: center; }
-  .sp-now-cover { width: min(52vw, 180px); max-width: 180px; }
-  .sp-now-body { width: 100%; }
-  .sp-now-title { text-align: center; font-size: 1.18rem; }
-  .sp-now-artist { text-align: center; }
-  .sp-now-controls { gap: .4rem; }
-  .sp-now-play { width: 58px; height: 58px; }
-  .sp-now-secondary { gap: .35rem; }
-  #np-vol { width: 76px !important; }
-  .sp-mini-time-wrap, .sp-mini-volume { display: none; }
+.sp-nav-title {
+  font-weight: 800;
+  font-size: .95rem;
+  letter-spacing: -.01em;
+  color: var(--player-text);
 }
 
-@media (max-width: 480px) {
-  .sp-nav-links { justify-content: stretch; gap: .1rem; overflow: visible; }
-  .sp-nav-label { display: none; }
-  .sp-nav .sp-btn { flex: 1 1 0; min-width: 0; padding: .55rem .15rem; }
-  .sp-visualizer-wrap { height: 68px; }
-  .sp-content { padding: .7rem; }
-  body.sp-mini-open { padding-bottom: 70px; }
-  .sp-mini { padding: .45rem .6rem calc(.45rem + env(safe-area-inset-bottom)); }
-  .sp-mini-inner { gap: .5rem; }
-  .sp-mini-cover { width: 38px; height: 38px; }
-  .sp-mini-title { font-size: .8rem; }
-  .sp-mini-artist { font-size: .68rem; }
-  .sp-mini-controls { gap: .1rem; }
-  .sp-mini-play { width: 44px; height: 44px; }
-  .sp-mini-controls .sp-btn-icon { padding: .4rem; }
+.sp-nav-sub {
+  font-size: .65rem;
+  color: var(--player-text-secondary);
+  letter-spacing: .02em;
+  text-transform: uppercase;
 }
 
-@media (max-width: 360px) {
-  .sp-now-cover { width: 145px; }
-  .sp-now-controls { gap: .25rem; }
-  .sp-now-play { width: 52px; height: 52px; }
-  .sp-now-secondary #np-vol { width: 64px !important; }
+.sp-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
 }
 
-/* ===================================================================
-   Componentes (siempre con tokens)
-   =================================================================== */
+.sp-nav .sp-btn {
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: .6rem .9rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--player-text-secondary);
+  background: transparent;
+  border: none;
+}
 
-.sp-panel {
+.sp-nav .sp-btn:hover {
   background: var(--player-bg-card);
+  color: var(--player-text);
+}
+
+.sp-nav .sp-btn.sp-btn-active {
+  background: var(--player-bg-card);
+  color: var(--player-primary);
+  border-left: 3px solid var(--player-primary);
+  padding-left: .6rem;
+}
+
+.sp-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  margin-right: .6rem;
+}
+
+.sp-nav-offline {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--player-border);
+}
+
+.sp-nav-offline:empty {
+  display: none;
+}
+
+.sp-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.sp-visualizer-wrap {
+  height: 100px;
+  flex: none;
+  border-radius: 10px;
   border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  overflow: hidden;
+}
+
+.sp-visualizer-fallback {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--player-text-secondary);
+  font-size: .75rem;
+}
+
+.sp-content {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  padding: 1rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  background: var(--player-bg);
+}
+
+/* ---------- Vista Reproductor (Now Playing) ---------- */
+.sp-now {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.sp-now-cover {
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
   border-radius: 14px;
-  box-shadow: var(--player-shadow);
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  overflow: hidden;
+  position: relative;
+}
+
+.sp-now-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sp-now-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.sp-now-title {
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -.02em;
+  color: var(--player-text);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.sp-now-artist {
+  font-size: 1rem;
+  color: var(--player-text-secondary);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.sp-now-progress {
+  margin-top: .25rem;
+}
+
+.sp-now-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: .75rem;
+  color: var(--player-text-secondary);
+  margin-top: .35rem;
+}
+
+.sp-now-controls {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .5rem;
+}
+
+.sp-now-play {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  color: var(--player-text);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sp-now-play:hover {
+  border-color: var(--player-border-hover);
+  background: var(--player-bg-card);
+}
+
+.sp-now-play:active {
+  transform: scale(.96);
+}
+
+.sp-now-secondary {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .25rem;
+  flex-wrap: wrap;
+}
+
+.sp-now-queuepos {
+  font-size: .75rem;
+  color: var(--player-text-secondary);
+  margin-top: .25rem;
+}
+
+/* ---------- Mini reproductor ---------- */
+.sp-mini {
+  padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex: none;
+}
+
+.sp-mini-inner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-mini-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--player-progress-bg);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.sp-mini-progress-fill {
+  height: 100%;
+  background: var(--player-progress);
+  width: 0%;
+  border-radius: 1px;
+}
+
+.sp-mini-cover {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-mini-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-mini-title {
+  font-weight: 700;
+  font-size: .85rem;
+  color: var(--player-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.sp-mini-artist {
+  font-size: .75rem;
+  color: var(--player-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-mini-controls {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  flex: none;
+}
+
+.sp-mini-play {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  color: var(--player-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: .9rem;
+}
+
+.sp-mini-play:hover {
+  border-color: var(--player-border-hover);
+  background: var(--player-bg-card);
+}
+
+.sp-mini-time-wrap {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex: none;
+  font-size: .7rem;
+  color: var(--player-text-secondary);
+  min-width: 60px;
+}
+
+.sp-mini-volume {
+  display: flex;
+  align-items: center;
+  gap: .2rem;
+  flex: none;
+}
+
+/* ---------- Componentes base ---------- */
+.sp-panel {
+  border-radius: 12px;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-card);
+  backdrop-filter: blur(4px);
 }
 
 .sp-panel-title {
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .12em;
+  font-weight: 800;
+  font-size: .85rem;
+  letter-spacing: -.01em;
+  color: var(--player-text);
+  margin-bottom: .75rem;
   text-transform: uppercase;
-  color: var(--player-text-secondary);
+  letter-spacing: .03em;
 }
 
 .sp-btn {
@@ -618,331 +445,440 @@ body.sp-mini-open { padding-bottom: 78px; }
   align-items: center;
   justify-content: center;
   gap: .4rem;
-  background: var(--player-bg-card);
-  border: 1px solid var(--player-border);
-  color: var(--player-text);
+  padding: .55rem .9rem;
   border-radius: 10px;
-  padding: .5rem .9rem;
-  font-size: .82rem;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  color: var(--player-text);
+  font-size: .85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all .2s ease;
+  transition: all .15s ease;
 }
+
 .sp-btn:hover {
-  border-color: var(--player-border-glow);
-  box-shadow: 0 0 14px var(--player-border-glow);
-  color: var(--player-primary);
+  border-color: var(--player-border-hover);
+  background: var(--player-bg-card);
 }
-.sakura-player .sp-btn-primary {
+
+.sp-btn:active {
+  transform: scale(.97);
+}
+
+.sp-btn.sp-btn-active {
   background: var(--player-primary);
+  color: #000000;
   border-color: var(--player-primary);
-  color: #08040c;
 }
+
+.sp-btn-primary {
+  background: var(--player-primary);
+  color: #000000;
+  border-color: var(--player-primary);
+}
+
 .sp-btn-primary:hover {
-  background: var(--player-accent-hover);
-  border-color: var(--player-accent-hover);
-  color: #08040c;
-  box-shadow: 0 0 18px var(--player-border-glow);
+  opacity: .9;
+  border-color: var(--player-primary);
 }
+
 .sp-btn-icon {
   width: 34px;
   height: 34px;
   padding: 0;
-  border-radius: 50%;
+  font-size: .95rem;
 }
-.sakura-player .sp-btn-active {
-  background: var(--player-primary);
-  color: #08040c;
-  border-color: var(--player-primary);
+
+.sp-btn-icon.sp-btn-active {
+  background: var(--player-bg-card);
+  color: var(--player-primary);
 }
 
 .sp-input, .sp-select {
-  background: var(--player-bg-secondary);
-  border: 1px solid var(--player-border);
-  color: var(--player-text);
+  width: 100%;
+  padding: .6rem .85rem;
   border-radius: 10px;
-  padding: .55rem .8rem;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  color: var(--player-text);
   font-size: .85rem;
   outline: none;
   transition: border-color .2s ease, box-shadow .2s ease;
+  box-sizing: border-box;
 }
-.sp-input:focus, .sp-select:focus {
-  border-color: var(--player-border-glow);
-  box-shadow: 0 0 12px var(--player-border-glow);
-}
-.sp-input::placeholder { color: var(--player-text-secondary); }
 
+.sp-input:focus, .sp-select:focus {
+  border-color: var(--player-border-focus);
+  box-shadow: 0 0 0 1px var(--player-border-focus);
+}
+
+.sp-input::placeholder {
+  color: var(--player-text-muted);
+}
+
+.sp-select {
+  cursor: pointer;
+}
+
+/* ---------- Resultados de búsqueda ---------- */
+.sp-search-results {
+  max-height: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 0;
+}
+
+/* ---------- Cards y portadas ---------- */
 .sp-card {
   background: var(--player-bg-card);
   border: 1px solid var(--player-border);
   border-radius: 12px;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
+
 .sp-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--player-border-glow);
-  box-shadow: 0 0 18px var(--player-border-glow);
+  border-color: var(--player-border-hover);
+  transform: translateY(-1px);
 }
 
 .sp-cover {
   border-radius: 10px;
-  overflow: hidden;
   border: 1px solid var(--player-border);
-  box-shadow: 0 0 16px var(--player-border-glow);
   background: var(--player-bg-secondary);
-  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.sp-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.sp-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .sp-badge {
   display: inline-flex;
   align-items: center;
-  gap: .3rem;
-  font-size: .66rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  padding: .15rem .5rem;
-  border-radius: 99px;
+  padding: .2rem .55rem;
+  border-radius: 6px;
   border: 1px solid var(--player-border);
-  color: var(--player-accent);
+  background: var(--player-bg-secondary);
+  font-size: .65rem;
+  font-weight: 700;
+  color: var(--player-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
+/* ---------- Slider y progreso ---------- */
 .sp-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 6px;
-  border-radius: 99px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--player-slider-bg);
   outline: none;
   cursor: pointer;
 }
+
 .sp-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: var(--player-slider);
-  box-shadow: 0 0 10px var(--player-border-glow);
   cursor: pointer;
+  border: none;
 }
+
 .sp-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border: none;
   border-radius: 50%;
   background: var(--player-slider);
-  box-shadow: 0 0 10px var(--player-border-glow);
   cursor: pointer;
+  border: none;
 }
 
 .sp-progress {
-  height: 6px;
-  border-radius: 99px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--player-progress-bg);
   cursor: pointer;
   position: relative;
-  overflow: hidden;
 }
+
 .sp-progress-fill {
   height: 100%;
-  border-radius: 99px;
   background: var(--player-progress);
-  box-shadow: 0 0 10px var(--player-border-glow);
-  transition: width .15s linear;
+  border-radius: 2px;
+  width: 0%;
 }
 
+/* ---------- Ecualizador ---------- */
 .sp-eq-bar {
-  flex: 1;
-  min-width: 0;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, var(--player-equalizer), var(--player-secondary));
-  box-shadow: 0 0 8px var(--player-border-glow);
-  transition: height .12s ease;
+  width: 100%;
+  height: 100%;
+  background: var(--player-equalizer);
+  border-radius: 2px 2px 0 0;
+  transition: height .1s ease;
 }
 
+/* ---------- Niveles de audio ---------- */
 .sp-level {
-  height: 8px;
-  border-radius: 99px;
-  background: var(--player-progress-bg);
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--player-border);
   overflow: hidden;
 }
+
 .sp-level-fill {
   height: 100%;
-  background: var(--player-progress);
-  box-shadow: 0 0 8px var(--player-border-glow);
-  transition: width .1s linear;
+  background: var(--player-visualizer);
+  width: 0%;
+  border-radius: 2px;
+  transition: width .1s ease;
 }
 
+/* ---------- Diálogos ---------- */
 .sp-dialog-overlay {
   position: fixed;
   inset: 0;
+  z-index: 600;
   background: rgba(0, 0, 0, .6);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 500;
-  padding: 1rem;
-}
-.sp-dialog {
-  background: var(--player-bg-secondary);
-  border: 1px solid var(--player-border);
-  border-radius: 16px;
-  box-shadow: var(--player-shadow), 0 0 40px var(--player-border-glow);
-  max-width: 480px;
-  width: 100%;
-  max-height: 85vh;
-  overflow: auto;
-  padding: 1.25rem;
-}
-
-.sp-toast {
-  position: fixed;
-  bottom: 6.5rem;
-  left: 50%;
-  transform: translateX(-50%) translateY(1rem);
-  background: var(--player-bg-secondary);
-  border: 1px solid var(--player-border);
-  color: var(--player-text);
-  border-radius: 12px;
-  padding: .6rem 1.1rem;
-  font-size: .82rem;
-  font-weight: 600;
-  box-shadow: var(--player-shadow);
   opacity: 0;
   pointer-events: none;
-  transition: all .3s ease;
-  z-index: 600;
-  max-width: 90vw;
+  transition: opacity .2s ease;
 }
-.sp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.sp-dialog-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sp-dialog {
+  width: 100%;
+  max-width: 380px;
+  padding: 1.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-card);
+  color: var(--player-text);
+  transform: scale(.95);
+  transition: transform .2s ease;
+}
+
+.sp-dialog-overlay.open .sp-dialog {
+  transform: scale(1);
+}
+
+.sp-dialog h3 {
+  font-weight: 800;
+  font-size: 1rem;
+  margin: 0 0 .5rem 0;
+  letter-spacing: -.01em;
+}
+
+.sp-dialog p {
+  font-size: .85rem;
+  color: var(--player-text-secondary);
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+/* ---------- Toast ---------- */
+.sp-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  z-index: 700;
+  padding: .85rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-card);
+  color: var(--player-text);
+  font-size: .85rem;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: all .25s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+
+.sp-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
 .sp-toast-error { border-color: var(--player-error); color: var(--player-error); }
 .sp-toast-success { border-color: var(--player-success); color: var(--player-success); }
 
+/* ---------- Estados vacíos ---------- */
 .sp-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 2.5rem 1rem;
+  padding: 3rem 1rem;
   color: var(--player-text-secondary);
 }
-.sp-empty-icon { font-size: 2.2rem; margin-bottom: .6rem; }
-.sp-empty-icon svg { width: 38px; height: 38px; }
-.sp-error .sp-empty-icon { color: var(--player-warning); }
-.sp-error .sp-btn { margin-top: .9rem; }
 
-.sp-spinner {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 3px solid var(--player-border);
-  border-top-color: var(--player-primary);
-  animation: spSpin .8s linear infinite;
+.sp-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  opacity: .5;
 }
-@keyframes spSpin { to { transform: rotate(360deg); } }
 
+.sp-empty-icon svg {
+  width: 42px;
+  height: 42px;
+}
+
+.sp-empty h3,
+.sp-empty > div:nth-child(2) {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--player-text);
+  margin: 0 0 .5rem 0;
+}
+
+.sp-empty > div:last-child {
+  font-size: .85rem;
+  color: var(--player-text-secondary);
+  line-height: 1.5;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.sp-error .sp-empty-icon {
+  color: var(--player-error);
+}
+
+/* ---------- Offline banner ---------- */
 .sp-offline-banner {
   display: flex;
-  align-items: flex-start;
-  gap: .55rem;
-  background: var(--player-bg-card);
-  border: 1px solid var(--player-warning);
-  color: var(--player-warning);
-  border-radius: 12px;
-  padding: .7rem .8rem;
-  font-size: .82rem;
-  font-weight: 600;
-  line-height: 1.4;
-}
-.sp-offline-banner > div { min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
-.sp-offline-banner b { display: block; font-size: .8rem; }
-.sp-offline-banner span { display: block; font-size: .72rem; font-weight: 500; }
-
-/* ===================================================================
-   Animaciones — opción global "Desactivar animaciones" (sección 30)
-   Corta transiciones y animaciones CSS; el visualizador baja a
-   intensidad "none" (menos fotogramas y sin efectos) por JS.
-   =================================================================== */
-.sakura-player.sp-anim-off *,
-.sakura-player.sp-anim-off *::before,
-.sakura-player.sp-anim-off *::after {
-  animation-duration: .001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: .001ms !important;
-}
-.sakura-player.sp-anim-off .sp-petal { display: none !important; }
-.sakura-player.sp-anim-off .sp-card:hover { transform: none; }
-.sakura-player.sp-anim-off .sp-btn:hover,
-.sakura-player.sp-anim-off .sp-card:hover { box-shadow: none; }
-/* El spinner es un indicador funcional: se mantiene aunque haya animaciones off */
-.sakura-player.sp-anim-off .sp-spinner {
-  animation: spSpin 1.4s linear infinite !important;
-}
-.sakura-player.sp-anim-off .sp-progress-fill { transition: none !important; }
-
-.sp-visualizer-wrap {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
+  align-items: center;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border-radius: 10px;
   border: 1px solid var(--player-border);
   background: var(--player-bg-secondary);
-}
-.sp-visualizer-wrap canvas { display: block; width: 100%; height: 100%; }
-.sakura-player:not(.sp-playing) .sp-visualizer-wrap::after {
-  content: 'Reproducí una canción para activar el visualizador';
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  padding: 1rem; text-align: center; pointer-events: none;
-  color: var(--player-text-secondary); font-size: .76rem;
+  font-size: .85rem;
+  color: var(--player-text-secondary);
 }
 
+.sp-offline-banner b {
+  font-size: .85rem;
+  color: var(--player-text);
+  font-weight: 700;
+}
+
+.sp-offline-banner span {
+  font-size: .75rem;
+  font-weight: 500;
+}
+
+/* ---------- Visualizador ---------- */
+.sp-visualizer-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Dropzone (archivos locales) ---------- */
 .sp-dropzone {
   border: 2px dashed var(--player-border);
-  border-radius: 14px;
-  padding: 2rem 1rem;
+  border-radius: 12px;
+  background: var(--player-bg-secondary);
+  padding: 2.5rem 1.5rem;
   text-align: center;
   color: var(--player-text-secondary);
-  transition: all .2s ease;
+  font-size: .85rem;
   cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
 }
-.sp-dropzone:hover, .sp-dropzone.drag {
-  border-color: var(--player-border-glow);
-  color: var(--player-primary);
+
+.sp-dropzone:hover,
+.sp-dropzone.drag {
+  border-color: var(--player-border-hover);
   background: var(--player-bg-card);
 }
 
+/* ---------- Cola ---------- */
 .sp-queue-item {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .45rem .6rem;
+  gap: .75rem;
+  padding: .7rem .9rem;
   border-radius: 10px;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background .15s ease;
+  transition: background .15s ease, border-color .15s ease;
+  min-width: 0;
 }
-.sp-queue-item:hover { background: var(--player-bg-card); }
-.sp-queue-item.current { background: var(--player-bg-card); border-left: 3px solid var(--player-primary); }
 
-/* Acciones de la fila (play/cola/favorito/menú) en su propio contenedor */
+.sp-queue-item:hover {
+  background: var(--player-bg-secondary);
+}
+
+.sp-queue-item.current {
+  border-color: var(--player-primary);
+  background: rgba(255, 255, 255, .03);
+}
+
+.sp-queue-item span:first-child {
+  font-size: .7rem;
+  color: var(--player-text-muted);
+  min-width: 1.4rem;
+  text-align: right;
+  font-weight: 600;
+}
+
 .sp-track-actions {
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: .4rem;
   flex: none;
+  min-width: 0;
 }
 
-/* Móvil: la fila pasa a dos líneas. En pantallas angostas todo en una
-   sola línea dejaba el título en 2-3 caracteres ("S.."). */
-@media (max-width: 560px) {
-  .sp-queue-item { flex-wrap: wrap; row-gap: .3rem; }
-  .sp-track-info { flex: 1 1 auto; }
-  .sp-track-actions { width: 100%; justify-content: flex-end; }
+/* Asegurar que el texto de las filas no empuje los botones */
+.sp-queue-item .sp-track-info {
+  min-width: 0;
+  overflow: hidden;
 }
 
+.sp-queue-item .sp-track-info > div:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-queue-item .sp-track-info > div:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Pestañas ---------- */
 .sp-tab {
-  padding: .45rem .9rem;
-  border-radius: 99px;
-  font-size: .78rem;
+  padding: .5rem .9rem;
+  border-radius: 8px;
+  font-size: .8rem;
   font-weight: 700;
   border: 1px solid var(--player-border);
   background: transparent;
@@ -950,20 +886,260 @@ body.sp-mini-open { padding-bottom: 78px; }
   cursor: pointer;
   transition: all .2s ease;
 }
-.sp-tab:hover { color: var(--player-text); }
-.sp-tab.active {
-  background: var(--player-primary);
-  border-color: var(--player-primary);
-  color: #08040c;
+
+.sp-tab:hover {
+  color: var(--player-text);
+  border-color: var(--player-border-hover);
 }
 
+.sp-tab.active {
+  background: var(--player-bg-card);
+  border-color: var(--player-border-hover);
+  color: var(--player-primary);
+}
+
+/* ---------- Teclado ---------- */
 .sp-kbd {
   font-family: inherit;
-  font-size: .66rem;
+  font-size: .65rem;
   border: 1px solid var(--player-border);
   border-bottom-width: 2px;
   border-radius: 6px;
   padding: .05rem .35rem;
   color: var(--player-text-secondary);
   background: var(--player-bg-secondary);
+}
+
+/* ---------- Letras sincronizadas ---------- */
+.sp-lyrics {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+.sp-lyrics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--player-border);
+}
+
+.sp-lyrics-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--player-text);
+}
+
+.sp-lyrics-close {
+  padding: .35rem;
+  border-radius: 8px;
+  background: var(--player-bg-secondary);
+  color: var(--player-text-secondary);
+  border: 1px solid var(--player-border);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.sp-lyrics-close:hover {
+  background: var(--player-bg-card);
+  color: var(--player-text);
+  border-color: var(--player-border-hover);
+}
+
+.sp-lyrics-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: .4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--player-border) transparent;
+}
+
+.sp-lyrics-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sp-lyrics-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sp-lyrics-list::-webkit-scrollbar-thumb {
+  background: var(--player-border);
+  border-radius: 3px;
+}
+
+.sp-lyrics-line {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--player-text-secondary);
+  padding: .5rem 0;
+  border-radius: 10px;
+  margin: 0 -0.4rem;
+  cursor: pointer;
+  transition: all .18s ease;
+  white-space: pre-wrap;
+}
+
+.sp-lyrics-line:hover {
+  background: var(--player-bg-secondary);
+  color: var(--player-text);
+}
+
+.sp-lyrics-active {
+  color: var(--player-primary);
+  font-weight: 700;
+  background: var(--player-bg-card);
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  transform: translateX(-4px);
+}
+
+.sp-lyrics-active .sp-lyrics-word-active {
+  color: var(--player-primary);
+  font-weight: 800;
+}
+
+.sp-lyrics-word {
+  color: inherit;
+}
+
+.sp-lyrics-word-active {
+  text-decoration: underline;
+  text-decoration-color: var(--player-primary);
+  text-underline-offset: 2px;
+}
+
+/* Indicador de fuente de letras */
+.sp-lyrics-source {
+  font-size: .65rem;
+  font-weight: 700;
+  padding: .2rem .5rem;
+  border-radius: 4px;
+  border: 1px solid var(--player-border);
+  background: var(--player-bg-secondary);
+  color: var(--player-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+/* Estilo karaoke para palabra activa */
+.sp-lyrics-word-active {
+  background: var(--player-primary);
+  color: #000000 !important;
+  border-radius: 3px;
+  padding: 0 .2rem;
+  font-weight: 800;
+}
+
+.sp-lyrics-word {
+  color: inherit;
+  opacity: .7;
+}
+
+.sp-lyrics-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--player-text-secondary);
+}
+
+.sp-lyrics-icon {
+  font-size: 2.2rem;
+  margin-bottom: .9rem;
+  opacity: .5;
+}
+
+.sp-lyrics-text {
+  font-size: .95rem;
+  line-height: 1.6;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+body.sp-lyrics-open {
+  overflow: hidden;
+}
+
+/* ---------- Estados de éxito/error ---------- */
+.sp-text-success {
+  color: var(--player-success);
+}
+
+.sp-text-error {
+  color: var(--player-error);
+}
+
+/* ---------- Badge de backend ---------- */
+.sp-backend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: .15rem .5rem;
+  border-radius: 99px;
+  background: var(--player-bg-secondary);
+  border: 1px solid var(--player-border);
+  color: var(--player-text-secondary);
+  margin-left: .4rem;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.sp-backend-badge.connected {
+  background: rgba(74, 222, 128, .1);
+  border-color: rgba(74, 222, 128, .2);
+  color: var(--player-success);
+}
+
+.sp-backend-badge.disconnected {
+  background: rgba(251, 113, 133, .1);
+  border-color: rgba(251, 113, 133, .2);
+  color: var(--player-error);
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 560px) {
+  .sp-nav {
+    width: 220px;
+    padding: 1rem .75rem;
+  }
+
+  .sp-content {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .sp-now-title {
+    font-size: 1.25rem;
+  }
+
+  .sp-lyrics {
+    padding: 1rem .8rem;
+    gap: .8rem;
+  }
+
+  .sp-lyrics-title {
+    font-size: 1rem;
+  }
+
+  .sp-lyrics-line {
+    font-size: 1rem;
+    padding: .5rem 0;
+    margin: 0 -0.4rem;
+  }
+
+  .sp-lyrics-active {
+    transform: translateX(-2px);
+  }
+
+  .sp-dropzone {
+    padding: 2rem 1rem;
+  }
 }

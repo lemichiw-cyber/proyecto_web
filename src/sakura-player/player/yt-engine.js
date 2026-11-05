@@ -71,6 +71,12 @@ export class YTEngine {
   load(videoId, { autoplay = true } = {}) {
     this._id = videoId;
     this._wantPlay = autoplay;
+    // Detener inmediatamente el video actual si ya hay un player, para que
+    // no siga sonando mientras se carga el nuevo (evita que se superpongan).
+    if (this._player) {
+      try { this._player.stopVideo(); } catch (e) { /* noop */ }
+      this._wantPlay = false;
+    }
     loadApi().then((YT) => this._ensure(YT)).catch((err) => {
       if (this.cb.onError) this.cb.onError(err);
     });

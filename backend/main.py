@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import accounts, admin, albums, artists, actividades, auth, debug, library, matricula, playlists, push, search, songs, tareas_examenes
+from api import accounts, admin, albums, artists, actividades, auth, debug, library, lyrics, matricula, playlists, push, search, songs, tareas_examenes, translate
 from api.deps import get_service
 
 load_dotenv()
@@ -54,20 +54,39 @@ app = FastAPI(
     version="1.0.0",
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_CORS,
-    allow_origin_regex=_CORS_LOCAL,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    # Private Network Access (Chrome): un sitio público (Render, GitHub
-    # Pages) pidiendo a este backend local envía un preflight con
-    # `Access-Control-Request-Private-Network: true`; sin esta opción la
-    # respuesta no lleva `Access-Control-Allow-Private-Network` y el
-    # navegador corta la petición aunque el origen esté permitido.
-    allow_private_network=True,
-)
+# CORS personalizado: con credenciales (credentials: 'include' en el
+# frontend) no se puede usar allow_origin_regex ni "*". Reflejamos el
+# Origin de la petición para permitir cualquier puerto local con
+# credenciales, necesario para vite dev server.
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    import re
+    origin = request.headers.get("origin", "")
+    is_local = bool(re.match(r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$", origin))
+    is_explicit = origin in _CORS
+
+    if request.method == "OPTIONS":
+        headers = {
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+            "Access-Control-Max-Age": "86400",
+        }
+        if is_local or is_explicit:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
+            if request.headers.get("access-control-request-private-network"):
+                headers["Access-Control-Allow-Private-Network"] = "true"
+        return JSONResponse(status_code=200, content={}, headers=headers)
+
+    response = await call_next(request)
+
+    if is_local or is_explicit:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        if request.headers.get("access-control-request-private-network"):
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+
+    return response
 
 # Headers de seguridad en toda respuesta del backend.
 @app.middleware("http")
@@ -87,6 +106,8 @@ app.include_router(artists.router)
 app.include_router(albums.router)
 app.include_router(playlists.router)
 app.include_router(library.router)
+app.include_router(lyrics.router)
+app.include_router(translate.router)
 app.include_router(admin.router)
 app.include_router(accounts.router)          # <-- nuevo
 app.include_router(auth.router)              # <-- auth (login/register/me/logout)

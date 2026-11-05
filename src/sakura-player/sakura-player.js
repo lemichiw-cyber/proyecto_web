@@ -15,6 +15,7 @@ import { Visualizer } from './player/visualizer.js';
 import { library } from './library/library.js';
 import { themeManager } from './theme/player-theme-manager.js';
 import * as catalogo from './api/catalogo.js';
+import { api, getApiBase, setApiBase } from './api/client.js';
 import { SearchView } from './components/search.js';
 import { NowPlayingView } from './components/nowplaying.js';
 import { LibraryView } from './components/library.js';
@@ -23,10 +24,12 @@ import { MixerView } from './components/mixer.js';
 import { UploadView } from './components/upload.js';
 import { QueueView } from './components/queue.js';
 import { MiniPlayer } from './components/mini-player.js';
+import { LyricsView } from './lyrics/lyrics-view.js';
 import { icon, toast, emptyState, promptDialog, escapeHtml } from './components/ui.js';
 
 const VIEWS = [
   { id: 'player', label: 'Reproductor', icon: 'note' },
+  { id: 'lyrics', label: 'Letras', icon: 'lyrics' },
   { id: 'search', label: 'Buscar', icon: 'search' },
   { id: 'library', label: 'Biblioteca', icon: 'home' },
   { id: 'playlists', label: 'Playlists', icon: 'list' },
@@ -128,6 +131,7 @@ class SakuraPlayer {
     const content = this.root.querySelector('#sp-view-content');
     this.views = {
       player: new NowPlayingView(content),
+      lyrics: new LyricsView(content),
       search: new SearchView(content, this._ctx()),
       library: new LibraryView(content, this._ctx()),
       playlists: new PlaylistView(content, this._ctx()),
@@ -170,6 +174,7 @@ class SakuraPlayer {
 
     // Estado de conexión
     this._bindConnectivity();
+    this._bindBackendStatus();
 
     this._mounted = true;
   }
@@ -197,6 +202,7 @@ class SakuraPlayer {
             '<span class="sp-nav-icon" aria-hidden="true">' + icon(v.icon) + '</span>' +
             '<span class="sp-nav-label">' + v.label + '</span></button>').join('') +
         '</div>' +
+        '<div id="sp-backend-badge" class="sp-backend-badge disconnected" title="Backend de YouTube Music">● Backend</div>' +
         '<div id="sp-offline-slot" class="sp-nav-offline"></div>' +
       '</nav>' +
       '<div class="sp-main">' +
@@ -253,29 +259,39 @@ class SakuraPlayer {
   }
 
   /* ---------------- vistas de detalle (catálogo local) ---------------- */
-  openAlbum(id) {
+  async openAlbum(id) {
     const seq = ++this._detailSeq;
-    const album = this._albumFromCatalog(id);
+    let album;
+    try {
+      album = await api.album(id);
+    } catch (e) {
+      album = null;
+    }
     if (seq !== this._detailSeq) return;
     if (!album) { this._detailNotFound('album', 'No se pudo abrir el álbum'); return; }
     this._detail({
       title: album.title,
       subtitle: album.artist || '',
       cover: album.thumb,
-      tracks: album.tracks,
+      tracks: album.songs || [],
     });
   }
 
-  openArtist(id) {
+  async openArtist(id) {
     const seq = ++this._detailSeq;
-    const artist = this._artistFromCatalog(id);
+    let artist;
+    try {
+      artist = await api.artist(id);
+    } catch (e) {
+      artist = null;
+    }
     if (seq !== this._detailSeq) return;
     if (!artist) { this._detailNotFound('user', 'No se pudo abrir el artista'); return; }
     this._detail({
       title: artist.name,
       subtitle: 'Artista',
       cover: artist.thumb,
-      tracks: artist.tracks,
+      tracks: artist.songs || [],
     });
   }
 
@@ -417,9 +433,19 @@ class SakuraPlayer {
       '<div class="sp-panel" style="padding:1rem;">' +
         '<div class="sp-panel-title" style="margin-bottom:.7rem;">Acerca del reproductor</div>' +
         '<div style="font-size:.78rem;color:var(--player-text-secondary);line-height:1.5;">' +
-          'Sin servidor: la búsqueda sale de un catálogo curado incluido en la página y la reproducción usa el reproductor oficial de YouTube. ' +
-          'Los archivos locales conservan ecualizador y visualizador; en pistas de YouTube esas herramientas no aplican (su audio no pasa por la página).' +
+          'Búsqueda en catálogo curado incluido en la página y reproducción vía reproductor oficial de YouTube. ' +
+          'Si configurás un backend FastAPI (URL más abajo), la búsqueda usa YouTube Music real y se obtienen URLs de stream y letras sincronizadas.' +
         '</div>' +
+      '</div>' +
+      '<div class="sp-panel" style="padding:1rem;">' +
+        '<div class="sp-panel-title" style="margin-bottom:.7rem;">Backend de YouTube Music</div>' +
+        '<label style="display:block;font-size:.82rem;color:var(--player-text-secondary);margin-bottom:.4rem;">URL del backend FastAPI</label>' +
+        '<input type="text" id="sp-settings-api-base" class="sp-input" style="width:100%;" placeholder="http://127.0.0.1:8000" value="">' +
+        '<div style="display:flex;gap:.4rem;margin-top:.5rem;">' +
+          '<button class="sp-btn sp-btn-primary" id="sp-settings-api-test" style="flex:1;">Probar conexión</button>' +
+          '<button class="sp-btn" id="sp-settings-api-save" style="flex:1;">Guardar</button>' +
+        '</div>' +
+        '<div id="sp-settings-api-status" style="font-size:.72rem;margin-top:.4rem;color:var(--player-text-secondary);"></div>' +
       '</div>' +
       '<div class="sp-panel" style="padding:1rem;">' +
         '<div class="sp-panel-title" style="margin-bottom:.7rem;">Atajos de teclado</div>' +
@@ -466,6 +492,61 @@ class SakuraPlayer {
       content.querySelectorAll('[data-speed]').forEach((x) => x.classList.toggle('sp-btn-active', Math.abs(parseFloat(x.dataset.speed) - player.rate) < 0.01));
       content.querySelector('#sp-speed-slider').nextElementSibling.textContent = 'Actual: ' + player.rate + 'x';
     });
+
+    /* ---- Backend ---- */
+    const apiInput = content.querySelector('#sp-settings-api-base');
+    const apiTest = content.querySelector('#sp-settings-api-test');
+    const apiSave = content.querySelector('#sp-settings-api-save');
+    const apiStatus = content.querySelector('#sp-settings-api-status');
+    if (apiInput) {
+      apiInput.value = getApiBase();
+      apiInput.addEventListener('input', () => {
+        apiStatus.textContent = '';
+        apiSave.classList.remove('sp-btn-active');
+      });
+    }
+    if (apiTest) {
+      apiTest.addEventListener('click', async () => {
+        const url = (apiInput ? apiInput.value : getApiBase()).replace(/\/+$/, '');
+        if (!url) { apiStatus.textContent = 'Ingresá una URL válida.'; apiStatus.style.color = 'var(--player-text-error)'; return; }
+        apiTest.disabled = true;
+        apiTest.textContent = 'Probando…';
+        apiStatus.textContent = '';
+        try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 5000);
+          const r = await fetch(url + '/api/health', { method: 'GET', signal: ctrl.signal, credentials: 'include' });
+          clearTimeout(t);
+          if (r.ok) {
+            apiStatus.textContent = '✅ Backend conectado correctamente.';
+            apiStatus.style.color = 'var(--player-text-success)';
+            apiSave.classList.add('sp-btn-active');
+          } else {
+            apiStatus.textContent = '❌ El backend respondió con error (' + r.status + ').';
+            apiStatus.style.color = 'var(--player-text-error)';
+          }
+        } catch (e) {
+          apiStatus.textContent = '❌ No se pudo conectar al backend.';
+          apiStatus.style.color = 'var(--player-text-error)';
+        } finally {
+          apiTest.disabled = false;
+          apiTest.textContent = 'Probar conexión';
+        }
+      });
+    }
+    if (apiSave) {
+      apiSave.addEventListener('click', () => {
+        const url = (apiInput ? apiInput.value : '').replace(/\/+$/, '');
+        if (!url) { apiStatus.textContent = 'Ingresá una URL válida.'; apiStatus.style.color = 'var(--player-text-error)'; return; }
+        setApiBase(url);
+        apiSave.classList.remove('sp-btn-active');
+        apiStatus.textContent = '✅ URL del backend guardada.';
+        apiStatus.style.color = 'var(--player-text-success)';
+        // Invalida la caché de detección de backend
+        window.__spBackendCache = { ok: null, ts: 0 };
+        toast('Configuración del backend guardada', 'success');
+      });
+    }
   }
 
   /* ---------------- tema → visualizador ---------------- */
@@ -505,6 +586,44 @@ class SakuraPlayer {
         '<div><b>Sin conexión</b><span>Las pistas de YouTube necesitan internet. Tus archivos locales siguen funcionando.</span></div></div>';
     } else {
       slot.innerHTML = '';
+    }
+  }
+
+  /* ---------------- estado del backend ------------ */
+  _bindBackendStatus() {
+    this._checkBackendStatus();
+    // Revisa cada 30 segundos si el backend está disponible
+    this._backendInterval = setInterval(() => this._checkBackendStatus(), 30000);
+  }
+
+  async _checkBackendStatus() {
+    try {
+      const disponible = await api.backendDisponible();
+      const badge = this.root && this.root.querySelector('#sp-backend-badge');
+      if (badge) {
+        if (disponible) {
+          badge.classList.remove('disconnected');
+          badge.classList.add('connected');
+          badge.title = 'Backend de YouTube Music — Conectado';
+        } else {
+          badge.classList.remove('connected');
+          badge.classList.add('disconnected');
+          badge.title = 'Backend de YouTube Music — Desconectado';
+        }
+      }
+    } catch (e) {
+      const badge = this.root && this.root.querySelector('#sp-backend-badge');
+      if (badge) {
+        badge.classList.remove('connected');
+        badge.classList.add('disconnected');
+        badge.title = 'Backend de YouTube Music — Error';
+      }
+    }
+  }
+
+  destroy() {
+    if (this._backendInterval) {
+      clearInterval(this._backendInterval);
     }
   }
 }

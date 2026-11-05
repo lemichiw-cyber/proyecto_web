@@ -5,6 +5,7 @@
    =================================================================== */
 
 import { YTEngine } from './yt-engine.js';
+import { applyEqCoefficients } from '../audio/equalizer.js';
 
 const LS = {
   queue: 'sp_queue',
@@ -316,15 +317,15 @@ export class Player {
     if (!track) { this.emit('time', this.status()); return; }
     // ¿Pista local o de YouTube? Cambia de motor si hace falta.
     const wantYt = track.source !== 'local';
+
+    // DETENER TODO ANTES DE CARGAR: esto evita que la canción anterior
+    // siga sonando cuando seleccionamos una nueva (local o de YouTube).
+    this._stopPlayback();
+
     if (wantYt && this.mode !== 'yt') {
       this.mode = 'yt';
-      // Silencia el <audio> para que no suene por debajo ni quede colgado.
-      this.audio.pause();
-      this.audio.removeAttribute('src');
-      try { this.audio.load(); } catch (e) { /* noop */ }
     } else if (!wantYt && this.mode !== 'local') {
       this.mode = 'local';
-      this.yt.stop(); // detiene el iframe al volver a una pista local
     }
 
     if (this.mode === 'yt') {
@@ -502,6 +503,10 @@ export class Player {
   setEqGains(gains) {
     if (!Array.isArray(gains)) return;
     gains.forEach((g, i) => this.setEqBand(i, g));
+    // Aplica coeficientes Biquad calculados (estilo Echo Music) para control preciso
+    if (this.nodes && this.nodes.bands) {
+      applyEqCoefficients(this, gains);
+    }
   }
 
   setMixer({ master, music, bass, treble, balance }) {
