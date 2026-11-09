@@ -28,7 +28,7 @@ export const FEATURES = {
 
   // ===== FUNCIONES MULTIUSUARIO (desactivadas por defecto) =====
   // Requieren backend real con autenticación, base de datos, RLS
-  FOROS: false,             // app-foros
+  FOROS: true,             // app-foros
   MENSAJES: false,          // app-mensajes
   GRUPALES: false,          // app-grupales
   PROTEGIDO: false,         // app-protegido (reportes de incidentes)

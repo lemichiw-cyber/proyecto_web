@@ -32,3 +32,16 @@ CREATE TABLE IF NOT EXISTS foro_reportes (
   resuelto BOOLEAN NOT NULL DEFAULT FALSE,
   creado DOUBLE PRECISION NOT NULL
 );
+CREATE TABLE IF NOT EXISTS actividades (
+  id BIGSERIAL PRIMARY KEY,
+  titulo TEXT NOT NULL,
+  descripcion TEXT NOT NULL DEFAULT '',
+  owner_id BIGINT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS actividades_grupo (
+  actividad_id BIGINT NOT NULL REFERENCES actividades(id) ON DELETE CASCADE,
+  grupo_id BIGINT NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+  PRIMARY KEY (actividad_id, grupo_id)
+);
+CREATE INDEX IF NOT EXISTS idx_actividades_grupo ON actividades_grupo (grupo_id);

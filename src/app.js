@@ -27,6 +27,7 @@ import {
 } from "./app-accounts";
 
 import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoCheckboxes, gruposSeleccionados } from "./api-client";
+import { initForos } from "./modules/foros/foro-app.js";
 (function () {
       'use strict';
 
@@ -369,9 +370,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       var scrollPos = 0;
       function lockBody() { scrollPos = window.scrollY; document.body.classList.add('no-scroll'); }
       function unlockBody() { document.body.classList.remove('no-scroll'); window.scrollTo(0, scrollPos); }
-      document.addEventListener('touchmove', function(e) {
-        if (document.body.classList.contains('no-scroll') && !e.target.closest('.modal-overlay')) e.preventDefault();
-      }, { passive: false });
+      // P1: no bloquear touchmove global — el scroll se bloquea solo con body.no-scroll (overflow:hidden).
+      // El handler anterior preventDefault sobre toda la página dejaba la dashboard sin scroll tras cerrar sidebar/modal si el tope se quedaba atascado.
 
       function abrirTemas() {
         var modal = $('modal-temas');
@@ -744,20 +744,32 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
 
       $('form-login').addEventListener('submit', async function (e) {
         e.preventDefault();
-        var email = $('login-email').value.trim();
-        var pass = $('login-pass').value.trim();
+        var btn = $('login-submit');
+        var email = $('login-email').value.trim().toLowerCase();
+        var pass = $('login-pass').value;
         if (!email || pass.length < 6) {
-          $('login-error').hidden = false; mostrarToast('Ingresa un correo y contraseña válidos (mín. 6 caracteres).', 'error'); return;
+          $('login-error').hidden = false; $('login-error').textContent = 'Ingresa un correo y contraseña válidos (mín. 6 caracteres).'; return;
         }
         $('login-error').hidden = true;
-
+        if (btn) { btn.disabled = true; btn.textContent = 'Ingresando…'; }
         try {
           var data = await apiLogin(email, pass);
           loginSuccess(data.email, data.rol, data.nombre);
         } catch (err) {
+          var msg = String(err.message || err);
+          $('login-error').textContent = (msg.indexOf('429') !== -1 || msg.indexOf('Demasiados') !== -1) ? 'Demasiados intentos. Esperá 5 minutos.' : (msg.indexOf('Credenciales') !== -1 ? 'Credenciales inválidas.' : msg);
           $('login-error').hidden = false;
-          mostrarToast(String(err.message || err), 'error');
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = 'Ingresar'; }
         }
+      });
+      var _toggle = $('btn-toggle-pass');
+      if (_toggle) _toggle.addEventListener('click', function () {
+        var inp = $('login-pass');
+        var show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        _toggle.textContent = show ? '🙈 Ocultar' : '👁 Mostrar';
+        inp.focus();
       });
 
       /* ---- Registro: la persona ELIGE el rol de su cuenta ---- */
@@ -3286,800 +3298,46 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
          =================================================================== */
       window.eventosAPI.migrarLegacy();
       var actividades = window.eventosAPI.listar('actividad');
-      var foros = JSON.parse(localStorage.getItem('foros') || '[]');
-      var agendaItems = window.eventosAPI.listar('agenda');
-      var calEventos = window.eventosAPI.listar('calendario');
-      var horarioItems = JSON.parse(localStorage.getItem('horarioItems') || '[]');
-      // Migrar datos antiguos al nuevo formato de tabla
-      if (horarioItems.length > 0 && horarioItems[0].materia !== undefined) {
-        var nuevos = [];
-        horarioItems.forEach(function (old) {
-          var hora = old.hora || '';
-          var dia = old.dia || '';
-          var fila = { hora: hora, Lunes: '', Martes: '', 'Miércoles': '', Jueves: '', Viernes: '' };
-          if (dia) fila[dia] = old.materia || '';
-          nuevos.push(fila);
-        });
-        horarioItems = nuevos;
-        guardarSeccion('horarioItems', horarioItems);
-      }
-      var clasesItems = JSON.parse(localStorage.getItem('clasesItems') || '[]');
-      var mensajesItems = JSON.parse(localStorage.getItem('mensajesItems') || '[]');
-      var gruposItems = JSON.parse(localStorage.getItem('gruposItems') || '[]');
-      var protegidoItems = JSON.parse(localStorage.getItem('protegidoItems') || '[]');
-
-      function guardarSeccion(nombre, arr) {
-        localStorage.setItem(nombre, JSON.stringify(arr));
-      }
-
-      function renderActividades() {
-        var el = $('act-lista');
-        if (actividades.length === 0) { el.innerHTML = emptyMsg('No hay actividades registradas.', { icon: '📋', title: 'Actividades', desc: 'Creá actividades para que tus estudiantes se mantengan al día.', actionText: '+ Nueva actividad', actionFn: function() { $('btn-act-add').click(); } }); return; }
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          actividades.map(function (a, i) {
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(a.titulo) + '</strong>' + (a.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(a.desc) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="actividades" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
-          }).join('') + '</div>';
-        el.querySelectorAll('.seccion-del').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var idx = parseInt(this.dataset.idx);
-            window.eventosAPI.borrar(actividades[idx].id);
-            actividades.splice(idx, 1);
-            renderActividades();
-            mostrarToast('Actividad eliminada.', 'success');
-          });
-        });
-      }
-      $('btn-act-add').addEventListener('click', function () {
-        if (!exigirPermiso('crear')) return;
-        dialogPrompt('T\u00EDtulo de la actividad:', 'Nueva actividad').then(function (titulo) {
-          if (!titulo) return;
-          dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            var ev = window.eventosAPI.agregar({
-              titulo: titulo.trim(),
-              tipo: 'actividad',
-              desc: (desc || '').trim(),
-              estado: 'pendiente',
-              prioridad: 'media',
-              recordatorio: false
-            });
-            actividades.push(ev);
-            renderActividades();
-            mostrarToast('Actividad agregada.', 'success');
-          });
-        });
-      });
-      renderActividades();
-
       /* ===================================================================
-         FOROS — temas con mensajes, respuestas, estados y filtros
+         FOROS — controlador tipo Reddit (comunidades, votos, hilos)
+         La lógica vive en src/modules/foros/ para poder probarla aparte.
          =================================================================== */
-      var MATERIAS_FORO = [
-        ['', 'Todas las materias'], ['general', 'General'], ['matematicas', 'Matem\u00E1ticas'],
-        ['fisica', 'F\u00edsica'], ['quimica', 'Qu\u00EDmica'], ['biologia', 'Biolog\u00EDa'],
-        ['literatura', 'Literatura'], ['historia', 'Historia'], ['ingles', 'Ingl\u00E9s'],
-      ];
-      var ESTADOS_FORO = {
-        abierto: { t: 'Abierto', c: 'badge-blue' },
-        resuelto: { t: 'Resuelto', c: 'badge-green' },
-        cerrado: { t: 'Cerrado', c: 'badge-amber' },
-      };
-      var foroAbierto = -1;      // índice del tema abierto en pantalla
-      var foroResponderA = null; // id del mensaje al que se responde (null = al tema)
-      var foroPagina = 1;        // página actual de paginación
-      var foroPorPagina = 5;     // temas por página
-      var foroOrden = 'reciente'; // ordenamiento: 'reciente' o 'populares'
-
-      // Migración de los foros viejos ({titulo, desc}) al formato con hilos
-      (function migrarForos() {
-        var cambia = false;
-        foros.forEach(function (f) {
-          if (!f.id) { f.id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); cambia = true; }
-          if (!Array.isArray(f.mensajes)) { f.mensajes = []; cambia = true; }
-          if (!f.estado) { f.estado = 'abierto'; cambia = true; }
-          if (f.fijado === undefined) { f.fijado = false; cambia = true; }
-          if (f.materia === undefined) { f.materia = ''; cambia = true; }
-          if (!f.creada) { f.creada = new Date().toISOString(); cambia = true; }
-          if (!f.autor) { f.autor = { nombre: 'An\u00F3nimo', email: '', rol: '' }; cambia = true; }
-          f.mensajes.forEach(function (m) {
-            if (!m.id) { m.id = 'm' + Math.random().toString(36).slice(2, 9); cambia = true; }
-            if (!Array.isArray(m.respuestas)) { m.respuestas = []; cambia = true; }
-            if (!m.autor) { m.autor = { nombre: 'An\u00F3nimo', email: '', rol: '' }; cambia = true; }
-            if (!m.fecha) { m.fecha = new Date().toISOString(); cambia = true; }
-          });
-        });
-        if (cambia) guardarSeccion('foros', foros);
-      })();
-
       function foroYo() {
         return usuarioActual
           ? { nombre: usuarioActual.nombre || usuarioActual.email, email: usuarioActual.email, rol: usuarioActual.rol }
           : null;
       }
-      function foroCuentaRespuestas(f) {
-        var n = f.mensajes.length;
-        f.mensajes.forEach(function (m) { n += (m.respuestas || []).length; });
-        return n;
-      }
-      function foroNombreMateria(v) {
-        var m = MATERIAS_FORO.find(function (x) { return x[0] === v; });
-        return m ? m[1] : v;
-      }
-      function fechaCorta(iso) {
-        if (!iso) return '';
-        var d = new Date(iso);
-        if (isNaN(d.getTime())) return '';
-        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
-        return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-      }
-      function enlacesAutomaticos(texto) {
-        if (!texto) return '';
-        return texto.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
-          var display = url.length > 50 ? url.substring(0, 47) + '...' : url;
-          return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--blue-ink);text-decoration:underline;word-break:break-all;">' + escapeHtml(display) + '</a>';
-        });
-      }
-      function foroPuedeBorrar(autor) {
-        var yo = foroYo();
-        if (yo && autor && autor.email && autor.email === yo.email) return true;
-        return tienePermiso('eliminar');
-      }
-      function foroPuedeEditar(autor) {
-        var yo = foroYo();
-        if (yo && autor && autor.email && autor.email === yo.email) return true;
-        return tienePermiso('editar');
-      }
-      function foroBadgeRol(rol) {
+      function foroRolBadge(rol) {
+        if (!rol) return '';
         var c = (typeof ROLES_BADGE !== 'undefined' && ROLES_BADGE[rol]) || 'badge-blue';
         var t = (typeof ROLES_LABEL !== 'undefined' && ROLES_LABEL[rol]) || rol;
-        return '<span class="badge ' + c + '" style="font-size:.68rem;">' + escapeHtml(t || '') + '</span>';
+        return '<span class="badge ' + c + '" style="font-size:.62rem;">' + escapeHtml(t || '') + '</span>';
       }
-
-      (function initForoFiltros() {
-        var sel = $('foro-filtro-materia');
-        if (sel) {
-          sel.innerHTML = MATERIAS_FORO.map(function (m) {
-            return '<option value="' + m[0] + '">' + m[1] + '</option>';
-          }).join('');
-        }
-        ['foro-buscar', 'foro-filtro-estado', 'foro-filtro-materia'].forEach(function (id) {
-          var el = $(id);
-          if (el) el.addEventListener('input', function () { if (foroAbierto < 0) renderForos(); });
-        });
-      })();
-
-      function renderForos() {
-        var el = $('foro-lista');
-        var det = $('foro-detalle');
-        if (!el || !det) return;
-
-        // Tema abierto: se muestra el hilo en vez de la lista
-        if (foroAbierto >= 0 && foros[foroAbierto]) {
-          el.classList.add('hidden');
-          det.classList.remove('hidden');
-          renderForoDetalle();
-          return;
-        }
-        foroAbierto = -1;
-        el.classList.remove('hidden');
-        det.classList.add('hidden');
-        det.innerHTML = '';
-
-        var q = (($('foro-buscar') && $('foro-buscar').value) || '').toLowerCase().trim();
-        var estado = $('foro-filtro-estado') ? $('foro-filtro-estado').value : 'todos';
-        var materia = $('foro-filtro-materia') ? $('foro-filtro-materia').value : '';
-
-        var visibles = foros.map(function (f, i) { return { f: f, i: i }; }).filter(function (x) {
-          if (estado !== 'todos' && x.f.estado !== estado) return false;
-          if (materia && x.f.materia !== materia) return false;
-          if (q && String(x.f.titulo).toLowerCase().indexOf(q) === -1 &&
-              String(x.f.desc || '').toLowerCase().indexOf(q) === -1) return false;
-          return true;
-        }).sort(function (a, b) {
-          var pa = a.f.fijado ? 1 : 0, pb = b.f.fijado ? 1 : 0;
-          if (pa !== pb) return pb - pa;
-          if (foroOrden === 'populares') {
-            var ca = foroCuentaRespuestas(a.f), cb = foroCuentaRespuestas(b.f);
-            if (ca !== cb) return cb - ca;
-          }
-          return String(b.f.creada).localeCompare(String(a.f.creada));
-        });
-
-        // Paginación
-        var totalPaginas = Math.ceil(visibles.length / foroPorPagina);
-        if (foroPagina > totalPaginas) foroPagina = totalPaginas || 1;
-        var inicio = (foroPagina - 1) * foroPorPagina;
-        var fin = inicio + foroPorPagina;
-        var paginaVisibles = visibles.slice(inicio, fin);
-
-        if (visibles.length === 0) {
-          el.innerHTML = foros.length === 0
-            ? emptyMsg('No hay temas todavía.', { icon: '\uD83D\uDCAC', title: 'Foros', desc: 'Cre\u00E1 un tema para iniciar una discusi\u00F3n con tu grupo.', actionText: '+ Nuevo tema', actionFn: function () { $('btn-foro-add').click(); } })
-            : emptyMsg('Ning\u00FAn tema coincide con el filtro.', { icon: '\uD83D\uDD0D', title: 'Sin resultados', desc: 'Prob\u00E1 con otra b\u00FAsqueda o limpi\u00E1 los filtros.' });
-          return;
-        }
-
-        // Controles superiores: paginación, orden y exportar CSV
-        var controlesSup = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem;">' +
-          '<div style="font-size:.75rem;color:var(--gray-500);">Mostrando ' + (inicio + 1) + ' a ' + Math.min(fin, visibles.length) + ' de ' + visibles.length + '</div>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-anterior" style="font-size:.75rem;">\u25C4 Anterior</button>' +
-          '<span style="font-size:.75rem;color:var(--gray-700);font-weight:600;">P\u00e1gina ' + foroPagina + ' de ' + totalPaginas + '</span>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-siguiente" style="font-size:.75rem;">Siguiente \u25BA</button>' +
-          '<select id="foro-orden" style="font-size:.75rem;padding:.2rem .4rem;border:1px solid var(--gray-300);border-radius:6px;">' +
-            '<option value="reciente" ' + (foroOrden === 'reciente' ? 'selected' : '') + '>M\u00e1s recientes</option>' +
-            '<option value="populares" ' + (foroOrden === 'populares' ? 'selected' : '') + '>M\u00e1s populares</option>' +
-          '</select>' +
-          (tienePermiso('eliminar') ? '<button class="btn btn-sm btn-outline foro-exportar" style="font-size:.75rem;color:var(--gray-800);">\uD83D\uDCCE Exportar CSV</button>' : '') +
-        '</div>';
-
-        el.innerHTML = controlesSup + '<div style="display:flex;flex-direction:column;gap:.5rem;">' + paginaVisibles.map(function (x) {
-          var f = x.f;
-          var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
-          var meta = [];
-          if (f.fijado) meta.push('\uD83D\uDCCC Fijado');
-          meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
-          if (f.materia) meta.push(escapeHtml(foroNombreMateria(f.materia)));
-          meta.push(fechaCorta(f.creada));
-          return '<div style="padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-            '<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">' +
-              '<div style="flex:1;min-width:0;">' +
-                '<button class="btn btn-sm foro-abrir" data-idx="' + x.i + '" style="padding:0;background:none;border:none;color:var(--gray-900);font-weight:700;text-align:left;font-size:.95rem;">' + escapeHtml(f.titulo) + '</button>' +
-                (f.desc ? '<p style="font-size:.83rem;color:var(--gray-500);margin:.15rem 0 0;">' + escapeHtml(f.desc) + '</p>' : '') +
-                '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.75rem;color:var(--gray-500);margin-top:.35rem;">' +
-                  '<span class="badge ' + st.c + '" style="font-size:.7rem;">' + st.t + '</span>' +
-                  '<span>' + meta.join(' \u00B7 ') + '</span>' +
-                  '<span>\uD83D\uDCAC ' + foroCuentaRespuestas(f) + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<div style="display:flex;gap:.35rem;flex-shrink:0;">' +
-                (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline foro-estado" data-idx="' + x.i + '" style="font-size:.75rem;">' + (f.estado === 'resuelto' ? 'Reabrir' : '\u2714 Resuelto') + '</button>' : '') +
-                '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + x.i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button>' +
-              '</div>' +
-            '</div></div>';
-        }).join('') + '</div>' +
-        '<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem;justify-content:space-between;">' +
-          '<div style="font-size:.7rem;color:var(--gray-500);">Total: ' + visibles.length + ' tema' + (visibles.length !== 1 ? 's' : '') + '</div>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-anterior2" style="font-size:.75rem;">\u25C4 Anterior</button>' +
-          '<span style="font-size:.75rem;color:var(--gray-700);font-weight:600;">P\u00e1gina ' + foroPagina + ' de ' + totalPaginas + '</span>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-siguiente2" style="font-size:.75rem;">Siguiente \u25BA</button>' +
-        '</div>';
-
-        el.querySelectorAll('.foro-abrir').forEach(function (b) {
-          b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
-        });
-        el.querySelectorAll('.foro-estado').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('editar')) return;
-            var f = foros[parseInt(this.dataset.idx, 10)];
-            if (!f) return;
-            f.estado = f.estado === 'resuelto' ? 'abierto' : 'resuelto';
-            foroGuardar();
-            renderForos();
-            mostrarToast(f.estado === 'resuelto' ? 'Tema marcado como resuelto.' : 'Tema reabierto.', 'success');
-          });
-        });
-        el.querySelectorAll('.seccion-del').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('eliminar')) return;
-            foros.splice(parseInt(this.dataset.idx, 10), 1);
-            foroGuardar();
-            renderForos();
-            mostrarToast('Tema eliminado.', 'success');
-          });
-        });
-
-        // Listeners paginación
-        el.querySelectorAll('.foro-pagina-anterior, .foro-pagina-anterior2').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (foroPagina > 1) {
-              foroPagina--;
-              renderForos();
-            }
-          });
-        });
-        el.querySelectorAll('.foro-pagina-siguiente, .foro-pagina-siguiente2').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (foroPagina < totalPaginas) {
-              foroPagina++;
-              renderForos();
-            }
-          });
-        });
-        var ordenSelect = $('foro-orden');
-        if (ordenSelect) {
-          ordenSelect.addEventListener('change', function () {
-            foroOrden = ordenSelect.value;
-            foroPagina = 1;
-            renderForos();
-          });
-        }
-        var btnExportar = el.querySelector('.foro-exportar');
-        if (btnExportar) {
-          btnExportar.addEventListener('click', function () {
-            foroExportarCSV(visibles);
-          });
-        }
-
-        el.querySelectorAll('.foro-abrir').forEach(function (b) {
-          b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
-        });
-        el.querySelectorAll('.foro-estado').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('editar')) return;
-            var f = foros[parseInt(this.dataset.idx, 10)];
-            if (!f) return;
-            f.estado = f.estado === 'resuelto' ? 'abierto' : 'resuelto';
-            foroGuardar();
-            renderForos();
-            mostrarToast(f.estado === 'resuelto' ? 'Tema marcado como resuelto.' : 'Tema reabierto.', 'success');
-          });
-        });
-        el.querySelectorAll('.seccion-del').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('eliminar')) return;
-            foros.splice(parseInt(this.dataset.idx, 10), 1);
-            foroGuardar();
-            renderForos();
-            mostrarToast('Tema eliminado.', 'success');
-          });
-        });
-      }
-
-      function abrirForo(idx) { foroAbierto = idx; foroResponderA = null; renderForos(); }
-      function cerrarForo() { foroAbierto = -1; foroResponderA = null; renderForos(); }
-
-      function renderForoDetalle() {
-        var det = $('foro-detalle');
-        var f = foros[foroAbierto];
-        if (!det) return;
-        if (!f) { foroAbierto = -1; renderForos(); return; }
-
-        // Marcar como leído los mensajes al ver el detalle
-        var yo = foroYo();
-        if (yo && yo.email) {
-          if (!f.leidosPor) f.leidosPor = [];
-          if (f.leidosPor.indexOf(yo.email) < 0) f.leidosPor.push(yo.email);
-          if (f.mensajes) {
-            f.mensajes.forEach(function (m) {
-              if (!m.leidosPor) m.leidosPor = [];
-              if (m.leidosPor.indexOf(yo.email) < 0) m.leidosPor.push(yo.email);
-              if (m.respuestas) {
-                m.respuestas.forEach(function (r) {
-                  if (!r.leidosPor) r.leidosPor = [];
-                  if (r.leidosPor.indexOf(yo.email) < 0) r.leidosPor.push(yo.email);
-                });
-              }
-            });
-          }
-          foroGuardar();
-        }
-
-        var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
-        yo = foroYo();
-        var cerrado = f.estado === 'cerrado';
-        var meta = [];
-        meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
-        if (f.materia) meta.push(escapeHtml(foroNombreMateria(f.materia)));
-        meta.push(fechaCorta(f.creada));
-        meta.push(foroCuentaRespuestas(f) + ' participaci\u00F3n' + (foroCuentaRespuestas(f) === 1 ? '' : 'es'));
-
-        var mensajes = f.mensajes.map(function (m) {
-          var respuestas = (m.respuestas || []).map(function (r) {
-            var aceptada = r.aceptada ? ' <span class="badge badge-green" style="font-size:.65rem;margin-left:.4rem;">✓ Aceptada</span>' : '';
-            var puedeAceptar = (yo && f.autor && f.autor.email === yo.email) && !r.aceptada;
-            return '<div style="margin:.4rem 0 0 .9rem;padding:.45rem .6rem;background:' + (r.aceptada ? 'rgba(46,204,113,.08)' : 'var(--gray-50)') + ';border-left:3px solid ' + (r.aceptada ? 'var(--green-ink)' : 'var(--gray-200)') + ';border-radius:0 8px 8px 0;">' +
-              '<div style="display:flex;justify-content:space-between;gap:.5rem;">' +
-                '<strong style="font-size:.82rem;">' + escapeHtml(r.autor ? r.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(r.autor ? r.autor.rol : '') + '</strong>' +
-                '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(r.fecha) + '</span>' + aceptada +
-              '</div>' +
-              '<p style="font-size:.85rem;margin:.2rem 0 0;">' + escapeHtml(enlacesAutomaticos(r.texto)) + '</p>' +
-              (r.archivos && r.archivos.length ? '<div style="margin:.3rem 0;display:flex;gap:.4rem;flex-wrap:wrap;">' + r.archivos.map(function (arch) {
-              return '<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;background:var(--gray-50);padding:.3rem .5rem;border-radius:6px;">' +
-                '<span>\uD83D\uDCCE</span>' + escapeHtml(arch.nombre) +
-                '</div>';
-            }).join('') + '</div>' : '') +
-            '<div style="display:flex;gap:.4rem;margin-top:.3rem;">' +
-                (puedeAceptar ? '<button class="btn btn-sm btn-outline foro-aceptar" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--green-ink);font-size:.72rem;">Marcar como respuesta</button>' : '') +
-                (foroPuedeEditar(r.autor) ? '<button class="btn btn-sm btn-outline foro-editar-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--blue-ink);font-size:.72rem;">Editar</button>' : '') +
-                (foroPuedeBorrar(r.autor) ? '<button class="btn btn-sm btn-outline foro-del-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.72rem;">Eliminar</button>' : '') +
-                '<div style="flex:1;display:flex;gap:.3rem;justify-content:flex-end;">' +
-                (r.reacciones ? Object.keys(r.reacciones).map(function (emoji) {
-                  var count = r.reacciones[emoji];
-                  var yoReacciono = r.reacciones[emoji].usuarios && r.reacciones[emoji].usuarios.indexOf(yo && yo.email) >= 0;
-                  return '<button class="btn btn-sm btn-outline foro-reaccionar" data-mid="' + m.id + '" data-rid="' + r.id + '" data-emoji="' + escapeHtml(emoji) + '" style="font-size:.8rem;background:' + (yoReacciono ? 'var(--blue-200)' : 'transparent') + ';border-color:' + (yoReacciono ? 'var(--blue-ink)' : 'var(--gray-300)') + ';">' + emoji + ' <span style="font-size:.65rem;">' + count + '</span></button>';
-                }).join('') : '') +
-              '</div>' +
-              (tienePermiso('eliminar') || (yo && r.autor && r.autor.email === yo.email) ? '<button class="btn btn-sm btn-outline foro-reportar" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.7rem;">\u26A0 Reportar</button>' : '') +
-              '</div></div>';
-          }).join('');
-
-          return '<div style="padding:.7rem 0;border-bottom:1px solid var(--gray-100);">' +
-            '<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">' +
-              '<strong style="font-size:.88rem;">' + escapeHtml(m.autor ? m.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(m.autor ? m.autor.rol : '') + '</strong>' +
-              '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(m.fecha) + '</span>' +
-            '</div>' +
-            '<p style="font-size:.88rem;margin:.35rem 0 .4rem;white-space:pre-wrap;">' + escapeHtml(enlacesAutomaticos(m.texto)) + '</p>' +
-            (m.archivos && m.archivos.length ? '<div style="margin:.3rem 0;display:flex;gap:.4rem;flex-wrap:wrap;">' + m.archivos.map(function (arch) {
-              return '<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;background:var(--gray-50);padding:.3rem .5rem;border-radius:6px;">' +
-                '<span>\uD83D\uDCCE</span>' + escapeHtml(arch.nombre) +
-                '</div>';
-            }).join('') + '</div>' : '') +
-            '<div style="display:flex;gap:.5rem;">' +
-              (cerrado ? '' : '<button class="btn btn-sm btn-outline foro-responder" data-mid="' + m.id + '" style="font-size:.75rem;">\u21A9 Responder</button>') +
-              (foroPuedeEditar(m.autor) ? '<button class="btn btn-sm btn-outline foro-editar-msg" data-mid="' + m.id + '" style="color:var(--blue-ink);font-size:.75rem;">Editar</button>' : '') +
-              (foroPuedeBorrar(m.autor) ? '<button class="btn btn-sm btn-outline foro-del-msg" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.75rem;">Eliminar</button>' : '') +
-              '<div style="flex:1;display:flex;gap:.3rem;justify-content:flex-end;">' +
-                (m.reacciones ? Object.keys(m.reacciones).map(function (emoji) {
-                  var count = m.reacciones[emoji];
-                  var yoReacciono = m.reacciones[emoji].usuarios && m.reacciones[emoji].usuarios.indexOf(yo && yo.email) >= 0;
-                  return '<button class="btn btn-sm btn-outline foro-reaccionar" data-mid="' + m.id + '" data-emoji="' + escapeHtml(emoji) + '" style="font-size:.8rem;background:' + (yoReacciono ? 'var(--blue-200)' : 'transparent') + ';border-color:' + (yoReacciono ? 'var(--blue-ink)' : 'var(--gray-300)') + ';">' + emoji + ' <span style="font-size:.65rem;">' + count + '</span></button>';
-                }).join('') : '') +
-              '</div>' +
-              (tienePermiso('eliminar') || (yo && m.autor && m.autor.email === yo.email) ? '<button class="btn btn-sm btn-outline foro-reportar" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.7rem;">\u26A0 Reportar</button>' : '') +
-            '</div>' + respuestas + '</div>';
-        }).join('');
-        if (!f.mensajes.length) {
-          mensajes = emptyMsg('Todav\u00EDa no hay respuestas.', { icon: '\uD83D\uDCAC', title: 'Sin comentarios', desc: 'S\u00E9 el primero en participar de este tema.' });
-        }
-
-        det.innerHTML =
-          '<div style="display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">' +
-            '<div style="min-width:0;">' +
-              '<h3 style="margin:0;">' + (f.fijado ? '\uD83D\uDCCC ' : '') + escapeHtml(f.titulo) + '</h3>' +
-              (f.desc ? '<p style="font-size:.85rem;color:var(--gray-500);margin:.3rem 0 0;">' + escapeHtml(f.desc) + '</p>' : '') +
-              '<div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.76rem;color:var(--gray-500);margin-top:.4rem;align-items:center;">' +
-                '<span class="badge ' + st.c + '" style="font-size:.7rem;">' + st.t + '</span>' + meta.join(' \u00B7 ') +
-              '</div>' +
-            '</div>' +
-            '<div style="display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap;">' +
-              (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline" id="foro-fijar" style="font-size:.78rem;">' + (f.fijado ? 'Quitar fijado' : '\uD83D\uDCCC Fijar') + '</button>' : '') +
-              (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline" id="foro-cerrar" style="font-size:.78rem;">' + (cerrado ? 'Reabrir tema' : 'Cerrar tema') + '</button>' : '') +
-              '<button class="btn btn-outline btn-sm" id="foro-volver">\u2190 Volver</button>' +
-            '</div>' +
-          '</div>' +
-          '<div style="margin-top:.9rem;">' + mensajes + '</div>' +
-          (cerrado
-            ? '<p style="font-size:.83rem;color:var(--gray-500);margin-top:.9rem;">\uD83D\uDD12 Este tema est\u00E1 cerrado: no se pueden agregar respuestas.</p>'
-            : (yo
-                ? '<div style="margin-top:.9rem;">' +
-                    '<div id="foro-respuesta-a" class="hidden" style="font-size:.78rem;color:var(--gray-500);margin-bottom:.3rem;"></div>' +
-                    '<textarea id="foro-texto" rows="3" placeholder="Escrib\u00ED tu respuesta..." aria-label="Tu respuesta" style="width:100%;padding:.55rem .7rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>' +
-                    '<input type="file" id="foro-archivo" accept="image/*,.pdf,.doc,.docx,.txt" style="width:100%;padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.8rem;margin-top:.3rem;" multiple>' +
-                    '<div id="foro-archivos-seleccionados" style="font-size:.75rem;color:var(--gray-500);margin-top:.3rem;"></div>' +
-                    '<div style="display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end;">' +
-                      '<button class="btn btn-primary btn-sm" id="foro-publicar">Publicar respuesta</button>' +
-                    '</div>' +
-                  '</div>'
-                : '<p style="font-size:.83rem;color:var(--gray-500);margin-top:.9rem;">Inici\u00E1 sesi\u00F3n para responder.</p>'));
-
-        var volver = $('foro-volver');
-        if (volver) volver.addEventListener('click', cerrarForo);
-        var fijar = $('foro-fijar');
-        if (fijar) fijar.addEventListener('click', function () {
-          if (!exigirPermiso('editar')) return;
-          f.fijado = !f.fijado;
-          foroGuardar();
-          renderForoDetalle();
-          mostrarToast(f.fijado ? 'Tema fijado.' : 'Tema desfijado.', 'success');
-        });
-        var cerrarBtn = $('foro-cerrar');
-        if (cerrarBtn) cerrarBtn.addEventListener('click', function () {
-          if (!exigirPermiso('editar')) return;
-          f.estado = cerrado ? 'abierto' : 'cerrado';
-          foroGuardar();
-          renderForoDetalle();
-          mostrarToast(f.estado === 'cerrado' ? 'Tema cerrado.' : 'Tema reabierto.', 'success');
-        });
-
-        det.querySelectorAll('.foro-responder').forEach(function (b) {
-          b.addEventListener('click', function () {
-            foroResponderA = this.dataset.mid;
-            var hint = $('foro-respuesta-a');
-            var msg = f.mensajes.find(function (m) { return m.id === foroResponderA; });
-            if (hint && msg) {
-              hint.textContent = 'Respondiendo a ' + (msg.autor ? msg.autor.nombre : '') + '  (click en "Publicar" para cancelar)';
-              hint.classList.remove('hidden');
-            }
-            var t = $('foro-texto');
-            if (t) t.focus();
-          });
-        });
-
-        det.querySelectorAll('.foro-del-msg').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var idx = f.mensajes.findIndex(function (m) { return m.id === this.dataset.mid; }, this);
-            var m = idx >= 0 ? f.mensajes[idx] : null;
-            if (!m) return;
-            if (!foroPuedeBorrar(m.autor)) { mostrarToast('No pod\u00E9s borrar ese mensaje.', 'error'); return; }
-            if (!confirm('\u00BFBorrar este mensaje y sus respuestas?')) return;
-            f.mensajes.splice(idx, 1);
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Mensaje eliminado.', 'success');
-          });
-        });
-        det.querySelectorAll('.foro-del-resp').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
-            if (!m) return;
-            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
-            if (ridx < 0) return;
-            if (!foroPuedeBorrar(m.respuestas[ridx].autor)) { mostrarToast('No pod\u00E9s borrar esa respuesta.', 'error'); return; }
-            if (!confirm('\u00BFBorrar esta respuesta?')) return;
-            m.respuestas.splice(ridx, 1);
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Respuesta eliminada.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-editar-msg').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var idx = f.mensajes.findIndex(function (m) { return m.id === this.dataset.mid; }, this);
-            var m = idx >= 0 ? f.mensajes[idx] : null;
-            if (!m) return;
-            if (!foroPuedeEditar(m.autor)) { mostrarToast('No pod\u00E9s editar este mensaje.', 'error'); return; }
-            var nuevoTexto = prompt('Editar mensaje:', m.texto);
-            if (nuevoTexto === null) return;
-            if (!nuevoTexto.trim()) { mostrarToast('El mensaje no puede estar vac\u00EDo.', 'error'); return; }
-            m.texto = nuevoTexto.trim();
-            m.editado = true;
-            m.editadoFecha = new Date().toISOString();
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Mensaje editado.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-editar-resp').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
-            if (!m) return;
-            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
-            if (ridx < 0) return;
-            if (!foroPuedeEditar(m.respuestas[ridx].autor)) { mostrarToast('No pod\u00E9s editar esta respuesta.', 'error'); return; }
-            var nuevoTexto = prompt('Editar respuesta:', m.respuestas[ridx].texto);
-            if (nuevoTexto === null) return;
-            if (!nuevoTexto.trim()) { mostrarToast('La respuesta no puede estar vac\u00EDa.', 'error'); return; }
-            m.respuestas[ridx].texto = nuevoTexto.trim();
-            m.respuestas[ridx].editado = true;
-            m.respuestas[ridx].editadoFecha = new Date().toISOString();
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Respuesta editada.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-aceptar').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
-            if (!m) return;
-            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
-            if (ridx < 0) return;
-            if (!yo || !f.autor || f.autor.email !== yo.email) { mostrarToast('Solo el autor del tema puede aceptar una respuesta.', 'error'); return; }
-            // Quitar aceptada de otras respuestas de este mensaje
-            if (m.respuestas) m.respuestas.forEach(function (r) { r.aceptada = false; });
-            m.respuestas[ridx].aceptada = true;
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Respuesta marcada como aceptada.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-reaccionar').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var mid = this.dataset.mid;
-            var rid = this.dataset.rid;
-            var emoji = this.dataset.emoji;
-            var yo2 = foroYo();
-            if (!yo2) { mostrarToast('Inici\u00E9 sesi\u00F3n para reaccionar.', 'error'); return; }
-            var mensaje;
-            var esRespuesta = !!rid;
-            if (esRespuesta) {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje || !mensaje.respuestas) return;
-              var r = mensaje.respuestas.find(function (r) { return r.id === rid; });
-              if (!r) return;
-              if (!r.reacciones) r.reacciones = {};
-              if (!r.reacciones[emoji]) r.reacciones[emoji] = { count: 0, usuarios: [] };
-              var reaccion = r.reacciones[emoji];
-              var idx = reaccion.usuarios.indexOf(yo2.email);
-              if (idx >= 0) {
-                reaccion.usuarios.splice(idx, 1);
-                reaccion.count--;
-              } else {
-                reaccion.usuarios.push(yo2.email);
-                reaccion.count++;
-              }
-            } else {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje) return;
-              if (!mensaje.reacciones) mensaje.reacciones = {};
-              if (!mensaje.reacciones[emoji]) mensaje.reacciones[emoji] = { count: 0, usuarios: [] };
-              var reaccion2 = mensaje.reacciones[emoji];
-              var idx2 = reaccion2.usuarios.indexOf(yo2.email);
-              if (idx2 >= 0) {
-                reaccion2.usuarios.splice(idx2, 1);
-                reaccion2.count--;
-              } else {
-                reaccion2.usuarios.push(yo2.email);
-                reaccion2.count++;
-              }
-            }
-            foroGuardar();
-            renderForoDetalle();
-          });
-        });
-
-        det.querySelectorAll('.foro-reportar').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var mid = this.dataset.mid;
-            var rid = this.dataset.rid;
-            var yo2 = foroYo();
-            if (!yo2) { mostrarToast('Inici\u00E9 sesi\u00F3n para reportar.', 'error'); return; }
-            var mensaje;
-            var esRespuesta = !!rid;
-            if (esRespuesta) {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje || !mensaje.respuestas) return;
-              var r = mensaje.respuestas.find(function (r) { return r.id === rid; });
-              if (!r) return;
-              if (!r.reportes) r.reportes = [];
-              if (r.reportes.indexOf(yo2.email) >= 0) { mostrarToast('Ya reportaste este mensaje.', 'info'); return; }
-              r.reportes.push(yo2.email);
-            } else {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje) return;
-              if (!mensaje.reportes) mensaje.reportes = [];
-              if (mensaje.reportes.indexOf(yo2.email) >= 0) { mostrarToast('Ya reportaste este tema.', 'info'); return; }
-              mensaje.reportes.push(yo2.email);
-            }
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Mensaje reportado. El docente/admin ser\u00E1 notificado.', 'success');
-          });
-        });
-
-        var publicar = $('foro-publicar');
-        if (publicar) publicar.addEventListener('click', function () {
-          var yo2 = foroYo();
-          if (!yo2) { mostrarToast('Inici\u00E1 sesi\u00F3n para responder.', 'error'); return; }
-          var t = $('foro-texto');
-          var texto = t ? t.value.trim() : '';
-          if (!texto) { mostrarToast('Escrib\u00ED una respuesta.', 'error'); return; }
-          var ahora = new Date().toISOString();
-          // Detectar menciones @usuario
-          var menciones = [];
-          var matches = texto.match(/@([a-zA-Z0-9._-]+)/g);
-          if (matches) {
-            matches.forEach(function (m) {
-              var nombre = m.slice(1);
-              if (menciones.indexOf(nombre) < 0) menciones.push(nombre);
-            });
-          }
-          var archivosArchivados = archivosSeleccionados.map(function (a) {
-            return { nombre: a.name, tipo: a.type, tamano: a.size, fecha: ahora, url: URL.createObjectURL(a) };
-          });
-          var nuevoItem = { id: 'm' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, respuestas: [], leidosPor: [], reacciones: [], archivos: archivosArchivados.length ? archivosArchivados : undefined };
-          if (menciones.length > 0) nuevoItem.mencionados = menciones;
-          if (foroResponderA) {
-            var destino = f.mensajes.find(function (m) { return m.id === foroResponderA; });
-            if (destino) {
-              destino.respuestas = destino.respuestas || [];
-              var nuevaResp = { id: 'r' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, leidosPor: [], reacciones: {}, archivos: archivosArchivados.length ? archivosArchivados : undefined };
-              if (menciones.length > 0) nuevaResp.mencionados = menciones;
-              destino.respuestas.push(nuevaResp);
-              foroGuardar();
-              foroResponderA = null;
-              renderForoDetalle();
-              mostrarToast('Respuesta publicada.', 'success');
-              return;
-            }
-          }
-          f.mensajes.push(nuevoItem);
-          foroGuardar();
-          renderForoDetalle();
-          mostrarToast('Respuesta publicada.', 'success');
-          archivosSeleccionados = [];
-          if (archivoEl) archivoEl.value = '';
-          if (archivosSel) archivosSel.innerHTML = '';
-        });
-        var textoEl = $('foro-texto');
-        if (textoEl) textoEl.addEventListener('input', function () {
-          if (foroResponderA && !this.value) {
-            foroResponderA = null;
-            var hint = $('foro-respuesta-a');
-            if (hint) hint.classList.add('hidden');
-          }
-        });
-        var archivoEl = $('foro-archivo');
-        var archivosSel = $('foro-archivos-seleccionados');
-        var archivosSeleccionados = [];
-        if (archivoEl) {
-          archivoEl.addEventListener('change', function () {
-            archivosSeleccionados = Array.from(this.files || []);
-            if (archivosSel) {
-              archivosSel.innerHTML = archivosSeleccionados.map(function (a) {
-                return '<span style="font-size:.7rem;background:var(--blue-50);color:var(--blue-ink);padding:.15rem .4rem;border-radius:4px;margin-right:.3rem;">' + escapeHtml(a.name) + ' (' + Math.round(a.size / 1024) + ' KB)</span>';
-              }).join('');
-            }
-          });
-        }
-      }
-
-      function foroGuardar() { guardarSeccion('foros', foros); }
-
-      function _foroPerfilParticipante(email) {
-        var _yo = foroYo();
-        var perfil = foros.reduce(function (acc, f) {
-          if (f.autor && f.autor.email === email) acc.temas++;
-          (f.mensajes || []).forEach(function (m) {
-            if (m.autor && m.autor.email === email) acc.respuestas++;
-            (m.respuestas || []).forEach(function (r) {
-              if (r.autor && r.autor.email === email) acc.respuestas++;
-            });
-          });
-          return acc;
-        }, { temas: 0, respuestas: 0 });
-        var temasCreados = foros.filter(function (f) { return f.autor && f.autor.email === email; });
-        return { temas: perfil.temas, respuestas: perfil.respuestas, temasLista: temasCreados };
-      }
-
-
-      function foroExportarCSV(temas) {
-        var filas = ['T\u00edtulo,Descripci\u00f3n,Autor,Materia,Estado,Fecha,Respuestas'];
-        temas.forEach(function (x) {
-          var f = x.f;
-          var titulo = escapeHtml(f.titulo || '').replace(/"/g, '""');
-          var desc = escapeHtml(f.desc || '').replace(/"/g, '""');
-          var autor = escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00f3nimo').replace(/"/g, '""');
-          var materia = f.materia ? escapeHtml(foroNombreMateria(f.materia)).replace(/"/g, '""') : '';
-          var estado = f.estado || 'abierto';
-          var fecha = fechaCorta(f.creada) || '';
-          var respuestas = foroCuentaRespuestas(f);
-          filas.push('"' + titulo + '","' + desc + '","' + autor + '","' + materia + '","' + estado + '","' + fecha + '",' + respuestas);
-        });
-        var csv = filas.join('\n');
-        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'foros_' + new Date().toISOString().slice(0, 10) + '.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        mostrarToast('Foros exportados a CSV.', 'success');
-      }
-
-      $('btn-foro-add').addEventListener('click', function () {
-        if (!exigirPermiso('participar')) return;
-        dialogPrompt('T\u00EDtulo del tema:', 'Nuevo tema').then(function (titulo) {
-          if (!titulo || !titulo.trim()) return;
-          dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            dialogPrompt('Materia: general, matematicas, fisica, quimica, biologia, literatura, historia o ingles', 'Materia', 'general').then(function (materia) {
-              var mat = String(materia || '').trim().toLowerCase();
-              var valido = MATERIAS_FORO.some(function (m) { return m[0] === mat && m[0] !== ''; });
-              foros.push({
-                id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                titulo: titulo.trim(),
-                desc: (desc || '').trim(),
-                materia: valido ? mat : 'general',
-                estado: 'abierto',
-                fijado: false,
-                creada: new Date().toISOString(),
-                autor: foroYo() || { nombre: 'An\u00F3nimo', email: '', rol: '' },
-                mensajes: [],
-              });
-              foroGuardar();
-              renderForos();
-              mostrarToast('Tema creado.', 'success');
-            });
-          });
-        });
+      var foroApp = initForos({
+        getUsuario: foroYo,
+        toast: mostrarToast,
+        confirmar: dialogConfirm,
+        prompt: dialogPrompt,
+        exigirPermiso: exigirPermiso,
+        puedeEditar: function () { return tienePermiso('editar'); },
+        puedeBorrar: function () { return tienePermiso('eliminar'); },
+        puedeModerar: function () { return tienePermiso('editar') || tienePermiso('eliminar'); },
+        rolBadge: foroRolBadge,
       });
-      renderForos();
+
+      // Enlaces compartibles: #foro=<id> abre el hilo directo.
+      function abrirForoDesdeHash() {
+        if (!foroApp || typeof foroApp.idDesdeHash !== 'function') return;
+        var id = foroApp.idDesdeHash();
+        if (!id) return;
+        if (!logueado) return;
+        window.mostrarApp('foros');
+        foroApp.abrirPorId(id, { hash: false });
+      }
+      window.addEventListener('hashchange', abrirForoDesdeHash);
+      if (foroApp && foroApp.idInicial && logueado) {
+        setTimeout(abrirForoDesdeHash, 0);
+      }
 
       function renderAgenda() {
         var el = $('agenda-lista');
@@ -6336,9 +5594,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         });
       };
       /* ===================================================================
-         DELEGADOR data-onclick — el HTML usa atributos como
-         data-onclick="funcion+arg1+arg2". Este delegador las resuelve
-         llamando a window[funcion](arg1, arg2, ...).
+         DELEGADOR data-onclick — mantenido UNICAMENTE en global-delegator.js
+         (allowlist). Se elimina el duplicado que estaba aquí: dejaba pasar
+         cualquier window[fn] y ejecutaba dos veces las acciones permitidas.
          =================================================================== */
       function clickLogin() {
         var modalLogin = $('modal-login');
@@ -6350,25 +5608,5 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       window.cerrarTemas = cerrarTemas;
       window.cerrarModalTexto = cerrarModalTexto;
       window.seleccionarTema = seleccionarTema;
-
-      document.addEventListener('click', function (e) {
-        var el = e.target && e.target.closest ? e.target.closest('[data-onclick]') : null;
-        if (!el) return;
-        var spec = el.getAttribute('data-onclick');
-        if (!spec) return;
-        var parts = spec.split('+');
-        var fnName = parts[0];
-        var args = parts.slice(1).map(function (a) {
-          if (a === 'null') return null;
-          if (a === 'true') return true;
-          if (a === 'false') return false;
-          return a;
-        });
-        var fn = window[fnName];
-        if (typeof fn === 'function') {
-          e.preventDefault();
-          e.stopPropagation();
-          fn.apply(window, args);
-        }
-      }, true);
+      window.mostrarToast = mostrarToast;
     })();

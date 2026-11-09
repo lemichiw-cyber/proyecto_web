@@ -509,9 +509,9 @@ unicode: "eaf8"
       <div class="flex-between"><h3 id="login-title">Iniciar sesión</h3><button class="modal-close" id="modal-login-close" aria-label="Cerrar">&times;</button></div>
       <form id="form-login">
 
-        <div class="form-group"><label>Correo institucional</label><input type="email" id="login-email" placeholder="profesor@bachillerato.edu" required></div>
-        <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" required minlength="6"></div>
-        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+        <div class="form-group"><label>Correo institucional</label><input type="email" id="login-email" autocomplete="email" inputmode="email" placeholder="profesor@bachillerato.edu" required></div>
+        <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••" required minlength="6"> <button type="button" id="btn-toggle-pass" class="btn btn-outline btn-sm" aria-label="Mostrar contraseña" style="margin-top:.4rem;">👁 Mostrar</button></div>
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit">Ingresar</button>
         <div id="login-error" class="alert alert-error" role="alert" hidden>Credenciales inválidas.</div>
       </form>
 
@@ -1250,6 +1250,7 @@ unicode: "eb6d"
     </section>
 
     <!-- ===== FOROS ===== -->
+        <!-- ===== FOROS ===== -->
     <section id="app-foros" class="section hidden">
       <div class="container">
         <h2 class="section-title"><!--
@@ -1258,7 +1259,7 @@ category: Communication
 version: "1.0"
 unicode: "eaed"
 -->
-<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1271,42 +1272,81 @@ unicode: "eaed"
   <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />
 </svg>
  Foros · Discusión académica</h2>
-        <p class="section-sub">Participa en debates y comparte conocimiento con tu grupo.</p>
-        <div class="card">
-          <div class="flex-between"><h3><!--
-tags: [newspaper, article, news, file, paper, text, record, information]
-category: Document
-version: "1.0"
-unicode: "eafd"
--->
-<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11" />
-  <path d="M8 8l4 0" />
-  <path d="M8 12l4 0" />
-  <path d="M8 16l4 0" />
-</svg>
- Foros activos</h3><button class="btn btn-primary btn-sm" id="btn-foro-add" data-perm="participar">+ Nuevo tema</button></div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1rem;">
-            <input type="search" id="foro-buscar" placeholder="Buscar tema..." aria-label="Buscar tema" style="flex:1;min-width:170px;padding:.5rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
-            <select id="foro-filtro-estado" aria-label="Filtrar por estado" class="field-sm">
-              <option value="todos">Todos los estados</option>
-              <option value="abierto">Abiertos</option>
-              <option value="resuelto">Resueltos</option>
-              <option value="cerrado">Cerrados</option>
-            </select>
-            <select id="foro-filtro-materia" aria-label="Filtrar por materia" class="field-sm"></select>
+        <p class="section-sub">Publicá, votá y comentá en un foro con comunidades, hilos anidados y respuestas aceptadas. Funciona en computadora, tablet y teléfono.</p>
+        <div class="fr-app card">
+          <div class="fr-cabecera">
+            <div class="fr-cabecera-titulo">
+              <span class="fr-logo" aria-hidden="true">🗣️</span>
+              <div>
+                <h3>Comunidad académica</h3>
+                <p>Debates, preguntas y recursos de todo el colegio.</p>
+              </div>
+            </div>
+            <div class="fr-cabecera-acciones">
+              <label class="fr-buscador">
+                <span aria-hidden="true">🔎</span>
+                <input type="search" id="foro-buscar" placeholder="Buscar temas, personas o comentarios…" aria-label="Buscar en el foro" autocomplete="off" aria-controls="foro-lista">
+              </label>
+              <button type="button" class="btn btn-primary btn-sm" id="foro-btn-nuevo">+ Crear publicación</button>
+            </div>
           </div>
-          <div id="foro-lista"><div class="empty-msg">No hay foros activos.</div></div>
-          <div id="foro-detalle" class="hidden"></div>
+
+          <div class="fr-layout">
+            <aside class="fr-rail fr-rail-izq" id="foro-comunidades" aria-label="Comunidades y filtros"></aside>
+
+            <main class="fr-feed">
+              <div class="fr-feed-cab">
+                <div class="fr-orden-tabs" id="foro-orden-tabs" role="tablist" aria-label="Ordenar publicaciones"></div>
+              </div>
+              <div class="fr-filtros-barra" id="foro-filtros" aria-label="Filtros rápidos"></div>
+
+              <div id="foro-compositor" class="fr-compositor hidden" aria-labelledby="foro-compositor-titulo">
+                <div class="fr-compositor-cab">
+                  <h3 id="foro-compositor-titulo">Crear publicación</h3>
+                  <button type="button" class="fr-cerrar" data-accion="cerrar-compositor" aria-label="Cerrar compositor">✕</button>
+                </div>
+                <form id="foro-form" novalidate>
+                  <label class="fr-campo">
+                    <span>Título</span>
+                    <input id="foro-form-titulo" type="text" maxlength="140" required placeholder="Una pregunta clara o un título que invite a leer">
+                  </label>
+                  <div class="fr-campo-fila">
+                    <label class="fr-campo">
+                      <span>Comunidad</span>
+                      <select id="foro-form-comunidad"></select>
+                    </label>
+                    <label class="fr-campo">
+                      <span>Tipo</span>
+                      <select id="foro-form-tipo"></select>
+                    </label>
+                  </div>
+                  <label class="fr-campo">
+                    <span>Texto <small>opcional</small></span>
+                    <textarea id="foro-form-texto" rows="6" maxlength="5000" placeholder="Contá el contexto, qué intentaste y qué necesitás saber. Podés usar **negrita**, *cursiva*, `código`, > citas y - viñetas."></textarea>
+                  </label>
+                  <div class="fr-campo">
+                    <span>Adjuntos</span>
+                    <label class="fr-adjuntar">📎 Elegir imágenes<input type="file" id="foro-form-archivo" accept="image/*,.pdf,.doc,.docx,.txt" multiple></label>
+                    <div id="foro-form-archivos" class="fr-archivos-pendientes"></div>
+                  </div>
+                  <div id="foro-form-preview" class="fr-preview hidden" aria-live="polite"></div>
+                  <div class="fr-compositor-pie">
+                    <button type="button" class="btn btn-outline btn-sm" id="foro-form-preview-btn" data-accion="preview">👁 Vista previa</button>
+                    <span class="fr-contador" id="foro-form-contador">0/5000</span>
+                    <span class="fr-acciones-pie">
+                      <button type="button" class="btn btn-ghost btn-sm" data-accion="cerrar-compositor">Cancelar</button>
+                      <button type="submit" class="btn btn-primary btn-sm" id="foro-form-publicar">Publicar</button>
+                    </span>
+                  </div>
+                </form>
+              </div>
+
+              <div id="foro-lista"><div class="empty-msg">Cargando foro…</div></div>
+              <div id="foro-detalle" class="hidden"></div>
+            </main>
+
+            <aside class="fr-rail fr-rail-der" id="foro-lateral" aria-label="Información del foro"></aside>
+          </div>
         </div>
       </div>
     </section>

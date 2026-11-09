@@ -64,6 +64,16 @@ def _perfil(email: str):
         return None
 
 
+def _mi_grupo_id(email: str):
+    try:
+        r = _query("SELECT grupo_id FROM estudiantes WHERE email=%s LIMIT 1", (email,), "one")
+        if r and r.get("grupo_id") is not None:
+            return int(r["grupo_id"])
+    except Exception:
+        pass
+    return None
+
+
 def _require_email(x_user_email: str | None = Header(default=None)) -> str:
     if not x_user_email:
         raise HTTPException(status_code=401, detail="Falta cabecera X-User-Email")
@@ -82,6 +92,7 @@ def _require_rol(email: str, roles: set[str]) -> dict:
 class ActividadIn(BaseModel):
     titulo: str = Field(..., min_length=1)
     descripcion: str = ""
+    grupo_ids: list[int] = []
 
 
 @router.get("")
@@ -89,9 +100,24 @@ def listar_actividades(email: str = Depends(_require_email)):
     p = _perfil(email)
     if not p:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
-    # Cualquier rol autenticado ve todas las actividades (lectura abierta)
-    sql = "SELECT id, titulo, descripcion, owner_id, created_at FROM actividades ORDER BY created_at DESC"
-    return _query(sql)
+    # Admin/director: todo. Estudiante/docente: solo su grupo (+ globales sin grupo en migración).
+    if p["rol"] in ("admin", "director"):
+        sql = "SELECT id, titulo, descripcion, owner_id, created_at FROM actividades ORDER BY created_at DESC"
+        return _query(sql)
+    gid = _mi_grupo_id(email)
+    if gid is None:
+        sql = "SELECT id, titulo, descripcion, owner_id, created_at FROM actividades ORDER BY created_at DESC"
+        return _query(sql)
+    try:
+        sql = (
+            "SELECT a.id, a.titulo, a.descripcion, a.owner_id, a.created_at FROM actividades a "
+            "LEFT JOIN actividades_grupo ag ON ag.actividad_id = a.id "
+            "WHERE (ag.grupo_id IS NULL OR ag.grupo_id = %s) ORDER BY a.created_at DESC"
+        )
+        return _query(sql, (gid,))
+    except Exception:
+        sql = "SELECT id, titulo, descripcion, owner_id, created_at FROM actividades ORDER BY created_at DESC"
+        return _query(sql)
 
 
 @router.post("", status_code=201)
@@ -104,6 +130,15 @@ def crear_actividad(payload: ActividadIn, email: str = Depends(_require_email)):
         (payload.titulo.strip(), payload.descripcion, p["id"]),
         "one",
     )
+    # Asignaciones por grupo (1° General B ≠ 1° Técnico C). Si no hay grupo, queda global (migración).
+    try:
+        for gid in (payload.grupo_ids or []):
+            try:
+                _query("INSERT INTO actividades_grupo (actividad_id, grupo_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (row["id"], int(gid)), fetch="none", commit=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
     return row
 
 

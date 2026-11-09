@@ -21,6 +21,7 @@ var ALLOWED_ACTIONS = {
   abrirCompartir: true, cerrarCompartir: true, compartirEnlace: true,
   abrirAuth: true, cerrarAuth: true, mostrarModoRegistro: true,
   abrirHabitos: true, cerrarHabitos: true, tokenCompartir: true,
+  clickLogin: true,
 };
 try { window.__ALLOWED_ACTIONS__ = ALLOWED_ACTIONS; } catch (e) { /* noop */ }
 
