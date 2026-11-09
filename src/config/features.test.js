@@ -12,7 +12,7 @@ describe('features.js — Feature flags', () => {
   });
 
   it('Personal features are enabled (true)', () => {
-    const personal = ['ACTIVIDADES', 'AGENDA', 'CALENDARIO', 'HORARIO', 'CLASES', 'TAREAS', 'ESTUDIO', 'SAKURA_PLAYER', 'RESPALDOS', 'CONFIGURACION', 'EXAMENES', 'PICKER', 'DIGITAL', 'FOROS'];
+    const personal = ['ACTIVIDADES', 'AGENDA', 'CALENDARIO', 'HORARIO', 'CLASES', 'TAREAS', 'ESTUDIO', 'SAKURA_PLAYER', 'RESPALDOS', 'CONFIGURACION', 'EXAMENES', 'PICKER', 'DIGITAL', 'FOROS', 'PLANIFICACION'];
     personal.forEach(f => {
       expect(FEATURES[f]).toBe(true);
     });
@@ -34,6 +34,7 @@ describe('features.js — Feature flags', () => {
 
   it('isEnabled returns false for multiusuario features', () => {
     expect(isEnabled('FOROS')).toBe(true);
+    expect(isEnabled('PLANIFICACION')).toBe(true);
     expect(isEnabled('AULAS')).toBe(false);
     expect(isEnabled('ROLES_DOCENTE')).toBe(false);
     expect(isEnabled('ASISTENCIA_DOCENTE')).toBe(false);
@@ -78,6 +79,7 @@ describe('features.js — Feature flags', () => {
     expect(isEnabled('AULAS')).toBe(false);
     expect(isEnabled('ROLES_DOCENTE')).toBe(false);
     expect(isEnabled('FOROS')).toBe(true);
+    expect(isEnabled('PLANIFICACION')).toBe(true);
   });
 });
 

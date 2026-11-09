@@ -53,8 +53,10 @@ export class LyricsView {
 
     this._handlers.trackchange = () => this._onTrackChange();
     this._handlers.time = (s) => this._onTime(s.currentTime);
+    this._handlers.tap = (e) => this._onTapSeek(e);
     player.on('trackchange', this._handlers.trackchange);
     player.on('time', this._handlers.time);
+    this.el.addEventListener('click', this._handlers.tap);
 
     this._render();
   }
@@ -68,6 +70,7 @@ export class LyricsView {
   _unbind() {
     player.off('trackchange', this._handlers.trackchange);
     player.off('time', this._handlers.time);
+    try { if (this.el && this._handlers.tap) this.el.removeEventListener('click', this._handlers.tap); } catch (e) { /* noop */ }
     this._handlers = {};
   }
 
@@ -302,6 +305,16 @@ export class LyricsView {
     });
   }
 
+  // tap-to-seek: cualquier click en una línea (o palabra) salta al timestamp de esa línea
+  _onTapSeek(e) {
+    var line = e.target && e.target.closest ? e.target.closest('.sp-lyrics-line') : null;
+    if (!line) return;
+    var t = parseFloat(line.getAttribute('data-time'));
+    if (!Number.isFinite(t)) return;
+    // Si el click fue en la palabra activa, t es el inicio de línea (el resaltado no trae timestamp propio)
+    try { player.seek(t); toast('Ir a ' + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'), 'success'); } catch (err) { /* noop */ }
+  }
+
   _highlightWords(entry, activeWordIdx) {
     return entry.words
       .map((w, i) => {
@@ -328,7 +341,7 @@ export class LyricsView {
       </div>
       <div class="sp-lyrics-list" role="region" aria-label="Letra de la canción" tabindex="0">
         ${this._entries.map((e, i) => `
-          <div class="sp-lyrics-line" data-index="${i}" data-text="${escapeHtml(e.text).replace(/"/g, '&quot;')}" aria-label="Línea ${i + 1}">
+          <div class="sp-lyrics-line" data-index="${i}" data-time="${e.time}" data-text="${escapeHtml(e.text).replace(/"/g, '&quot;')}" aria-label="Línea ${i + 1}" style="cursor:pointer" title="Ir a este momento">
             ${escapeHtml(this._translated && this._translatedLines ? this._translatedLines[i] || '' : e.text)}
           </div>
         `).join('')}

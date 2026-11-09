@@ -11,6 +11,7 @@ interface Grupo {
   anio?: string;
   seccion?: string;
   ciclo_escolar?: string;
+  especialidad?: string;
 }
 
 interface MiGrupo {
@@ -56,7 +57,7 @@ export function apiFetch<T>(path: string, body?: any): Promise<T> {
     // P2: sin red (TypeError) → encola para reintentar al volver online
     if (e instanceof TypeError) {
       try {
-        const mod: any = await import("./offline-queue.js");
+        const mod: any = await import("./offline-sync.js");
         mod.enqueue?.({ path, body: body ?? null });
       } catch (_ignored) { /* noop */ }
       return { ok: false, queued: true } as unknown as T;
@@ -67,6 +68,10 @@ export function apiFetch<T>(path: string, body?: any): Promise<T> {
 
 export function apiGrupos(): Promise<Grupo[]> {
   return apiFetch<Grupo[]>("/api/matricula/grupos").catch(() => []);
+}
+
+export function apiGruposPublicos(): Promise<Grupo[]> {
+  return fetch(API_BASE + "/api/matricula/grupos-publicos", { credentials: "include" }).then((r) => (r.ok ? (r.json() as Promise<Grupo[]>) : [])).catch(() => []);
 }
 
 export function apiMiGrupo(): Promise<MiGrupo> {

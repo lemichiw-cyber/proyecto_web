@@ -1442,3 +1442,22 @@ body:not([data-perm~="participar"]) [data-perm~="participar"] {
   .fr-post, .fr-voto, .fr-tab, .fr-chip { transition: none; }
 }
 
+/* ===== P4-A: Accesibilidad (escala de letra + alto contraste) ===== */
+:root { --scale: 1; }
+html { font-size: 16px; }
+html[style] { font-size: 16px; }
+body { font-size: calc(1rem * var(--scale, 1)); }
+body.alto-contraste { --text: #000; --text-secondary: #1a1a1a; --gray-500: #222; --gray-600: #000; --border: #444; }
+body.alto-contraste .btn { border: 1px solid currentColor; }
+body.alto-contraste :is(input, select, textarea) { border-width: 2px; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ===== P4-B: móvil gama baja (sin jank por blur) ===== */
+.app-card, .fr-post, .card { content-visibility: auto; contain-intrinsic-size: 120px; }
+@media (max-width: 768px) {
+  .app-header, .sidebar-overlay, .modal-overlay, .sidebar { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+.btn-ghost { background: transparent; border: 1.5px solid transparent; color: var(--gray-600); font-size: .75rem; font-weight: 700; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); cursor: pointer; }
+.btn-ghost:hover { background: var(--gray-100); color: var(--primary); }
+.btn-ghost[aria-pressed="true"] { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }

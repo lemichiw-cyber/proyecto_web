@@ -17,6 +17,7 @@ const LS = {
   shuffle: 'sp_shuffle',
   repeat: 'sp_repeat',
   rate: 'sp_rate',
+  pos: 'sp_pos',
   theme: 'sp_theme',
   themeMode: 'sp_theme_mode',
   animations: 'sp_animations',
@@ -282,13 +283,25 @@ export class Player {
 
   /* ---------------- reproducción ---------------- */
   async play() {
+    try { this._mediaSession(this.current()); } catch (e) { /* noop */ }
+    try { this._guardarPos(); } catch (e) { /* noop */ }
     if (this.mode === 'yt') {
       // El contexto Web Audio no controla el iframe de YouTube.
       this.yt.play();
+      // Reanudar posición guardada (yt)
+      try {
+        const savedPos = load(LS.pos, null);
+        if (savedPos && savedPos.id === this.current()?.id && Number.isFinite(savedPos.t) && savedPos.t > 3) this.yt.seek(savedPos.t);
+      } catch (e) { /* noop */ }
       return;
     }
     this.resumeContext();
     if (!this.current()) return;
+    // Reanudar posición guardada (local)
+    try {
+      const savedPos = load(LS.pos, null);
+      if (savedPos && savedPos.id === this.current()?.id && Number.isFinite(savedPos.t) && savedPos.t > 3) this.audio.currentTime = savedPos.t;
+    } catch (e) { /* noop */ }
     try {
       await this.audio.play();
     } catch (e) {
@@ -404,6 +417,21 @@ export class Player {
     if (this.shuffle) { this.index = Math.floor(Math.random() * this.queue.length); }
     else { this.index = this.index - 1; if (this.index < 0) this.index = 0; }
     this._loadCurrent(true);
+  }
+
+  _mediaSession(t) {
+    try {
+      if (!("mediaSession" in navigator) || !t) return;
+      navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || 'Sin título', artist: t.artist || t.artists?.[0]?.name || '', artwork: t.thumb ? [{ src: t.thumb, sizes: '512x512', type: 'image/jpeg' }] : [] });
+      navigator.mediaSession.setActionHandler("play", () => this.play());
+      navigator.mediaSession.setActionHandler("pause", () => this.pause());
+      navigator.mediaSession.setActionHandler("previoustrack", () => this.prev());
+      navigator.mediaSession.setActionHandler("nexttrack", () => this.next());
+    } catch (e) { /* noop */ }
+  }
+
+  _guardarPos() {
+    try { save(LS.pos, { id: this.current()?.id || null, t: this.currentTime() }); } catch (e) { /* noop */ }
   }
 
   seek(seconds) {

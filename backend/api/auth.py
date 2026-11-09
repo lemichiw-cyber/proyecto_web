@@ -126,6 +126,7 @@ class RegisterIn(BaseModel):
     nombre: str = ""
     password: str = Field(..., min_length=6)
     rol: str = "estudiante"
+    grupo_id: int | None = None
 
     @field_validator("email")
     @classmethod
@@ -177,8 +178,26 @@ def register(request: Request, payload: RegisterIn = Body(...)):
         "semestre": None,
         "creado": creado,
     }
+    if getattr(payload, "grupo_id", None) is not None:
+        try:
+            account["grupo_id"] = int(payload.grupo_id)
+        except Exception:
+            pass
     accounts[email] = account
     _save_accounts(accounts)
+    # Si hay Postgres, crear fila estudiante con el grupo elegido (best-effort)
+    if getattr(payload, "grupo_id", None) is not None:
+        try:
+            from api import matricula as _mat  # lazy
+            _q_mat = _mat._query  # type: ignore
+        except Exception:
+            _q_mat = None
+        try:
+            if _q_mat is not None:
+                _q_mat("INSERT INTO estudiantes (nombre, email, grupo_id) VALUES (%s,%s,%s) ON CONFLICT (email) DO UPDATE SET grupo_id = EXCLUDED.grupo_id",
+                       (account["nombre"], email, int(payload.grupo_id)), fetch="none", commit=True)
+        except Exception:
+            pass
     try:
         audit_write("auth.register", email, request.client.host if request.client else "")
     except Exception:
@@ -236,14 +255,24 @@ def login(request: Request, response: Response, payload: LoginIn = Body(...)):
 @router.get("/me")
 def me(response: Response, user: dict = Depends(require_auth), cherrybomb_session: Optional[str] = Cookie(default=None), authorization: Optional[str] = Header(default=None)):
     token = _extraer_token(authorization) or (cherrybomb_session.strip() if cherrybomb_session else None)
+    nuevo_token = token
     if token:
-        _touch_session(token)
+        # P5-B: rotación — invalida el token viejo y emite uno nuevo (ventana deslizante + rotación)
+        try:
+            sessions = _limpiar_expiradas(_load_sessions())
+            if token in sessions:
+                data = sessions.pop(token)
+                nuevo_token = secrets.token_urlsafe(32)
+                sessions[nuevo_token] = {"email": data.get("email", user["email"]), "rol": data.get("rol", user["rol"]), "creado": time.time()}
+                _save_sessions(sessions)
+        except Exception:
+            nuevo_token = token
         response.set_cookie(
-            SESSION_COOKIE, token,
+            SESSION_COOKIE, nuevo_token,
             max_age=SESSION_COOKIE_MAX_AGE, httponly=True, samesite="lax",
             secure=SESSION_COOKIE_SECURE, path="/",
         )
-    return {"ok": True, "email": user["email"], "rol": user["rol"]}
+    return {"ok": True, "email": user["email"], "rol": user["rol"], "token_nuevo": nuevo_token}
 
 
 @router.post("/logout")

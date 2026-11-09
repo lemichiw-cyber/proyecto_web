@@ -26,7 +26,7 @@ import {
   cuentasBackend,
 } from "./app-accounts";
 
-import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoCheckboxes, gruposSeleccionados } from "./api-client";
+import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados } from "./api-client";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
       'use strict';
@@ -432,7 +432,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         'protegido': 'PROTEGIDO',
         'tareas': 'TAREAS',
         'aulas': 'AULAS',
-        'planificacion': 'ROLES_DOCENTE',
+        'planificacion': 'PLANIFICACION',
         'matricula': 'MATRICULA',
         'estudio': 'ESTUDIO',
         'sakura-player': 'SAKURA_PLAYER',
@@ -635,7 +635,7 @@ import { initForos } from "./modules/foros/foro-app.js";
             mostrarToast('No se pudo cargar el módulo de respaldos.', 'error');
           });
         }
-        if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
+        if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); renderCuadro(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
         if (app === 'auth') { renderAuth(); }
         if (app === 'aulas' && window.CherryBombNotifications) {
@@ -780,6 +780,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         var nom = $('reg-nombre').value.trim();
         var email = $('reg-email').value.trim();
         var rolSel = $('reg-rol') ? $('reg-rol').value : ROL_REGISTRO;
+        if ($('reg-grupo-wrap')) $('reg-grupo-wrap').style.display = (rolSel === 'estudiante') ? '' : 'none';
         var p1 = $('reg-pass').value;
         var p2 = $('reg-pass2').value;
 
@@ -796,7 +797,8 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
 
         try {
-          var data = await apiRegister(email, nom, p1, rolSel);
+          var _gid = ($('reg-grupo') && $('reg-grupo').value && rolSel === 'estudiante') ? parseInt($('reg-grupo').value, 10) : null;
+          var data = await apiRegister(email, nom, p1, rolSel, Number.isFinite(_gid) ? _gid : null);
           console.log('[registro] Éxito:', data);
           err.hidden = true;
           $('form-registro').reset();
@@ -809,6 +811,41 @@ import { initForos } from "./modules/foros/foro-app.js";
           fallo(String(err.message || err));
         }
       });
+
+      if ($('reg-rol')) $('reg-rol').addEventListener('change', function () {
+        if ($('reg-grupo-wrap')) $('reg-grupo-wrap').style.display = ($('reg-rol').value === 'estudiante') ? '' : 'none';
+      });
+      // P1: poblar selector de grupo en registro (estudiantes)
+      async function _poblarGrupoRegistro() {
+        var sel = $('reg-grupo'); if (!sel) return;
+        var anio = $('reg-anio') ? $('reg-anio').value : '';
+        var esp = $('reg-especialidad') ? $('reg-especialidad').value : '';
+        var sec = $('reg-seccion') ? $('reg-seccion').value : '';
+        var grupos = [];
+        try {
+          grupos = await apiGruposPublicos();
+        } catch (e) { grupos = []; }
+        if (!grupos || !grupos.length) {
+          grupos = [
+            { id: 1, anio: '1', seccion: 'B', especialidad: 'general', ciclo_escolar: '' },
+            { id: 2, anio: '1', seccion: 'C', especialidad: 'software', ciclo_escolar: '' },
+            { id: 3, anio: '1', seccion: 'C', especialidad: 'contaduria', ciclo_escolar: '' },
+          ];
+        }
+        var filtrados = grupos.filter(function (g) {
+          return (!anio || String(g.anio || '') === anio) && (!esp || (g.especialidad || '') === esp) && (!sec || (g.seccion || '') === sec);
+        });
+        var usar = filtrados.length ? filtrados : grupos;
+        sel.innerHTML = '<option value="">Sin grupo (podrás elegirlo después)</option>' + usar.map(function (g) {
+          var lbl = (g.anio || '') + '° ' + (g.especialidad || 'general') + ' ' + (g.seccion || '');
+          return '<option value="' + g.id + '">' + escapeHtml(lbl.trim()) + ' (id ' + g.id + ')</option>';
+        }).join('');
+        try { localStorage.setItem('reg-grupo-cache', JSON.stringify(usar)); } catch (e) { /* noop */ }
+      }
+      ['reg-anio', 'reg-especialidad', 'reg-seccion'].forEach(function (id) {
+        var el = $(id); if (el) el.addEventListener('change', _poblarGrupoRegistro);
+      });
+      if ($('reg-anio')) _poblarGrupoRegistro();
 
       function loginSuccess(email, rol, nombre) {
         // Rangos desconocidos degradados a estudiante (defensa extra)
@@ -4980,6 +5017,98 @@ import { initForos } from "./modules/foros/foro-app.js";
       }
 
       // UI por rol
+      function renderCuadro() {
+        var card = $('cuadro-docente');
+        if (!card) return;
+        card.hidden = !(logueado && esDocente());
+        if (card.hidden) return;
+        var grupo = $('quad-grupo') ? $('quad-grupo').value : '1B';
+        var cont = $('quad-grid');
+        if (!cont) return;
+        var estudiantes = planEstudiantesPorGrupo[grupo] || [];
+        estudiantes.forEach(function (nom) {
+          if (!planData.some(function (f) { return f.estudiante === nom && f.grupo === grupo; })) {
+            planData.push({ estudiante: nom, grupo: grupo });
+          }
+        });
+        planGuardarStorage();
+        var filas = planData.filter(function (f) { return f.grupo === grupo; });
+        var cols = [];
+        filas.forEach(function (f) {
+          Object.keys(f).forEach(function (k) {
+            if (k !== 'estudiante' && k !== 'grupo' && cols.indexOf(k) === -1) cols.push(k);
+          });
+        });
+        // column group, tareas técnicas desde _planMaterias como columnas base
+        if (!cols.length) { _planMaterias.forEach(function (m) { if (cols.indexOf(m) === -1) cols.push(m); }); }
+        var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
+        cols.forEach(function (c) { html += '<th>' + escapeHtml(c) + ' <button class="btn btn-sm" data-qdel="' + escapeHtml(c) + '"' + ' style="background:var(--red);color:#fff;padding:0 .3rem;font-size:.65rem;">×</button></th>'; });
+        html += '<th>Promedio</th><th>Estado</th></tr></thead><tbody>';
+        filas.forEach(function (fila) {
+          var fi = planData.indexOf(fila);
+          html += '<tr><td><strong>' + escapeHtml(fila.estudiante) + '</strong></td>';
+          var suma = 0, count = 0;
+          cols.forEach(function (col) {
+            var val = fila[col] || '';
+            var num = parseFloat(val);
+            if (val !== '' && !isNaN(num)) { suma += num; count++; }
+            html += '<td><input type="number" min="0" max="10" step="0.1" class="quad-input" data-fi="' + fi + '" data-col="' + escapeHtml(col) + '" value="' + escapeHtml(val) + '" style="width:58px;padding:.25rem;text-align:center;border:1px solid var(--gray-300);border-radius:4px;font:inherit;"></td>';
+          });
+          var prom = count > 0 ? (suma / count) : null;
+          var estado = prom === null ? '—' : (prom >= 5 ? '✅ Aprueba' : '⚠️ Reprobado');
+          html += '<td><strong>' + (prom !== null ? prom.toFixed(1) : '—') + '</strong></td><td>' + estado + '</td></tr>';
+        });
+        html += '</tbody></table></div><div style="margin-top:.5rem;display:flex;gap:.5rem;"><button class="btn btn-primary btn-sm" id="btn-quad-add">+ Agregar columna</button><button class="btn btn-outline btn-sm" id="btn-quad-reset">Reiniciar</button></div>';
+        cont.innerHTML = html;
+        cont.querySelectorAll('.quad-input').forEach(function (inp) {
+          inp.addEventListener('change', function () {
+            var v = parseFloat(this.value);
+            if (this.value !== '' && (isNaN(v) || v < 0 || v > 10)) { this.value = ''; }
+            planData[parseInt(this.dataset.fi, 10)][this.dataset.col] = this.value;
+            planGuardarStorage();
+            renderCuadro();
+          });
+        });
+        cont.querySelectorAll('[data-qdel]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var col = this.dataset.qdel;
+            dialogConfirm('¿Eliminar "' + col + '" y sus notas?', 'Eliminar columna').then(function (ok) {
+              if (!ok) return;
+              planData.forEach(function (f) { delete f[col]; });
+              planGuardarStorage();
+              renderCuadro();
+            });
+          });
+        });
+        var addBtn = $('btn-quad-add'); if (addBtn) addBtn.addEventListener('click', planAgregarColumna);
+        var rstBtn = $('btn-quad-reset'); if (rstBtn) rstBtn.addEventListener('click', function () {
+          dialogConfirm('¿Reiniciar cuadro de este grupo?', 'Reiniciar').then(function (ok) {
+            if (!ok) return;
+            var g = $('quad-grupo').value;
+            planData = planData.filter(function (f) { return f.grupo !== g; });
+            planGuardarStorage();
+            renderCuadro();
+          });
+        });
+      }
+      if ($('quad-grupo')) $('quad-grupo').addEventListener('change', renderCuadro);
+      if ($('btn-quad-export')) $('btn-quad-export').addEventListener('click', function () {
+        var grupo = $('quad-grupo').value;
+        var filas = planData.filter(function (f) { return f.grupo === grupo; });
+        var cols = [];
+        filas.forEach(function (f) { Object.keys(f).forEach(function (k) { if (k !== 'estudiante' && k !== 'grupo' && cols.indexOf(k) === -1) cols.push(k); }); });
+        var csv = ['Estudiante,' + cols.join(',') + ',Promedio'].join('\n') + '\n' + filas.map(function (f) {
+          var vals = cols.map(function (c) { return f[c] == null ? '' : f[c]; });
+          var nums = vals.filter(function (v) { return v !== '' && !isNaN(parseFloat(v)); }).map(Number);
+          var prom = nums.length ? (nums.reduce(function (a, b) { return a + b; }, 0) / nums.length).toFixed(1) : '';
+          return [f.estudiante].concat(vals, [prom]).join(',');
+        }).join('\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = url; a.download = 'cuadro-' + grupo + '.csv'; a.click(); URL.revokeObjectURL(url);
+      });
+      if ($('btn-quad-print')) $('btn-quad-print').addEventListener('click', function () { window.print(); });
+
       function planifActualizarUI() {
         var puedeCrear = tienePermiso('crear');
         $('planif-docente').style.display = puedeCrear ? '' : 'none';

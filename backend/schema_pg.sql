@@ -45,3 +45,5 @@ CREATE TABLE IF NOT EXISTS actividades_grupo (
   PRIMARY KEY (actividad_id, grupo_id)
 );
 CREATE INDEX IF NOT EXISTS idx_actividades_grupo ON actividades_grupo (grupo_id);
+ALTER TABLE grupos ADD COLUMN IF NOT EXISTS especialidad TEXT NOT NULL DEFAULT 'general';
+CREATE INDEX IF NOT EXISTS idx_grupos_lookup ON grupos (ciclo_escolar, anio, especialidad, seccion);

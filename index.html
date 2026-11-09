@@ -75,6 +75,9 @@ unicode: "eaf8"
   <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" />
 </svg>
 </button>
+      <button id="btn-font-dec" class="btn-ghost" title="Letra más pequeña" aria-label="Reducir letra">A−</button>
+      <button id="btn-font-inc" class="btn-ghost" title="Letra más grande" aria-label="Aumentar letra">A+</button>
+      <button id="btn-contrast" class="btn-ghost" title="Alto contraste" aria-label="Alto contraste">◐</button>
       <div class="vol-control hidden" id="vol-control">
         <button class="btn-vol-toggle" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
 tags: [speaker, volume, loud, speaker-high]
@@ -527,6 +530,26 @@ unicode: "eaf8"
             <option value="director">Director</option>
             <option value="subdirector">Subdirector</option>
             <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="form-group" id="reg-grupo-wrap">
+          <label>Año, especialidad y sección (solo estudiantes)</label>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <select id="reg-anio" aria-label="Año" style="flex:1;min-width:80px;">
+              <option value="1">1° año</option><option value="2">2° año</option><option value="3">3° año</option><option value="9">9° grado</option>
+            </select>
+            <select id="reg-especialidad" aria-label="Especialidad" style="flex:1;min-width:110px;">
+              <option value="general">General</option>
+              <option value="software">Software</option>
+              <option value="contaduria">Contaduría</option>
+            </select>
+            <select id="reg-seccion" aria-label="Sección" style="flex:1;min-width:70px;">
+              <option value="A">Sección A</option><option value="B" selected>Sección B</option><option value="C">Sección C</option>
+            </select>
+          </div>
+          <label for="reg-grupo" style="margin-top:.4rem;">Grupo (se completa desde año/especialidad/sección)</label>
+          <select id="reg-grupo" aria-label="Grupo">
+            <option value="">Sin grupo (podrás elegirlo después)</option>
           </select>
         </div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="••••••" required minlength="6"></div>
@@ -3608,6 +3631,22 @@ unicode: "ea6f"
             </select>
           </div>
           <div id="planif-lista"><div class="empty-msg">No hay planificaciones registradas.</div></div>
+        </div>
+
+        <div class="card mt-4" id="cuadro-docente" hidden>
+          <div class="flex-between"><h3>📊 Cuadro de notas</h3></div>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem;">
+            <label class="text-82-muted">Grupo:</label>
+            <select id="quad-grupo" class="field-mini">
+              <option value="1A">1° General A</option><option value="1B" selected>1° General B</option><option value="2A">2° General A</option><option value="2B">2° General B</option><option value="3A">3° General A</option><option value="3B">3° General B</option>
+            </select>
+            <span style="flex:1"></span>
+            <button class="btn btn-outline btn-sm" id="btn-quad-export">⬇ CSV</button>
+            <button class="btn btn-outline btn-sm" id="btn-quad-print">🖨 Imprimir</button>
+          </div>
+          <p class="section-sub">Notas 0–10. El promedio y el estado (≥5 aprueba) se calculan solos. Se guardan en este dispositivo.</p>
+          <div id="quad-grid"><div class="empty-msg">Selecciona un grupo.</div></div>
+          <p class="section-sub" style="margin-top:.5rem;">Escala salvadoreña usada aquí: 0–10, aprueba en 5.0.</p>
         </div>
       </div>
     </section>

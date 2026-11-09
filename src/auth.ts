@@ -110,6 +110,7 @@ export async function register(
   nombre: string,
   password: string,
   rol?: string,
+  grupo_id?: number | null,
 ): Promise<AuthResult> {
   const e = normalizaEmail(email);
 
@@ -127,6 +128,7 @@ export async function register(
       nombre: nombre,
       password: password,
       rol: rol || "estudiante",
+      ...(grupo_id != null ? { grupo_id } : {}),
     });
     if (!r.ok) {
       const detalle = await r.text().catch(() => "Registro fallido");
@@ -164,8 +166,9 @@ export async function me(): Promise<{ email: string; rol: string; nombre: string
   try {
     const r = await _api("/api/auth/me", null);
     if (!r.ok) return usuario;
-    const data = (await r.json()) as { email: string; rol: string; nombre: string };
-    _guardarSesion(token, { email: data.email, rol: data.rol, nombre: data.nombre });
+    const data = (await r.json()) as { email: string; rol: string; nombre: string; token_nuevo?: string };
+    const nt = (data as any).token_nuevo || token;
+    _guardarSesion(nt || null, { email: data.email, rol: data.rol, nombre: data.nombre });
     return { email: data.email, rol: data.rol, nombre: data.nombre };
   } catch (err) {
     return usuario;

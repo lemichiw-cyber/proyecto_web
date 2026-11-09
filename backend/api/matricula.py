@@ -86,6 +86,7 @@ class GrupoIn(BaseModel):
     anio: str
     seccion: str
     ciclo_escolar: str
+    especialidad: str = "general"
 
 
 class InscribirIn(BaseModel):
@@ -96,6 +97,14 @@ class CambiarGrupoIn(BaseModel):
     email: str
     grupo_id: int
 
+
+@router.get("/grupos-publicos")
+def listar_grupos_publicos():
+    """Lista pública (sin auth) para poblar el selector en registro. Solo lectura."""
+    try:
+        return _query("SELECT id, anio, seccion, ciclo_escolar, especialidad FROM grupos ORDER BY ciclo_escolar, anio, especialidad, seccion")
+    except Exception:
+        return []
 
 @router.get("/grupos")
 def listar_grupos(email: str = Depends(_require_email)):
@@ -133,9 +142,9 @@ def crear_grupo(payload: GrupoIn, email: str = Depends(_require_email)):
     _require_rol(email, {"admin", "director"})
     try:
         row = _query(
-            "INSERT INTO grupos (anio, seccion, ciclo_escolar) VALUES (%s,%s,%s) "
-            "RETURNING id, anio, seccion, ciclo_escolar",
-            (payload.anio, payload.seccion, payload.ciclo_escolar),
+            "INSERT INTO grupos (anio, seccion, ciclo_escolar, especialidad) VALUES (%s,%s,%s,%s) "
+            "RETURNING id, anio, seccion, ciclo_escolar, especialidad",
+            (payload.anio, payload.seccion, payload.ciclo_escolar, payload.especialidad.strip().lower()),
             "one",
         )
     except Exception as e:
