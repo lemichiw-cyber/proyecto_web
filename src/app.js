@@ -3298,6 +3298,29 @@ import { initForos } from "./modules/foros/foro-app.js";
          =================================================================== */
       window.eventosAPI.migrarLegacy();
       var actividades = window.eventosAPI.listar('actividad');
+      var agendaItems = window.eventosAPI.listar('agenda');
+      var calEventos = window.eventosAPI.listar('calendario');
+      var horarioItems = JSON.parse(localStorage.getItem('horarioItems') || '[]');
+      if (horarioItems.length > 0 && horarioItems[0].materia !== undefined) {
+        var nuevos = [];
+        horarioItems.forEach(function (old) {
+          var hora = old.hora || '';
+          var dia = old.dia || '';
+          var fila = { hora: hora, Lunes: '', Martes: '', 'Miércoles': '', Jueves: '', Viernes: '' };
+          if (dia) fila[dia] = old.materia || '';
+          nuevos.push(fila);
+        });
+        horarioItems = nuevos;
+        guardarSeccion('horarioItems', horarioItems);
+      }
+      var clasesItems = JSON.parse(localStorage.getItem('clasesItems') || '[]');
+      var mensajesItems = JSON.parse(localStorage.getItem('mensajesItems') || '[]');
+      var gruposItems = JSON.parse(localStorage.getItem('gruposItems') || '[]');
+      var protegidoItems = JSON.parse(localStorage.getItem('protegidoItems') || '[]');
+
+      function guardarSeccion(nombre, arr) {
+        localStorage.setItem(nombre, JSON.stringify(arr));
+      }
       /* ===================================================================
          FOROS — controlador tipo Reddit (comunidades, votos, hilos)
          La lógica vive en src/modules/foros/ para poder probarla aparte.
