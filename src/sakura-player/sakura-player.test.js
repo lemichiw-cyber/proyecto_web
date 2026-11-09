@@ -179,10 +179,13 @@ describe('Contraste WCAG AA de los tokens', () => {
    de YouTube que trae cada pista.
    ------------------------------------------------------------------ */
 describe('Catálogo curado', () => {
-  it('no hay backend: el cliente no expone salud ni stream remoto', async () => {
+  it('no hay backend: el cliente detecta backend y el stream remoto es opcional (fallback local)', async () => {
     const client = await import('./api/client.js');
+    // `health` no existe: la comprobación es `backendDisponible`
     expect(client.api.health).toBeUndefined();
-    expect(client.api.streamUrl).toBeUndefined();
+    expect(typeof client.api.backendDisponible).toBe('function');
+    // `streamUrl` SÍ existe (endpoint /api/music/stream): sin backend devuelve null
+    expect(typeof client.api.streamUrl).toBe('function');
     // En cambio sí expone búsqueda sobre el catálogo
     expect(typeof client.api.search).toBe('function');
   });

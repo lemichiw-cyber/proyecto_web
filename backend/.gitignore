@@ -10,3 +10,7 @@ env/
 auth.json
 oauth.json
 *.json.key
+sessions.json
+accounts.json
+audit.log
+*.log

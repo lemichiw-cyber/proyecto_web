@@ -23,7 +23,7 @@ import {
 import { fetchLyrics } from './lyrics-client.js';
 import { icon, escapeHtml, toast } from '../components/ui.js';
 
-const CACHE = new Map(); // trackId -> { entries, syncedLyrics, plainLyrics, source, words }
+const _CACHE = new Map(); // trackId -> { entries, syncedLyrics, plainLyrics, source, words }
 
 export class LyricsView {
   constructor(root) {

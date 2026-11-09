@@ -1,8 +1,20 @@
+// P3: Sentry frontend opcional — solo si el host carga @sentry/browser vía CDN global (window.Sentry).
+// Evita dependencia de npm y no bloquea el bundle (no hay import dinámico que Rollup deba resolver).
+try {
+  const _env: any = (import.meta as any).env || {};
+  const _dsn = typeof _env.VITE_SENTRY_DSN === "string" ? _env.VITE_SENTRY_DSN : "";
+  const _sentry = (window as any).Sentry;
+  if (typeof _dsn === "string" && _dsn && _sentry && typeof _sentry.init === "function") {
+    try { _sentry.init({ dsn: _dsn }); } catch (e) { /* noop */ }
+  }
+} catch (e) { /* noop */ }
+
 import './styles.css';
 import './data.js';
 import './data/eventos.js';
 import './notifications.js';
 import './global-delegator.js';
+import './offline-sync.js';
 import './app.js';
 
 /* ------------------------------------------------------------------
@@ -112,3 +124,10 @@ window.addEventListener('appinstalled', () => {
   installPrompt = null;
   installBtn?.classList.add('hidden');
 });
+
+// P3: drenar cola offline al volver online
+try {
+  window.addEventListener('online', async () => {
+    try { const m: any = await import('./offline-sync.js'); await m.flush?.(async () => undefined); } catch (e) { /* noop */ }
+  });
+} catch (e) { /* noop */ }

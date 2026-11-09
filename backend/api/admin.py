@@ -32,6 +32,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from api.deps import get_service
+from audit import read_tail as _audit_tail
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -213,3 +214,8 @@ def stats(email: str = Depends(require_admin)) -> dict:
         "session_ttl": _TOKEN_TTL,
         "locked_ips": len([v for v in _attempts.values() if len(v) >= _MAX_ATTEMPTS]),
     }
+
+@router.get("/audit")
+def audit_log(email: str = Depends(require_admin), limit: int = 100) -> dict:
+    """Cola de auditoría (P1): últimos eventos auth/cuentas. Solo admin."""
+    return {"ok": True, "eventos": _audit_tail(limit=limit)}

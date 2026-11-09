@@ -7,18 +7,16 @@ import {
   textoCorrecta,
   calcularResultadoExamen,
 } from "./modules/examenes/evaluador.js";
-import { ICON_DATA, iconSrc } from "./icons/icon-data.js";
+import { iconSrc } from "./icons/icon-data.js";
 import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
 } from "./auth";
 import {
-  LS_CUENTAS,
-  ROLES_VALIDOS,
+    ROLES_VALIDOS,
   ROL_REGISTRO,
-  ADMIN_EMAIL,
-  normalizaEmail,
+    normalizaEmail,
   leerCuentas,
   guardarCuentas,
   obtenerCuenta,
@@ -129,7 +127,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       var cryptoKey = null;
       var cryptoKeyStr = '';
 
-      function cryptoDeriveKey(password, salt) {
+      function _cryptoDeriveKey(password, salt) {
         // Deriva una clave AES de 256 bits a partir de la contraseña
         var s = (password || '') + ':' + (salt || 'CHERRYBOMB_SALT_2026');
         // SHA-256 simulado mediante iteración de FNV-1a para key stretching
@@ -203,7 +201,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
 
       // Hash de contraseña (SHA-256 vía Web Crypto si disponible, fallback síncrono)
-      function hashPassword(password) {
+      function _hashPassword(password) {
         if (password.length < 6) return '';
         // Fallback síncrono multiplataforma
         var s = password + ':CHERRYBOMB_HASH';
@@ -662,14 +660,14 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         }
         if (app === 'sakura-player') {
           var playerRoot = $('sakura-player-root');
-          var section = $('app-sakura-player');
+          var _section = $('app-sakura-player');
 
           // Asegurar que el contenedor tenga contenido visible incluso si el JS falla
           if (playerRoot && !playerRoot.children.length) {
             playerRoot.innerHTML = '<div id="sp-loading" style="padding:2rem;text-align:center;color:var(--player-text-secondary);">Cargando reproductor…</div>';
           }
 
-          function montarSakura() {
+          var montarSakura = function () {
             if (!window.mountSakuraPlayer) {
               console.warn('[SakuraPlayer] mountSakuraPlayer no disponible aún, reintentando…');
               setTimeout(montarSakura, 200);
@@ -682,7 +680,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               console.error('[SakuraPlayer] Error al montar:', err);
               if (playerRoot) playerRoot.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--player-error);">Error cargando el reproductor. Recargá la página.</div>';
             }
-          }
+          };
 
           if (window.mountSakuraPlayer) {
             montarSakura();
@@ -971,7 +969,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function esAdmin() { return usuarioActual && (usuarioActual.rol === 'admin' || usuarioActual.rol === 'director' || usuarioActual.rol === 'subdirector'); }
       function esDocente() { return usuarioActual && (usuarioActual.rol === 'docente' || esAdmin()); }
       function esEstudiante() { return usuarioActual && usuarioActual.rol === 'estudiante'; }
-      function esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
+      function _esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
 
       var rolesPermisos = {
         admin: { ver: true, crear: true, editar: true, eliminar: true, participar: true },
@@ -1089,7 +1087,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var filtrados = g === 'todos' ? pickerStudents : pickerStudents.filter(function (s) { return s.grupo === g; });
         var el = $('picker-list');
         if (filtrados.length === 0) { el.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '🎲', title: 'Picker' }); return; }
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + filtrados.map(function (s, i) {
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + filtrados.map(function (s, _i) {
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gray-50);border-radius:6px;">' +
             '<span>' + escapeHtml(s.nombre) + ' <span class="semestre-badge">' + s.grupo + '</span></span>' +
             '<button class="btn btn-sm picker-del" data-idx="' + pickerStudents.indexOf(s) + '" style="background:var(--red);color:#fff;padding:.15rem .4rem;font-size:.7rem;">×</button></div>';
@@ -1935,8 +1933,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               throw new Error('pregunta_invalida');
             }
             q.respuesta = mVal;
-            var tVal = matTol ? matTol.value.trim() : '0';
-            q.tolerancia = (tVal !== '' && !isNaN(Number(tVal))) ? Math.max(0, parseFloat(tVal)) : 0;
+            var tValMat = matTol ? matTol.value.trim() : '0';
+            q.tolerancia = (tValMat !== '' && !isNaN(Number(tValMat))) ? Math.max(0, parseFloat(tValMat)) : 0;
           } else if (tipo === 'ciencia_formula' || tipo === 'ciencia_ecuacion' || tipo === 'ciencia_diagrama') {
             var ciInp = item.querySelector('input[data-ciencia-resp]');
             var cVal = ciInp ? ciInp.value.trim() : '';
@@ -2080,7 +2078,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       /* ===== PLAN DE TRABAJO (Planilla de calificaciones) ===== */
       var PLAN_KEY = 'bachillerato_plan_trabajo';
       var planData = JSON.parse(localStorage.getItem(PLAN_KEY) || '[]');
-      var planMaterias = ['Matemáticas', 'Física', 'Química', 'Biología', 'Literatura', 'Historia', 'Inglés'];
+      var _planMaterias = ['Matemáticas', 'Física', 'Química', 'Biología', 'Literatura', 'Historia', 'Inglés'];
       var planEstudiantesPorGrupo = {
         '1A': ['Ana García López','Carlos Mendoza Ruiz','Sofía Ramírez Cruz','Jorge Luis Hernández','Diana Rivas Mora'],
         '1B': ['María Torres Silva','Valentina Ortiz Mora','Pedro Sánchez Vega','Gabriela Flores Ruiz'],
@@ -2195,7 +2193,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         });
       }
 
-      function initPlanTab() {
+      function _initPlanTab() {
         var tabBtn = document.querySelector('[data-exam-tab="plan"]');
         if (!tabBtn) return;
         tabBtn.addEventListener('click', function () {
@@ -2731,12 +2729,12 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       /* ===================================================================
          TAREAS — Docente crea, Estudiante entrega
          =================================================================== */
-      var TAREAS_KEY = 'bachillerato_tareas';
+      var _TAREAS_KEY = 'bachillerato_tareas';
       var tareas = window.eventosAPI.listar('tarea');
       var ENTREGAS_KEY = 'bachillerato_entregas';
       var entregas = JSON.parse(localStorage.getItem(ENTREGAS_KEY) || '[]');
 
-      function tareaGuardarStorage() { /* las tareas viven ahora en eventosAPI (clave 'eventos') */ }
+      function _tareaGuardarStorage() { /* las tareas viven ahora en eventosAPI (clave 'eventos') */ }
       function entregaGuardarStorage() { localStorage.setItem(ENTREGAS_KEY, JSON.stringify(entregas)); }
 
       function tareaRenderCreadas() {
@@ -2939,7 +2937,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           total.textContent = '0 aulas'; return;
         }
         container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem;">' +
-          items.map(function (a, i) {
+          items.map(function (a, _i) {
             var realIdx = aulas.indexOf(a);
             var icono = tipoIconos[a.tipo] || '\uD83C\uDFEB';
             var color = tipoColores[a.tipo] || 'blue';
@@ -3170,8 +3168,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function estudiantesGuardar() { localStorage.setItem('estudiantes_db', JSON.stringify(ESTUDIANTES_DB)); }
       function asistenciaGuardar() { localStorage.setItem('asistencia_historial', JSON.stringify(asistenciaHistorial)); }
 
-      var estPresentes = 0;
-      var estAusentes = 0;
+      var _estPresentes = 0;
+      var _estAusentes = 0;
 
       function estRenderTabla() {
         var anio = parseInt($('est-filtro-anio').value, 10);
@@ -3220,8 +3218,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
             '</td></tr>';
         }).join('');
 
-        estPresentes = presentes;
-        estAusentes = ausentes;
+        _estPresentes = presentes;
+        _estAusentes = ausentes;
         totalSpan.textContent = 'Mostrando ' + filtrados.length + ' estudiante' + (filtrados.length !== 1 ? 's' : '');
         presentesSpan.textContent = '\u2705 ' + presentes + ' Presente' + (presentes !== 1 ? 's' : '');
         ausentesSpan.textContent = '\u274C ' + ausentes + ' Ausente' + (ausentes !== 1 ? 's' : '');
@@ -3658,7 +3656,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         }
 
         var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
-        var yo = foroYo();
+        yo = foroYo();
         var cerrado = f.estado === 'cerrado';
         var meta = [];
         meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
@@ -3899,14 +3897,14 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               if (!mensaje) return;
               if (!mensaje.reacciones) mensaje.reacciones = {};
               if (!mensaje.reacciones[emoji]) mensaje.reacciones[emoji] = { count: 0, usuarios: [] };
-              var reaccion = mensaje.reacciones[emoji];
-              var idx = reaccion.usuarios.indexOf(yo2.email);
-              if (idx >= 0) {
-                reaccion.usuarios.splice(idx, 1);
-                reaccion.count--;
+              var reaccion2 = mensaje.reacciones[emoji];
+              var idx2 = reaccion2.usuarios.indexOf(yo2.email);
+              if (idx2 >= 0) {
+                reaccion2.usuarios.splice(idx2, 1);
+                reaccion2.count--;
               } else {
-                reaccion.usuarios.push(yo2.email);
-                reaccion.count++;
+                reaccion2.usuarios.push(yo2.email);
+                reaccion2.count++;
               }
             }
             foroGuardar();
@@ -4012,8 +4010,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
 
       function foroGuardar() { guardarSeccion('foros', foros); }
 
-      function foroPerfilParticipante(email) {
-        var yo = foroYo();
+      function _foroPerfilParticipante(email) {
+        var _yo = foroYo();
         var perfil = foros.reduce(function (acc, f) {
           if (f.autor && f.autor.email === email) acc.temas++;
           (f.mensajes || []).forEach(function (m) {
@@ -4256,7 +4254,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           el.parentNode.insertBefore(hoyBox, el);
         }
         if (clasesItems.length) {
-          var ahora = new Date();
+          var _ahora = new Date();
           var enVivo = null, prox = null, mejor = null;
           clasesItems.forEach(function (c) {
             var ini = claseFecha(c);
@@ -4280,11 +4278,11 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
 
       var editandoIdx = -1;
-      var editandoDia = '';
+      var _editandoDia = '';
 
       function abrirEditarCelda(idx, dia) {
         editandoIdx = idx;
-        editandoDia = dia;
+        _editandoDia = dia;
         var row = horarioItems[idx];
         $('he-hora').value = row.hora || '';
         $('he-lunes').value = row.Lunes || '';
@@ -4300,7 +4298,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function cerrarPanelHorario() {
         $('horario-edit-panel').classList.add('hidden');
         editandoIdx = -1;
-        editandoDia = '';
+        _editandoDia = '';
         $('he-hora').value = '';
         $('he-lunes').value = '';
         $('he-martes').value = '';
@@ -4340,7 +4338,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       $('btn-horario-add').addEventListener('click', function () {
         if (!exigirPermiso('crear')) return;
         editandoIdx = -1;
-        editandoDia = '';
+        _editandoDia = '';
         $('he-hora').value = '';
         $('he-lunes').value = '';
         $('he-martes').value = '';
@@ -5671,7 +5669,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           return;
         }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          items.map(function (p, i) {
+          items.map(function (p, _i) {
             var realIdx = planificaciones.indexOf(p);
             var materiaLabel = { matematicas:'Matemáticas', fisica:'Física', quimica:'Química', biologia:'Biología', literatura:'Literatura', historia:'Historia', ingles:'Inglés' }[p.materia] || p.materia;
             return '<div style="border:1px solid var(--gray-200);border-radius:10px;padding:.75rem;background:var(--gray-50);">' +
@@ -5918,7 +5916,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var intervalo = null;
         var ciclos = 0;
         var pausado = false;
-        var materiaActual = 'general';
+        var _materiaActual = 'general';
 
         function durs() {
           return {

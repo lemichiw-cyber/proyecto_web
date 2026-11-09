@@ -36,3 +36,7 @@ pnpm-debug.log*
 
 # Datos locales de cuentas escolares (nunca al repo)
 backend/accounts.json
+backend/sessions.json
+backend/auth.json
+audit.log
+backend/foro_reportes.json

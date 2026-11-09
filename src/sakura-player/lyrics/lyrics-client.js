@@ -66,7 +66,7 @@ async function searchLrcLib(title, artist, duration, album, signal) {
 /**
  * Obtiene letra exacta por ID de LrcLib.
  */
-async function getLrcLibById(lrcId, signal) {
+async function _getLrcLibById(lrcId, signal) {
   const url = `${LRC_LIB_GET}?id=${encodeURIComponent(lrcId)}`;
   const res = await fetch(url, { signal });
   if (!res.ok) {
@@ -106,7 +106,7 @@ async function searchYouTubeSubtitles(videoId, signal) {
       const text = ev.segs.map((s) => s.utf8 || '').join('').trim();
       if (!text) continue;
       const tStart = (ev.tStartMs || 0) / 1000;
-      const tDur = (ev.tDurationMs || 0) / 1000;
+      const _tDur = (ev.tDurationMs || 0) / 1000;
       lines.push({ time: tStart, text, words: null });
     }
     if (lines.length === 0) return null;

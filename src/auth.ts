@@ -21,28 +21,19 @@ const USER_KEY = "cherrybombAuthUser";
 let token: string | null = null;
 let usuario: { email: string; rol: string; nombre: string } | null = null;
 
+// P1: cookie-only. El token vive SOLO en memoria; la sesión real es la cookie HttpOnly
+// del backend (credentials: "include"). Un XSS ya no puede leer el token de localStorage.
+// Al cargar, borramos cualquier residuo viejo (cherrybombAuthToken/User) y partimos de null.
 function _guardarSesion(t: string | null, u: { email: string; rol: string; nombre: string } | null): void {
   token = t;
   usuario = u;
-  try {
-    if (t) localStorage.setItem(TOKEN_KEY, t);
-    else localStorage.removeItem(TOKEN_KEY);
-    if (u) localStorage.setItem(USER_KEY, JSON.stringify(u));
-    else localStorage.removeItem(USER_KEY);
-  } catch (e) {
-    /* sin storage */
-  }
+  try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); } catch (e) { /* noop */ }
 }
 
 function _cargarSesion(): void {
-  try {
-    token = localStorage.getItem(TOKEN_KEY) || null;
-    const u = localStorage.getItem(USER_KEY);
-    usuario = u ? JSON.parse(u) : null;
-  } catch (e) {
-    token = null;
-    usuario = null;
-  }
+  try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); } catch (e) { /* noop */ }
+  token = null;
+  usuario = null;
 }
 _cargarSesion();
 
@@ -168,7 +159,8 @@ export async function logout(): Promise<{ ok: boolean }> {
 }
 
 export async function me(): Promise<{ email: string; rol: string; nombre: string } | null> {
-  if (!token) return null;
+  // P1: aunque token sea null (recarga de página), la cookie HttpOnly puede autenticar.
+  // No retornamos null aquí: intentamos validador con servidor.
   try {
     const r = await _api("/api/auth/me", null);
     if (!r.ok) return usuario;

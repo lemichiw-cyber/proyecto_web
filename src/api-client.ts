@@ -42,14 +42,26 @@ function apiHeaders(): HeadersInit {
 }
 
 export function apiFetch<T>(path: string, body?: any): Promise<T> {
-  return fetch(API_BASE + path, {
-    method: body ? "POST" : "GET",
-    headers: apiHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: "include",
-  }).then((r) => {
-    if (!r.ok) throw new Error("API " + r.status);
-    return r.json() as Promise<T>;
+  const call = () =>
+    fetch(API_BASE + path, {
+      method: body ? "POST" : "GET",
+      headers: apiHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: "include",
+    }).then((r) => {
+      if (!r.ok) throw new Error("API " + r.status);
+      return r.json() as Promise<T>;
+    });
+  return call().catch(async (e) => {
+    // P2: sin red (TypeError) → encola para reintentar al volver online
+    if (e instanceof TypeError) {
+      try {
+        const mod: any = await import("./offline-queue.js");
+        mod.enqueue?.({ path, body: body ?? null });
+      } catch (_ignored) { /* noop */ }
+      return { ok: false, queued: true } as unknown as T;
+    }
+    throw e;
   });
 }
 

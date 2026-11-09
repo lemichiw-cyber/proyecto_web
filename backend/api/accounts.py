@@ -20,6 +20,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from api.admin import require_admin
+from db import write_json_atomic
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
@@ -67,7 +68,7 @@ def _load_accounts() -> dict:
 
 
 def _save_accounts(data: dict) -> None:
-    ACCOUNTS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_atomic(ACCOUNTS_FILE, data, mode=0o600)
 
 
 # ------------------------------------------------------------
