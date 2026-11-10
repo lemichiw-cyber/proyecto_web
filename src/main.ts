@@ -16,6 +16,7 @@ import './notifications.js';
 import './global-delegator.js';
 import './offline-sync.js';
 import './app.js';
+import { syncBodyLock } from './scroll-lock.js';
 
 /* ------------------------------------------------------------------
    CSP Report-Only: escuchar violations y loggearlas a consola.
@@ -159,7 +160,9 @@ try {
     if (e.key === "Escape") {
       (window as any).closeSidebar?.();
       document.querySelectorAll(".modal-overlay.open").forEach((m) => { (m as HTMLElement).classList.remove("open"); });
-      document.body.classList.remove("no-scroll");
+      // Re-sincroniza el bloqueo de scroll con el DOM (antes se quitaba la
+      // clase a pelo y el estado interno quedaba inconsistente).
+      syncBodyLock();
     }
   });
   window.addEventListener("resize", () => {

@@ -24,6 +24,27 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    // Sin proxy, Vite sirve index.html (SPA fallback) para /api/* y los POST
+    // devuelven 404 -> "error api:404". El proxy manda /api al backend FastAPI.
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: false,
+        // El backend marca la cookie como Secure en prod; en dev sobre http
+        // hay que permitirla para que la sesión viaje.
+        secure: false,
+      },
+    },
+  },
+  preview: {
+    port: 4173,
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: false,
+        secure: false,
+      },
+    },
   },
   plugins: [
     VitePWA({

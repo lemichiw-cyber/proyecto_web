@@ -27,6 +27,7 @@ import {
 } from "./app-accounts";
 
 import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen } from "./api-client";
+import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
       'use strict';
@@ -367,11 +368,10 @@ import { initForos } from "./modules/foros/foro-app.js";
         else volControl.classList.add('hidden');
       }
 
-      var scrollPos = 0;
-      function lockBody() { scrollPos = window.scrollY; document.body.classList.add('no-scroll'); }
-      function unlockBody() { document.body.classList.remove('no-scroll'); window.scrollTo(0, scrollPos); }
       // P1: no bloquear touchmove global — el scroll se bloquea solo con body.no-scroll (overflow:hidden).
       // El handler anterior preventDefault sobre toda la página dejaba la dashboard sin scroll tras cerrar sidebar/modal si el tope se quedaba atascado.
+      // El bloqueo vive en scroll-lock.js (fuente única de verdad, sincronizada con el DOM):
+      // así ningún modal puede dejar el body con overflow:hidden pegado.
 
       function abrirTemas() {
         var modal = $('modal-temas');
@@ -855,6 +855,10 @@ import { initForos } from "./modules/foros/foro-app.js";
         localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
         window.usuarioActual = usuarioActual; // notifications.js lo lee
         modalLogin.classList.remove('open');
+        // P1: cerrar el modal de login debe liberar el scroll del body.
+        // Sin esto, body.no-scroll (overflow:hidden) quedaba pegado y la
+        // página dejaba de scrollear (bug reportado por el usuario).
+        syncBodyLock();
         mostrarModoRegistro(false);
         $('btn-login').style.display = 'none';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = 'none';
@@ -895,6 +899,7 @@ import { initForos } from "./modules/foros/foro-app.js";
       $('link-olvide').addEventListener('click', function (e) {
         e.preventDefault();
         modalLogin.classList.remove('open');
+        syncBodyLock();
         _flujoOlvideContrasena();
       });
 
@@ -2056,23 +2061,31 @@ import { initForos } from "./modules/foros/foro-app.js";
             fuente: fuente,
             numero_preguntas: cantidad,
             tipo: 'mixto',
-            materia: materia || 'general',
+            // Se manda la materia seleccionada (puede ir vacía: el backend la
+            // deduce del tema). Antes se mandaba 'general', que no existe en
+            // el <select> ni en la lista de materias válidas del backend.
+            materia: materia,
             grado: 'bachillerato',
           });
           // Limpiar preguntas existentes y agregar las de la IA
           var cont = $('exam-q-list');
           if (!cont) return;
           cont.innerHTML = '';
-          generado.preguntas.forEach(function (p, i) {
-            examAddPreguntaIA(p, i);
+          generado.preguntas.forEach(function (p) {
+            examAddPreguntaIA(p);
           });
           // Rellenar campos del examen
           $('exam-titulo').value = generado.titulo || tema;
-          $('exam-materia').value = generado.materia || materia;
+          var selMateria = $('exam-materia');
+          if (selMateria && generado.materia) {
+            // Solo se asigna si existe la opción en el <select>.
+            var existe = Array.prototype.some.call(selMateria.options, function (o) { return o.value === generado.materia; });
+            if (existe) selMateria.value = generado.materia;
+          }
           $('exam-tiempo').value = generado.tiempo_minutos || 45;
           $('exam-notamin').value = generado.nota_minima || 60;
           $('exam-intentos').value = generado.intentos || 2;
-          msg.textContent = '✅ ' + generado.preguntas.length + ' preguntas generadas por IA.';
+          msg.textContent = '✅ ' + generado.preguntas.length + ' preguntas generadas por IA. Revisá y ajustá las que necesites.';
           msg.style.color = 'var(--green)';
         } catch (err) {
           msg.textContent = '⚠️ Error: ' + (err.message || 'No se pudo generar');
@@ -2083,26 +2096,91 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
       }
 
-      function examAddPreguntaIA(p, i) {
+      function examAddPreguntaIA(p) {
         var cont = $('exam-q-list');
         if (!cont) return;
-        var idx = Date.now() + i;
+        // Se usa el renderizador CANÓNICO (el mismo que al crear una pregunta a
+        // mano). Antes la IA generaba su propio HTML, que no coincidía con lo
+        // que lee examGetPreguntas(): se perdían las respuestas correctas y los
+        // tipos "verdadero_falso"/"emparejar" no existían en el selector, así
+        // que el examen se guardaba sin calificar.
+        examAddPregunta();
+        var item = cont.querySelector('.pregunta-item:last-child');
+        if (!item) return;
+        var sel = item.querySelector('.tipo-select');
+        if (!sel) return;
+        var idx = sel.dataset.idx;
         var tipo = p.tipo || 'multiple';
-        var html = '<div class="pregunta-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:var(--bg-card);">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;"><div style="font-weight:600;">Pregunta ' + (i + 1) + '</div><select class="tipo-select" style="width:130px;padding:.3rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"><option value="multiple">Opción múltiple</option><option value="verdadero_falso">Verdadero/Falso</option><option value="completar">Completar</option><option value="abierta">Abierta</option></select><button class="btn btn-sm btn-outline" onclick="this.closest(\'.pregunta-item\').remove()" style="padding:.15rem .4rem;">Eliminar</button></div>';
-        html += '<div style="margin-top:.5rem;"><label>Enunciado:</label><textarea class="pregunta-textarea" data-idx="' + idx + '" style="width:100%;min-height:70px;padding:.5rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;">' + escapeHtml(p.enunciado || '') + '</textarea></div>';
-        if (p.opciones && p.opciones.length) {
-          html += '<div style="margin-top:.4rem;"><label>Opciones:</label>' + p.opciones.map(function (o, oi) { return '<div style="margin:.2rem 0;"><input type="text" class="opt-input" data-opt="' + oi + '" value="' + escapeHtml(o) + '" style="width:100%;padding:.35rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"></div>'; }).join('') + '</div>';
+        if (!sel.querySelector('option[value="' + tipo + '"]')) tipo = 'multiple';
+        sel.value = tipo;
+        window.examCambiarTipo(sel);
+
+        var ta = item.querySelector('.pregunta-textarea');
+        if (ta) ta.value = p.enunciado || '';
+
+        var body = item.querySelector('.pregunta-body[data-idx="' + idx + '"]');
+        if (!body) return;
+
+        var ops = Array.isArray(p.opciones) ? p.opciones : [];
+        if (tipo === 'multiple') {
+          for (var k = 0; k < 3; k++) {
+            var inp = body.querySelector('input[type="text"][data-opt="' + k + '"]');
+            if (inp) inp.value = ops[k] != null ? String(ops[k]) : '';
+          }
+          if (p.correcta != null && p.correcta !== '') {
+            var radio = body.querySelector('input[name="correcta-' + idx + '"][value="' + p.correcta + '"]');
+            if (radio) radio.checked = true;
+          }
+        } else if (tipo === 'vf') {
+          if (p.correcta != null && p.correcta !== '') {
+            var radioVf = body.querySelector('input[name="correcta-' + idx + '"][value="' + (Number(p.correcta) ? 1 : 0) + '"]');
+            if (radioVf) radioVf.checked = true;
+          }
+        } else if (tipo === 'completar' || tipo === 'abierta') {
+          var resp = body.querySelector('input[data-resp]');
+          var textoResp = p.respuesta != null && p.respuesta !== '' ? String(p.respuesta) : (p.respuesta_correcta || '');
+          if (resp) resp.value = textoResp;
+        } else if (tipo === 'texto_largo') {
+          var taResp = body.querySelector('textarea[data-resp]');
+          var textoLargo = p.respuesta != null && p.respuesta !== '' ? String(p.respuesta) : (p.respuesta_correcta || '');
+          if (taResp) taResp.value = textoLargo;
+        } else if (tipo === 'casilla') {
+          var correctas = Array.isArray(p.correctas) ? p.correctas : [];
+          for (var j = 0; j < 3; j++) {
+            var inpC = body.querySelector('input[type="text"][data-opt="' + j + '"]');
+            if (inpC) inpC.value = ops[j] != null ? String(ops[j]) : '';
+            var cb = body.querySelector('input[type="checkbox"][name="casilla-' + idx + '"][data-opt="' + j + '"]');
+            if (cb && correctas.indexOf(j) !== -1) cb.checked = true;
+          }
+        } else if (tipo === 'ordenar') {
+          for (var m = 0; m < 3; m++) {
+            var inpO = body.querySelector('input[data-opt="' + m + '"]');
+            if (inpO) inpO.value = ops[m] != null ? String(ops[m]) : '';
+          }
+        } else if (tipo === 'emparejar') {
+          var pares = Array.isArray(p.pares) ? p.pares : [];
+          var filas = body.querySelectorAll('.opt-row');
+          for (var r = 0; r < filas.length && r < pares.length; r++) {
+            var par = pares[r] || [];
+            var concepto = Array.isArray(par) ? par[0] : par.a;
+            var definicion = Array.isArray(par) ? par[1] : par.b;
+            var optC = r === 0 ? '0' : '3';
+            var optD = r === 0 ? '1' : '4';
+            var ic = filas[r].querySelector('input[data-opt="' + optC + '"]');
+            var idf = filas[r].querySelector('input[data-opt="' + optD + '"]');
+            if (ic) ic.value = concepto != null ? String(concepto) : '';
+            if (idf) idf.value = definicion != null ? String(definicion) : '';
+          }
         }
-        html += '<div style="margin-top:.4rem;"><label>Respuesta correcta:</label><input type="text" class="resp-input" value="' + escapeHtml(p.respuesta_correcta || '') + '" style="width:100%;padding:.35rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"></div>';
+
+        // La justificación de la IA no tiene campo en el editor: se muestra como
+        // nota para que el docente la lea al revisar el examen.
         if (p.justificacion) {
-          html += '<div style="margin-top:.3rem;font-size:.8rem;color:var(--gray-500);">' + escapeHtml(p.justificacion) + '</div>';
+          var nota = document.createElement('div');
+          nota.style.cssText = 'margin-top:.4rem;font-size:.8rem;color:var(--gray-500);';
+          nota.textContent = '💡 ' + p.justificacion;
+          item.appendChild(nota);
         }
-        html += '</div>';
-        cont.insertAdjacentHTML('beforeend', html);
-        // Seleccionar el tipo correcto en el select
-        var sel = cont.querySelector('[data-idx="' + idx + '"] .tipo-select');
-        if (sel) sel.value = tipo;
       }
 
       function examGuardar() {
@@ -2116,6 +2194,11 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
         var titulo = $('exam-titulo').value.trim();
         var materia = $('exam-materia').value.trim();
+        if (!preguntas.length) {
+          var m0 = $('exam-guardar-msg');
+          if (m0) { m0.textContent = '⚠️ Agregá al menos una pregunta al examen.'; m0.style.color = 'var(--red)'; }
+          return;
+        }
         var tiempo = parseInt($('exam-tiempo').value, 10) || 60;
         var notamin = parseInt($('exam-notamin').value, 10);
         var intentos = parseInt($('exam-intentos').value, 10);
@@ -2155,12 +2238,29 @@ import { initForos } from "./modules/foros/foro-app.js";
         };
         examenes.push(ex);
         examGuardarStorage();
-        apiGuardarExamen(ex);
         examRenderGuardados();
         examRenderResultados();
         examCargarSelect();
-        $('exam-guardar-msg').textContent = '✅ Examen guardado.';
+        $('exam-guardar-msg').textContent = '✅ Examen guardado en este dispositivo.';
         $('exam-guardar-msg').style.color = 'var(--green)';
+        // Sincronización con el backend: si falla, se avisa (antes se silenciaba
+        // y el usuario veía un 404 sin explicación).
+        apiGuardarExamen(ex).then(function (r) {
+          if (r && r.queued) {
+            var m = $('exam-guardar-msg');
+            if (m) { m.textContent = '✅ Guardado localmente. Se sincronizará cuando haya internet.'; m.style.color = 'var(--amber-ink)'; }
+            return;
+          }
+          var m2 = $('exam-guardar-msg');
+          if (m2) { m2.textContent = '✅ Examen guardado y sincronizado con el servidor.'; m2.style.color = 'var(--green)'; }
+        }).catch(function (err) {
+          var m3 = $('exam-guardar-msg');
+          if (m3) {
+            m3.textContent = '⚠️ Guardado solo en este dispositivo: ' + (err && err.message ? err.message : 'sin conexión con el servidor');
+            m3.style.color = 'var(--amber-ink)';
+          }
+          mostrarToast('No se pudo sincronizar el examen con el servidor.', 'error');
+        });
       }
 
       /* ===== ANTI-CHEAT ===== */

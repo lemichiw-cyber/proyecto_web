@@ -1,10 +1,31 @@
 import { escapeHtml } from "./utils/escape.js";
 
 const API_BASE = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "").replace(/\/+$/, "");
-const API_EMAIL =
-  (typeof VITE_API_EMAIL !== "undefined" ? VITE_API_EMAIL : "") ||
-  localStorage.getItem("cherrybombSessionEmail") ||
-  "";
+
+/**
+ * Email de la sesión actual.
+ *
+ * Antes se leía de `localStorage.getItem("cherrybombSessionEmail")`, una clave
+ * que NUNCA se escribía: la sesión real vive en `cherrybombSession` (JSON).
+ * Como la constante se calculaba al importar el módulo, además quedaba
+ * congelada en "" y los endpoints /api/items/* respondían 401.
+ */
+function _emailSesion(): string {
+  const env = (typeof VITE_API_EMAIL !== "undefined" ? VITE_API_EMAIL : "") || "";
+  if (env) return env.trim().toLowerCase();
+  try {
+    const raw = localStorage.getItem("cherrybombSession");
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && typeof s.email === "string" && s.email) return s.email.trim().toLowerCase();
+    }
+  } catch (e) {
+    /* storage no disponible o JSON inválido */
+  }
+  const w = (window as any).usuarioActual;
+  if (w && typeof w.email === "string" && w.email) return w.email.trim().toLowerCase();
+  return "";
+}
 
 interface Grupo {
   id: number;
@@ -28,6 +49,7 @@ interface TareaIn {
 
 interface ExamenIn {
   titulo: string;
+  materia: string;
   tiempo: number;
   preguntas: any[];
   notamin: number;
@@ -79,8 +101,32 @@ interface ExamenAcomodado {
 
 function apiHeaders(): HeadersInit {
   const h: Record<string, string> = { "Content-Type": "application/json" };
-  if (API_EMAIL) h["X-User-Email"] = API_EMAIL;
+  const email = _emailSesion();
+  if (email) h["X-User-Email"] = email;
+  // La sesión se autentica con la cookie HttpOnly `cherrybomb_session`
+  // (credentials: "include"). El token NO se guarda en localStorage (P1) ni se
+  // expone en window, así que no se manda cabecera Authorization.
   return h;
+}
+
+/** Extrae el detalle de una respuesta de error del backend. */
+async function _detalleError(r: Response): Promise<string> {
+  try {
+    const txt = await r.text();
+    if (!txt) return "";
+    try {
+      const data = JSON.parse(txt);
+      if (data && typeof data.detail === "string") return data.detail;
+      if (data && Array.isArray(data.detail) && data.detail[0] && typeof data.detail[0].msg === "string") {
+        return data.detail[0].msg;
+      }
+    } catch (e) {
+      /* respuesta no-JSON (p.ej. HTML del SPA fallback) */
+    }
+    return txt.slice(0, 120);
+  } catch (e) {
+    return "";
+  }
 }
 
 export function apiFetch<T>(path: string, body?: any): Promise<T> {
@@ -90,8 +136,11 @@ export function apiFetch<T>(path: string, body?: any): Promise<T> {
       headers: apiHeaders(),
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include",
-    }).then((r) => {
-      if (!r.ok) throw new Error("API " + r.status);
+    }).then(async (r) => {
+      if (!r.ok) {
+        const detalle = await _detalleError(r);
+        throw new Error("API " + r.status + (detalle ? ": " + detalle : ""));
+      }
       return r.json() as Promise<T>;
     });
   return call().catch(async (e) => {
@@ -129,16 +178,19 @@ export function apiGuardarTarea(t: TareaIn): Promise<{ ok: boolean }> {
   }).catch(() => ({ ok: false }));
 }
 
-export function apiGuardarExamen(e: ExamenIn): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>("/api/items/examenes", {
+export function apiGuardarExamen(e: ExamenIn): Promise<{ ok: boolean; queued?: boolean }> {
+  // NO se silencia el error: el caller necesita saber si se sincronizó con el
+  // backend o si falló, para informar al usuario sin mentir.
+  return apiFetch<{ ok: boolean; queued?: boolean }>("/api/items/examenes", {
     titulo: e.titulo,
+    materia: e.materia || "",
     tiempo: e.tiempo,
     preguntas: e.preguntas || [],
     notamin: e.notamin,
     intentos: e.intentos,
     barajar: !!e.barajar,
     grupo_ids: Array.isArray(e.grupo_ids) ? e.grupo_ids : [],
-  }).catch(() => ({ ok: false }));
+  });
 }
 
 let _gruposCache: Grupo[] | null = null;

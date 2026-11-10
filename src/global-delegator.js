@@ -2,12 +2,13 @@
 // This runs in global scope, not module scope
 // P0: allowlist estricta — nunca ejecutar window[fnName] arbitrario (XSS)
 
+import { lockBody } from "./scroll-lock.js";
+
 function _global$(id) { return document.getElementById(id); }
-function _globalLockBody() { document.body.style.overflow = 'hidden'; }
 
 window.clickLogin = function clickLogin() {
   var modalLogin = _global$('modal-login');
-  if (modalLogin) { modalLogin.classList.add('open'); _globalLockBody(); }
+  if (modalLogin) { modalLogin.classList.add('open'); lockBody(); }
 };
 
 // Acciones permitidas desde index.html data-onclick="accion+arg1+arg2"

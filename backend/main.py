@@ -20,10 +20,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# El .env debe cargarse ANTES de importar los routers: varios módulos leen
+# variables al importarse (NVIDIA_API_KEY en api.ia, flags de cookie, etc.).
+# Si se cargara después, la clave se leía como "" y la IA devolvía 503.
+load_dotenv()
+
 from api import accounts, admin, albums, artists, actividades, auth, debug, library, lyrics, matricula, moderacion, playlists, push, search, songs, tareas_examenes, translate, ia
 from api.deps import get_service
-
-load_dotenv()
 
 # P2: Sentry opcional (sin dependencia obligatoria; si SENTRY_DSN existe y está instalado)
 try:
