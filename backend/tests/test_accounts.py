@@ -38,10 +38,15 @@ def _reset_accounts():
         ACCOUNTS_FILE.unlink()
 
 
-def test_estudiante_no_puede_crear_admin():
-    """POST /api/accounts ignora el rol del cliente y fuerza 'estudiante'."""
+def test_crear_cuenta_exige_admin():
+    """POST /api/accounts ya no es público: sin sesión administrativa va 401.
+
+    (Antes cualquiera podía crear cuentas y el rol se forzaba a "estudiante";
+    ahora el rol lo elige el admin y la cuenta se crea desde el panel.)
+    Ver backend/tests/test_roles.py para el flujo completo.
+    """
     r = client.post(
-        "/api/accounts",
+        "/api/accounts/",
         json={
             "email": "alu@test.local",
             "password": "pw-123456",
@@ -49,8 +54,7 @@ def test_estudiante_no_puede_crear_admin():
             "nombre": "Alumno",
         },
     )
-    assert r.status_code == 201, r.text
-    assert r.json()["account"]["rol"] == "estudiante", r.text
+    assert r.status_code == 401, r.text
 
 
 def test_put_delete_sin_token_devuelve_401():

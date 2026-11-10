@@ -88,10 +88,31 @@ def _query(sql: str, params: tuple = (), fetch: str = "all", commit: bool = Fals
     return result
 
 def _perfil(email: str):
+    """Perfil del usuario: id de Postgres + rango VIGENTE de accounts.json.
+
+    El rango vive en accounts.json (fuente de verdad); Postgres es un espejo
+    que puede quedar viejo. Si no hay Postgres, se devuelve el rango igual
+    para que la app funcione local-first.
+    """
+    email = (email or "").strip().lower()
+    p = None
     try:
-        return _query("SELECT id, rol FROM perfiles WHERE email = %s LIMIT 1", (email,), "one")
+        p = _query("SELECT id, rol FROM perfiles WHERE email = %s LIMIT 1", (email,), "one")
     except Exception:
-        return None
+        p = None
+    rol = None
+    try:
+        from api.accounts import rol_de_cuenta
+        rol = rol_de_cuenta(email)
+    except Exception:
+        rol = None
+    if rol:
+        if isinstance(p, dict):
+            p = dict(p)
+            p["rol"] = rol
+            return p
+        return {"id": None, "rol": rol}
+    return p
 
 def _require_email(x_user_email: str | None = Header(default=None)) -> str:
     if not x_user_email:

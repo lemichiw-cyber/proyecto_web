@@ -246,3 +246,85 @@ export function apiIA(payload: GenerarExamenIn): Promise<ExamenGenerado> {
 export function apiAcomodarExamen(payload: AcomodarExamenIn): Promise<ExamenAcomodado> {
   return apiFetch<ExamenAcomodado>("/api/ia/acomodar-examen", payload);
 }
+
+/* ===================================================================
+   Cuentas y roles — /api/accounts (gestión del panel de usuarios)
+   =================================================================== */
+
+export interface CuentaBackend {
+  email: string;
+  rol: string;
+  nombre: string;
+  activo: boolean;
+  semestre?: string | null;
+  creado?: string | null;
+}
+
+export interface CuentaCrear {
+  email: string;
+  nombre: string;
+  rol: string;
+  /** Opcional: si no viene, la persona la define en su primer ingreso. */
+  password?: string | null;
+  semestre?: string | null;
+}
+
+export interface CuentaActualizar {
+  rol?: string | null;
+  activo?: boolean | null;
+  nombre?: string | null;
+  semestre?: string | null;
+}
+
+/** fetch + JSON con método libre (apiFetch solo hace GET/POST). */
+async function _apiJson<T>(method: string, path: string, body?: any): Promise<T> {
+  const r = await fetch(API_BASE + path, {
+    method,
+    headers: apiHeaders(),
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    credentials: "include",
+  });
+  if (!r.ok) {
+    const detalle = await _detalleError(r);
+    throw new Error("API " + r.status + (detalle ? ": " + detalle : ""));
+  }
+  if (r.status === 204) return { ok: true } as unknown as T;
+  return (await r.json()) as T;
+}
+
+export function apiCuentas(): Promise<{ count: number; accounts: CuentaBackend[] }> {
+  // El backend devuelve {count, accounts:{email: {...}}} (un mapa); se
+  // normaliza a lista para que el caller no tenga que saber la forma.
+  return _apiJson<{ count?: number; accounts: CuentaBackend[] | Record<string, CuentaBackend> }>(
+    "GET",
+    "/api/accounts/",
+  ).then((r) => {
+    const raw: any = r && r.accounts;
+    const lista: CuentaBackend[] = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === "object"
+        ? Object.keys(raw).map((k) => raw[k])
+        : [];
+    return { count: typeof r?.count === "number" ? r.count : lista.length, accounts: lista };
+  });
+}
+
+export function apiCrearCuenta(cuenta: CuentaCrear): Promise<{ ok: boolean; account: CuentaBackend }> {
+  return _apiJson<{ ok: boolean; account: CuentaBackend }>("POST", "/api/accounts/", cuenta);
+}
+
+export function apiActualizarCuenta(
+  email: string,
+  cambios: CuentaActualizar,
+): Promise<{ ok: boolean; account: CuentaBackend }> {
+  return _apiJson<{ ok: boolean; account: CuentaBackend }>(
+    "PUT",
+    "/api/accounts/" + encodeURIComponent(email),
+    cambios,
+  );
+}
+
+export function apiBorrarCuenta(email: string): Promise<{ ok: boolean }> {
+  return _apiJson<{ ok: boolean }>("DELETE", "/api/accounts/" + encodeURIComponent(email));
+}
+

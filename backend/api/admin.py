@@ -28,7 +28,9 @@ import json
 import os
 import time
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from typing import Optional
+
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from api.deps import get_service
@@ -108,12 +110,52 @@ def verify_token(token: str) -> str:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
 
-def require_admin(authorization: str = Header(default="")) -> str:
-    """Dependencia: exige `Authorization: Bearer <token>` válido."""
+# Rangos que pueden administrar cuentas/roles de la plataforma.
+ROLES_ADMIN = {"admin", "director", "subdirector"}
+
+
+def require_admin(
+    authorization: str = Header(default=""),
+    cherrybomb_session: Optional[str] = Cookie(default=None),
+) -> str:
+    """Dependencia: exige sesión con rango administrativo.
+
+    Acepta dos mecanismos:
+
+    * `Authorization: Bearer <token>` firmado con HMAC (modo admin legacy,
+      `POST /api/admin/login`).
+    * Cookie HttpOnly `cherrybomb_session` — la sesión normal de la app. El
+      frontend es cookie-only, así que esta es la vía real: el rango se lee
+      VIGENTE de `accounts.json` (una promoción surte efecto de inmediato).
+
+    Devuelve el email del administrador.
+    """
+    # 1) Token legacy firmado.
     scheme, _, token = (authorization or "").partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
-        raise HTTPException(status_code=401, detail="Se requiere iniciar sesión como administrador")
-    return verify_token(token.strip())
+    if scheme.lower() == "bearer" and token.strip():
+        try:
+            return verify_token(token.strip())
+        except HTTPException:
+            # No es un token del modo admin: se intenta la cookie de sesión.
+            pass
+
+    # 2) Cookie de sesión de la app.
+    if cherrybomb_session and cherrybomb_session.strip():
+        # Import perezoso: api.auth -> api.accounts -> api.admin (ciclo).
+        from api.auth import require_auth  # type: ignore
+
+        try:
+            user = require_auth(authorization=None, cherrybomb_session=cherrybomb_session.strip())
+        except HTTPException:
+            user = None
+        if isinstance(user, dict) and str(user.get("rol") or "") in ROLES_ADMIN:
+            return str(user.get("email") or "")
+        raise HTTPException(
+            status_code=403,
+            detail="Tu rango no tiene permiso para administrar cuentas.",
+        )
+
+    raise HTTPException(status_code=401, detail="Se requiere iniciar sesión como administrador")
 
 
 # ------------------------------------------------------------------

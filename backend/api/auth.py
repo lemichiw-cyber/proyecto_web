@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field, field_validator
 from api.accounts import (
     _load_accounts,
     _save_accounts,
+    _hash_password,
     _verify_password,
     ROLES_VALIDOS_BACKEND,
 )
@@ -109,7 +110,12 @@ def _extraer_token(authorization: Optional[str]) -> Optional[str]:
 
 
 def require_auth(authorization: Optional[str] = Header(default=None), cherrybomb_session: Optional[str] = Cookie(default=None)) -> dict:
-    """Dependency: acepta Bearer (compat) o cookie HttpOnly cherrybomb_session."""
+    """Dependency: acepta Bearer (compat) o cookie HttpOnly cherrybomb_session.
+
+    El rol que devuelve es el VIGENTE de la cuenta (accounts.json), no el que
+    quedó congelado en la sesión: así una promoción o una baja de rango surte
+    efecto de inmediato, sin obligar a volver a iniciar sesión.
+    """
     token = _extraer_token(authorization) or (cherrybomb_session.strip() if cherrybomb_session else None)
     if not token:
         raise HTTPException(status_code=401, detail="No autenticado")
@@ -117,8 +123,26 @@ def require_auth(authorization: Optional[str] = Header(default=None), cherrybomb
     s = sessions.get(token)
     if not s:
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+    email = str(s.get("email") or "").strip().lower()
+    rol = str(s.get("rol") or "estudiante")
+    # Rol vigente + baja inmediata de cuentas desactivadas.
+    try:
+        acc = _load_accounts().get(email)
+        if isinstance(acc, dict):
+            if acc.get("activo") is False:
+                sessions.pop(token, None)
+                _save_sessions(sessions)
+                raise HTTPException(
+                    status_code=401,
+                    detail="Tu cuenta fue desactivada. Contactá al administrador.",
+                )
+            rol = str(acc.get("rol") or rol)
+    except HTTPException:
+        raise
+    except Exception:
+        pass
     _save_sessions(sessions)
-    return {"email": s["email"], "rol": s["rol"]}
+    return {"email": email, "rol": rol}
 
 
 class RegisterIn(BaseModel):
@@ -205,6 +229,65 @@ def register(request: Request, payload: RegisterIn = Body(...)):
     return {"ok": True, "email": email, "rol": rol, "nombre": account["nombre"]}
 
 
+class DefinirContrasenaIn(BaseModel):
+    email: str
+    password: str = Field(..., min_length=6)
+
+    @field_validator("email")
+    @classmethod
+    def email_lower(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+@router.post("/definir-contrasena")
+def definir_contrasena(request: Request, response: Response, payload: DefinirContrasenaIn = Body(...)):
+    """Primer ingreso: define la contraseña de una cuenta que no tiene ninguna.
+
+    Solo funciona para cuentas creadas por un administrador (o la cuenta
+    semilla admin) que todavía no tienen `password_hash`. Si la cuenta ya
+    tiene contraseña, se rechaza: el cambio de contraseña de una cuenta
+    existente va por el flujo de recuperación, no por acá.
+    """
+    email = payload.email.strip().lower()
+    accounts = _load_accounts()
+    acc = accounts.get(email)
+    if not isinstance(acc, dict):
+        raise HTTPException(status_code=404, detail="No existe esa cuenta.")
+    if acc.get("activo") is False:
+        raise HTTPException(status_code=403, detail="La cuenta está desactivada.")
+    if acc.get("password_hash"):
+        raise HTTPException(
+            status_code=409,
+            detail="La cuenta ya tiene contraseña. Usá el flujo de recuperación.",
+        )
+    acc = dict(acc)
+    acc["password_hash"] = _hash_password(payload.password)
+    acc["password_creado"] = time.time()
+    accounts[email] = acc
+    _save_accounts(accounts)
+    try:
+        audit_write("auth.set_password", email, request.client.host if request.client else "")
+    except Exception:
+        pass
+    # Se inicia sesión de una vez: el usuario no tiene que volver a escribirla.
+    token = secrets.token_urlsafe(32)
+    sessions = _limpiar_expiradas(_load_sessions())
+    sessions[token] = {"email": email, "rol": acc.get("rol", "estudiante"), "creado": time.time()}
+    _save_sessions(sessions)
+    response.set_cookie(
+        SESSION_COOKIE, token,
+        max_age=SESSION_COOKIE_MAX_AGE,
+        httponly=True, samesite="lax",
+        secure=SESSION_COOKIE_SECURE, path="/",
+    )
+    return {
+        "ok": True,
+        "token": token,
+        "rol": acc.get("rol", "estudiante"),
+        "nombre": acc.get("nombre", ""),
+    }
+
+
 @router.post("/login")
 def login(request: Request, response: Response, payload: LoginIn = Body(...)):
     email = payload.email.strip().lower()
@@ -221,7 +304,15 @@ def login(request: Request, response: Response, payload: LoginIn = Body(...)):
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
 
     stored = acc.get("password_hash")
-    if not stored or not _verify_password(payload.password, stored):
+    if not stored:
+        # La cuenta fue creada por un administrador (o es la semilla admin) y
+        # todavía no tiene contraseña: el usuario la define en su primer
+        # ingreso (POST /api/auth/definir-contrasena).
+        raise HTTPException(
+            status_code=409,
+            detail="PASSWORD_PENDIENTE: esta cuenta todavía no tiene contraseña. Definila para entrar.",
+        )
+    if not _verify_password(payload.password, stored):
         _record_failed_attempt(_ip, email)
         try:
             audit_write("auth.login_fail", email, _ip)

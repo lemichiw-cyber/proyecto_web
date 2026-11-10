@@ -8,6 +8,7 @@
 import {
   obtenerCuenta,
   crearCuenta,
+  definirPasswordLocal,
   normalizaEmail,
   cuentaActiva,
   verificarPassword,
@@ -43,9 +44,9 @@ function _headersConToken(): Record<string, string> {
   return h;
 }
 
-function _api(path: string, body: any): Promise<Response> {
+function _api(path: string, body: any, method?: string): Promise<Response> {
   return fetch(API_BASE + path, {
-    method: body ? "POST" : "GET",
+    method: method || (body ? "POST" : "GET"),
     headers: _headersConToken(),
     body: body ? JSON.stringify(body) : undefined,
     credentials: "include",
@@ -58,6 +59,15 @@ interface AuthResult {
   rol: string;
   nombre: string;
   local: boolean;
+}
+
+/* Marcador que usa el backend cuando la cuenta existe pero todavía no
+   tiene contraseña (creada por un administrador o la semilla admin). */
+export const PASSWORD_PENDIENTE = "PASSWORD_PENDIENTE";
+
+export function esPasswordPendiente(err: unknown): boolean {
+  const msg = String((err as any)?.message || err || "");
+  return msg.indexOf(PASSWORD_PENDIENTE) !== -1;
 }
 
 export function isAuthenticated(): boolean {
@@ -85,16 +95,27 @@ export async function login(email: string, password: string): Promise<AuthResult
     const r = await _api("/api/auth/login", { email: e, password: password });
     if (!r.ok) {
       const detalle = await r.text().catch(() => "Login fallido");
+      // 409 PASSWORD_PENDIENTE: la cuenta existe pero no tiene contraseña.
+      // No se sigue con el fallback local: hay que crearla primero.
+      if (r.status === 409 && detalle.indexOf(PASSWORD_PENDIENTE) !== -1) {
+        throw new Error(PASSWORD_PENDIENTE + ": definí tu contraseña para entrar.");
+      }
       throw new Error(detalle || "Credenciales inválidas.");
     }
     const data = (await r.json()) as { token: string; rol: string; nombre: string };
     _guardarSesion(data.token, { email: e, rol: data.rol, nombre: data.nombre });
     return { ok: true, email: e, rol: data.rol, nombre: data.nombre, local: false };
   } catch (err) {
+    // La cuenta sin contraseña se reporta tal cual (no es "credencial inválida").
+    if (esPasswordPendiente(err)) throw err;
     // 2) Fallback local: verificar cuenta y contraseña en localStorage
     const cuenta = obtenerCuenta(e);
     if (!cuenta || !cuentaActiva(cuenta)) {
       throw new Error("Credenciales inválidas.");
+    }
+    if (!cuenta.passwordHash) {
+      // Cuenta creada por el admin (o la semilla admin) sin contraseña.
+      throw new Error(PASSWORD_PENDIENTE + ": definí tu contraseña para entrar.");
     }
     if (!verificarPassword(password, cuenta)) {
       throw new Error("Credenciales inválidas.");
@@ -102,6 +123,31 @@ export async function login(email: string, password: string): Promise<AuthResult
     _guardarSesion(null, { email: e, rol: cuenta.rol, nombre: cuenta.nombre });
     return { ok: true, email: e, rol: cuenta.rol, nombre: cuenta.nombre, local: true };
   }
+}
+
+/* ---------- Definir contraseña (primer ingreso) ---------- */
+export async function definirContrasena(email: string, password: string): Promise<AuthResult> {
+  const e = normalizaEmail(email);
+  if (!e) throw new Error("Falta el correo.");
+  if (!password || password.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
+
+  let r: Response;
+  try {
+    r = await _api("/api/auth/definir-contrasena", { email: e, password: password });
+  } catch (networkErr) {
+    // Sin backend: se define localmente (solo si la cuenta existe local).
+    const res = definirPasswordLocal(e, password);
+    if (!res.ok || !res.cuenta) throw new Error(res.msg || "No se pudo guardar la contraseña.");
+    _guardarSesion(null, { email: e, rol: res.cuenta.rol, nombre: res.cuenta.nombre });
+    return { ok: true, email: e, rol: res.cuenta.rol, nombre: res.cuenta.nombre, local: true };
+  }
+  if (!r.ok) {
+    const detalle = await r.text().catch(() => "No se pudo guardar la contraseña.");
+    throw new Error(detalle || "No se pudo guardar la contraseña.");
+  }
+  const data = (await r.json()) as { token?: string; rol: string; nombre: string };
+  _guardarSesion(data.token || null, { email: e, rol: data.rol, nombre: data.nombre });
+  return { ok: true, email: e, rol: data.rol, nombre: data.nombre, local: false };
 }
 
 /* ---------- Registro ---------- */
@@ -127,7 +173,9 @@ export async function register(
       email: e,
       nombre: nombre,
       password: password,
-      rol: rol || "estudiante",
+      // El registro público es SIEMPRE estudiante: el rango lo asigna un
+      // administrador. (El backend también lo fuerza.)
+      rol: "estudiante",
       ...(grupo_id != null ? { grupo_id } : {}),
     });
     if (!r.ok) {
@@ -138,8 +186,8 @@ export async function register(
     _guardarSesion(data.token, { email: e, rol: data.rol, nombre: data.nombre });
     return { ok: true, email: e, rol: data.rol, nombre: data.nombre, local: false };
   } catch (err) {
-    // 2) Fallback local: crear cuenta en localStorage
-    const res = crearCuenta(e, nombre, rol || "estudiante", password);
+    // 2) Fallback local: crear cuenta en localStorage (siempre estudiante)
+    const res = crearCuenta(e, nombre, "estudiante", password);
     if (!res.ok || !res.cuenta) throw new Error(res.msg);
     _guardarSesion(null, { email: e, rol: res.cuenta.rol, nombre: res.cuenta.nombre });
     return { ok: true, email: e, rol: res.cuenta.rol, nombre: res.cuenta.nombre, local: true };
@@ -147,9 +195,12 @@ export async function register(
 }
 
 export async function logout(): Promise<{ ok: boolean }> {
-  const t = token;
   try {
-    if (t) await _api("/api/auth/logout", null).catch(() => {
+    // La sesión es una cookie HttpOnly: hay que llamar SIEMPRE al backend
+    // para que invalide la cookie (si no, el servidor sigue aceptando la
+    // sesión aunque la app ya haya "cerrado" la sesión local).
+    // OJO: es POST (un GET devolvía 405 y la cookie seguía viva).
+    await _api("/api/auth/logout", null, "POST").catch(() => {
       /* best effort */
     });
   } catch (e) {

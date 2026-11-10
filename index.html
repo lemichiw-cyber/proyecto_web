@@ -98,6 +98,14 @@ unicode: "ea05"
       <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
         <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
       </div>
+      <button type="button" id="btn-logout-top" class="btn btn-sm btn-logout-top hidden" style="display:none;" title="Salir de la cuenta" aria-label="Salir de la cuenta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span class="btn-logout-label">Salir</span>
+      </button>
     </div>
     <div id="app-offline-banner" class="app-offline-banner hidden" role="status" aria-live="polite">
       <span class="app-offline-dot" aria-hidden="true"></span>
@@ -518,19 +526,17 @@ unicode: "eaf8"
         <div id="login-error" class="alert alert-error" role="alert" hidden>Credenciales inválidas.</div>
       </form>
 
-      <!-- Registro: la persona elige el rol de su cuenta entre los
-           disponibles (estudiante, docente, director, subdirector o admin) -->
+      <!-- Registro público: la cuenta se crea SIEMPRE como Estudiante.
+           Los rangos docente/coordinador/director/subdirector/padres/admin
+           los asigna un administrador desde el panel "Usuarios". -->
       <form id="form-registro" class="hidden">
         <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-nombre" placeholder="Ana García" required></div>
         <div class="form-group"><label>Correo institucional</label><input type="email" id="reg-email" placeholder="estudiante@bachillerato.edu" required></div>
-        <div class="form-group" id="reg-rol-wrap"><label for="reg-rol">Rol de la cuenta</label>
-          <select id="reg-rol" required>
-            <option value="estudiante" selected>Estudiante</option>
-            <option value="docente">Docente</option>
-            <option value="director">Director</option>
-            <option value="subdirector">Subdirector</option>
-            <option value="admin">Administrador</option>
-          </select>
+        <div class="form-group" id="reg-rol-wrap">
+          <p style="margin:0;font-size:.82rem;color:var(--gray-600);">
+            Tu cuenta se crea como <strong>Estudiante</strong>. Si sos docente o administración,
+            pedí al administrador del colegio que ajuste tu rango desde el panel de usuarios.
+          </p>
         </div>
         <div class="form-group" id="reg-grupo-wrap">
           <label>Año, especialidad y sección (solo estudiantes)</label>
@@ -561,6 +567,23 @@ unicode: "eaf8"
       <p class="link-muted" id="link-registro-wrap"><a href="#" id="link-registro">¿No tenés cuenta? Crear cuenta</a></p>
       <p class="link-muted hidden" id="link-login-wrap"><a href="#" id="link-volver-login">¿Ya tenés cuenta? Iniciar sesión</a></p>
       <p class="link-muted" id="link-olvide-wrap"><a href="#" id="link-olvide">Olvidé mi contraseña</a></p>
+    </div>
+  </div>
+
+  <!-- ===== DEFINIR CONTRASEÑA (primer ingreso de cuentas creadas por admin) ===== -->
+  <div class="modal-overlay" id="modal-definir-pass" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+      <div class="flex-between"><h3>Definí tu contraseña</h3><button class="modal-close" id="modal-definir-pass-close" aria-label="Cerrar">&times;</button></div>
+      <p style="font-size:.85rem;color:var(--gray-600);margin:.25rem 0 .6rem;">
+        Esta cuenta todavía no tiene contraseña. Creala ahora para poder entrar.
+      </p>
+      <form id="form-definir-pass">
+        <div class="form-group"><label>Correo institucional</label><input type="email" id="def-pass-email" autocomplete="email" inputmode="email" required></div>
+        <div class="form-group"><label>Contraseña</label><input type="password" id="def-pass-pass" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6"></div>
+        <div class="form-group"><label>Repetí la contraseña</label><input type="password" id="def-pass-pass2" autocomplete="new-password" placeholder="••••••" required minlength="6"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="def-pass-submit">Guardar contraseña y entrar</button>
+        <div id="def-pass-error" class="alert alert-error" role="alert" hidden></div>
+      </form>
     </div>
   </div>
 

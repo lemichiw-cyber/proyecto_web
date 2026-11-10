@@ -162,6 +162,24 @@ def _account_exists(email: str, accounts: dict) -> bool:
     return email in accounts
 
 
+def rol_de_cuenta(email: str) -> str | None:
+    """Rango vigente de una cuenta (accounts.json). None si no existe.
+
+    Es la fuente de verdad de los roles: Postgres (`perfiles.rol`) es solo un
+    espejo y puede quedar desactualizado.
+    """
+    key = str(email or "").strip().lower()
+    if not key:
+        return None
+    acc = _load_accounts().get(key)
+    if not isinstance(acc, dict):
+        return None
+    if acc.get("activo") is False:
+        return None
+    rol = str(acc.get("rol") or "").strip().lower()
+    return rol or None
+
+
 # ------------------------------------------------------------
 # Endpoints
 # ------------------------------------------------------------
@@ -187,18 +205,38 @@ def list_accounts(
     return {"count": len(public), "accounts": public}
 
 
+def _sync_rol_postgres(email: str, rol: str) -> bool:
+    """Sincroniza el rango con la tabla `perfiles` de Postgres (best-effort).
+
+    La fuente de verdad es `accounts.json`; Postgres es el espejo que usan
+    los endpoints de tareas/exámenes/actividades. Si no hay base de datos
+    configurada, no pasa nada (la app sigue funcionando en local-first).
+    """
+    try:
+        from api import matricula as _mat  # lazy: evita cargar psycopg2 al importar
+
+        q = _mat._query  # type: ignore[attr-defined]
+        q("UPDATE perfiles SET rol = %s WHERE email = %s", (rol, email), fetch="none", commit=True)
+        return True
+    except Exception:
+        return False
+
+
 @router.post("/", response_model=dict, status_code=201)
-def create_account(payload: AccountCreate, request: Request) -> dict:
-    """Crear una nueva cuenta de usuario.
+def create_account(
+    payload: AccountCreate,
+    request: Request,
+    _email_admin: str = Depends(require_admin),
+) -> dict:
+    """Crear una nueva cuenta de usuario. Solo un administrador.
 
     - El email debe ser único.
-    - El rol se IGNORA del cliente: siempre se fuerza "estudiante" (un
-      usuario anónimo no puede autoasignarse admin/docente). Solo un admin
-      autenticado puede cambiar roles vía PUT.
-    - La contraseña se guarda como hash bcrypt.
-    - En el primer registro (cuando no existe admin@bachillerato.edu),
-      el email y la contraseña del primer usuario se convierten en el admin
-      semilla (igual que el comportamiento actual con localStorage).
+    - El rol se respeta tal cual lo elige el admin (siempre uno de
+      ROLES_VALIDOS_BACKEND): el registro público NO pasa por acá, va por
+      `/api/auth/register`, que fuerza siempre "estudiante".
+    - La contraseña es OPCIONAL: si no viene, la cuenta queda sin contraseña y
+      la persona la define en su primer ingreso
+      (`POST /api/auth/definir-contrasena`).
     """
     accounts = _load_accounts()
 
@@ -209,15 +247,13 @@ def create_account(payload: AccountCreate, request: Request) -> dict:
             detail="Ya existe una cuenta con ese correo electrónico.",
         )
 
-    # Si aún no hay admin semilla, el primer usuario creado pasa a ser admin
-    is_first = not _account_exists("admin@bachillerato.edu", accounts)
-
+    rol = payload.rol if payload.rol in ROLES_VALIDOS_BACKEND else "estudiante"
     hashed = _hash_password(payload.password) if payload.password else None
 
     account = {
         "email": email,
         "password_hash": hashed,
-        "rol": "estudiante",  # SIEMPRE estudiante en el registro público
+        "rol": rol,
         "nombre": payload.nombre,
         "activo": True,
         "semestre": payload.semestre,
@@ -227,20 +263,9 @@ def create_account(payload: AccountCreate, request: Request) -> dict:
     accounts[email] = account
     _save_accounts(accounts)
 
-    # Si es el primero, también lo marcamos como admin (aunque su rol venga del payload)
-    # para mantener la compatibilidad con el flujo "first login sets password"
-    if is_first:
-        # Sobreescribimos roles y permisos solo si es el primer usuario
-        accounts["admin@bachillerato.edu"] = {
-            "email": "admin@bachillerato.edu",
-            "password_hash": hashed,  # mismísima contraseña que el usuario puso
-            "rol": "admin",
-            "nombre": "Administrador",
-            "activo": True,
-            "semestre": None,
-            "creado": account["creado"],
-        }
-        _save_accounts(accounts)
+    # Espejo en Postgres (si hay base de datos): el rango tiene que coincidir
+    # en los dos lados o los endpoints de tareas/exámenes ven otro rol.
+    _sync_rol_postgres(email, rol)
 
     return {"ok": True, "account": {k: v for k, v in account.items() if k != "password_hash"}}
 
@@ -260,10 +285,12 @@ def update_account(
         raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
 
     # Actualizar campos no nulos
+    nuevo_rol: str | None = None
     if payload.rol is not None:
         # Validar que el nuevo rol sea válido
         if payload.rol not in ROLES_VALIDOS_BACKEND:
             raise HTTPException(status_code=400, detail="Rol inválido.")
+        nuevo_rol = payload.rol
         accounts[target]["rol"] = payload.rol
     if payload.activo is not None:
         accounts[target]["activo"] = payload.activo
@@ -272,7 +299,23 @@ def update_account(
     if "semestre" in payload.model_fields_set:
         accounts[target]["semestre"] = payload.semestre
 
+    # No dejar la plataforma sin ningún admin activo (misma protección que
+    # en el borrado): si el único admin se degrada o se desactiva, el panel
+    # de usuarios quedaría inaccesible para siempre.
+    admin_count = sum(1 for v in accounts.values() if v.get("rol") == "admin" and v.get("activo"))
+    if admin_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede quedar la plataforma sin ningún administrador activo.",
+        )
+
     _save_accounts(accounts)
+
+    # Espejo en Postgres (si hay base de datos): el rango tiene que coincidir
+    # en los dos lados o los endpoints de tareas/exámenes ven otro rol.
+    if nuevo_rol:
+        _sync_rol_postgres(target, nuevo_rol)
+
     return {"ok": True, "account": {k: v for k, v in accounts[target].items() if k != "password_hash"}}
 
 

@@ -344,6 +344,19 @@
     .logo-link:hover img { transform: rotate(-6deg) scale(1.05); }
     #user-info { min-width: 0; }
     #user-email-display { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Botón de cierre de sesión en la barra superior: siempre visible cuando
+       hay sesión (también en móvil, donde #user-info se oculta). */
+    .btn-logout-top {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .3rem .6rem; min-height: 32px;
+      border: 1px solid var(--border); background: var(--bg-card); color: var(--gray-600);
+      border-radius: var(--radius-sm); font-size: .78rem; font-weight: 600;
+      cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+      flex-shrink: 0; line-height: 1;
+    }
+    .btn-logout-top:hover { background: var(--red-light); color: var(--red-ink); border-color: var(--red); }
+    .btn-logout-top:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .btn-logout-top:active { transform: translateY(1px); }
     .app-loading {
       display: flex; align-items: center; justify-content: center; gap: .7rem;
       min-height: 220px; padding: 2rem; color: var(--text-secondary);
@@ -375,6 +388,9 @@
     }
     @media (max-width: 640px) {
       #user-info { display: none !important; }
+      /* En móvil el correo no cabe: queda solo el botón de salir (icono). */
+      .btn-logout-label { display: none; }
+      .btn-logout-top { width: 34px; height: 34px; min-height: 34px; padding: 0; justify-content: center; }
       .app-offline-banner { font-size: .72rem; padding: .35rem .75rem; text-align: center; line-height: 1.35; }
     }
     .main-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex: 1; }

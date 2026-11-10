@@ -12,6 +12,9 @@ import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
+  me as apiMe,
+  definirContrasena as apiDefinirContrasena,
+  esPasswordPendiente,
 } from "./auth";
 import {
     ROLES_VALIDOS,
@@ -26,7 +29,7 @@ import {
   cuentasBackend,
 } from "./app-accounts";
 
-import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen } from "./api-client";
+import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta } from "./api-client";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
@@ -112,6 +115,22 @@ import { initForos } from "./modules/foros/foro-app.js";
           if (window.usuarioActual) actualizarUsuarioDesdeCuenta();
           if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
         });
+        // El rango vigente vive en el servidor: al abrir la app se consulta
+        // (cookie HttpOnly) para que una promoción o una baja hecha por otro
+        // administrador surta efecto de inmediato, sin recargar a mano.
+        if (logueado) {
+          apiMe().then(function (u) {
+            if (!u || !u.rol) return;
+            if (!usuarioActual) return;
+            if (usuarioActual.rol !== u.rol) {
+              usuarioActual.rol = u.rol;
+              window.usuarioActual = usuarioActual;
+              try { localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual)); } catch (e) { /* sin storage */ }
+              if (typeof restoreUI === 'function') restoreUI();
+            }
+            if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
+          }).catch(function () { /* sin backend: se queda el rango local */ });
+        }
       })();
 
       var toastEl = $('toast');
@@ -637,7 +656,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); renderCuadro(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
-        if (app === 'auth') { renderAuth(); }
+        if (app === 'auth') { renderAuth(); sincronizarCuentasBackend(); }
         if (app === 'aulas' && window.CherryBombNotifications) {
           window.CherryBombNotifications.showPermissionBanner();
         }
@@ -757,12 +776,65 @@ import { initForos } from "./modules/foros/foro-app.js";
           loginSuccess(data.email, data.rol, data.nombre);
         } catch (err) {
           var msg = String(err.message || err);
+          // La cuenta existe pero todavía no tiene contraseña (creada por un
+          // administrador o la cuenta semilla admin): se pide crearla.
+          if (esPasswordPendiente(err)) {
+            abrirDefinirContrasena(email);
+            return;
+          }
           $('login-error').textContent = (msg.indexOf('429') !== -1 || msg.indexOf('Demasiados') !== -1) ? 'Demasiados intentos. Esperá 5 minutos.' : (msg.indexOf('Credenciales') !== -1 ? 'Credenciales inválidas.' : msg);
           $('login-error').hidden = false;
         } finally {
           if (btn) { btn.disabled = false; btn.textContent = 'Ingresar'; }
         }
       });
+
+      /* ---- Definir contraseña (primer ingreso de cuentas sin contraseña) ---- */
+      var modalDefinirPass = $('modal-definir-pass');
+      function abrirDefinirContrasena(email) {
+        if (!modalDefinirPass) return;
+        var inp = $('def-pass-email');
+        if (inp) inp.value = String(email || '');
+        var errBox = $('def-pass-error');
+        if (errBox) { errBox.hidden = true; errBox.textContent = ''; }
+        var p1 = $('def-pass-pass'); var p2 = $('def-pass-pass2');
+        if (p1) p1.value = ''; if (p2) p2.value = '';
+        modalDefinirPass.classList.add('open');
+        lockBody();
+        if (p1) p1.focus();
+      }
+      function cerrarDefinirContrasena() {
+        if (!modalDefinirPass) return;
+        modalDefinirPass.classList.remove('open');
+        unlockBody();
+      }
+      if (modalDefinirPass) {
+        $('modal-definir-pass-close').addEventListener('click', cerrarDefinirContrasena);
+        modalDefinirPass.addEventListener('click', function (e) { if (e.target === modalDefinirPass) cerrarDefinirContrasena(); });
+        $('form-definir-pass').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var errBox = $('def-pass-error');
+          var btn = $('def-pass-submit');
+          var email = $('def-pass-email').value.trim().toLowerCase();
+          var p1 = $('def-pass-pass').value;
+          var p2 = $('def-pass-pass2').value;
+          function fallo(msg) { if (errBox) { errBox.textContent = msg; errBox.hidden = false; } mostrarToast(msg, 'error'); }
+          if (!email) return fallo('Ingresá tu correo institucional.');
+          if (p1.length < 6) return fallo('La contraseña debe tener al menos 6 caracteres.');
+          if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
+          if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+          try {
+            var data = await apiDefinirContrasena(email, p1);
+            cerrarDefinirContrasena();
+            loginSuccess(data.email, data.rol, data.nombre);
+            mostrarToast('¡Contraseña creada! Bienvenido/a.', 'success');
+          } catch (err) {
+            fallo(String(err.message || err));
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar contraseña y entrar'; }
+          }
+        });
+      }
       var _toggle = $('btn-toggle-pass');
       if (_toggle) _toggle.addEventListener('click', function () {
         var inp = $('login-pass');
@@ -772,15 +844,17 @@ import { initForos } from "./modules/foros/foro-app.js";
         inp.focus();
       });
 
-      /* ---- Registro: la persona ELIGE el rol de su cuenta ---- */
+      /* ---- Registro: la cuenta pública se crea SIEMPRE como estudiante ----
+         Los rangos docente/coordinador/director/subdirector/padres/admin los
+         asigna un administrador desde el panel "Usuarios". */
       $('form-registro').addEventListener('submit', async function (e) {
         e.preventDefault();
         var err = $('reg-error');
         function fallo(msg) { err.textContent = msg; err.hidden = false; mostrarToast(msg, 'error'); console.log('[registro] ERROR:', msg); }
         var nom = $('reg-nombre').value.trim();
         var email = $('reg-email').value.trim();
-        var rolSel = $('reg-rol') ? $('reg-rol').value : ROL_REGISTRO;
-        if ($('reg-grupo-wrap')) $('reg-grupo-wrap').style.display = (rolSel === 'estudiante') ? '' : 'none';
+        var rolSel = ROL_REGISTRO; // registro público: siempre estudiante
+        if ($('reg-grupo-wrap')) $('reg-grupo-wrap').style.display = '';
         var p1 = $('reg-pass').value;
         var p2 = $('reg-pass2').value;
 
@@ -789,7 +863,6 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (!nom) return fallo('Poné tu nombre completo.');
         if (!email || p1.length < 6) return fallo('Correo y contraseña válidos (mín. 6 caracteres).');
         if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
-        if (ROLES_VALIDOS.indexOf(rolSel) === -1) return fallo('Elegí un rol válido.');
 
         // Verificación local previa: si el email ya existe, avisar sin llamar al backend
         if (obtenerCuenta(email)) {
@@ -797,12 +870,11 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
 
         try {
-          var _gid = ($('reg-grupo') && $('reg-grupo').value && rolSel === 'estudiante') ? parseInt($('reg-grupo').value, 10) : null;
-          var data = await apiRegister(email, nom, p1, rolSel, Number.isFinite(_gid) ? _gid : null);
+          var _gid = ($('reg-grupo') && $('reg-grupo').value) ? parseInt($('reg-grupo').value, 10) : null;
+          var data = await apiRegister(email, nom, p1, ROL_REGISTRO, Number.isFinite(_gid) ? _gid : null);
           console.log('[registro] Éxito:', data);
           err.hidden = true;
           $('form-registro').reset();
-          if ($('reg-rol')) $('reg-rol').value = ROL_REGISTRO;
           mostrarModoRegistro(false);
           loginSuccess(data.email, data.rol, data.nombre);
           mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[data.rol] || data.rol) + '.', 'success');
@@ -812,9 +884,6 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
       });
 
-      if ($('reg-rol')) $('reg-rol').addEventListener('change', function () {
-        if ($('reg-grupo-wrap')) $('reg-grupo-wrap').style.display = ($('reg-rol').value === 'estudiante') ? '' : 'none';
-      });
       // P1: poblar selector de grupo en registro (estudiantes)
       async function _poblarGrupoRegistro() {
         var sel = $('reg-grupo'); if (!sel) return;
@@ -869,6 +938,9 @@ import { initForos } from "./modules/foros/foro-app.js";
         var sui = $('sidebar-user-info');
         sui.style.display = 'flex'; sui.classList.remove('hidden');
         $('sidebar-user-email').textContent = email + ' (' + rolDisplay + ')';
+        // Botón de salir en la barra superior (visible también en móvil).
+        var btnSalirTop = $('btn-logout-top');
+        if (btnSalirTop) { btnSalirTop.style.display = 'inline-flex'; btnSalirTop.classList.remove('hidden'); }
         mostrarToast('Bienvenido, ' + email.split('@')[0], 'success');
         $('form-login').reset();
         actualizarPermisosUI();
@@ -876,8 +948,11 @@ import { initForos } from "./modules/foros/foro-app.js";
         if ($('aula-tab-tareas') && !$('aula-tab-tareas').classList.contains('hidden')) renderAulaTareas();
       }
 
-      $('btn-logout').addEventListener('click', async function () {
-        await apiLogout();
+      /* ===== CIERRE DE SESIÓN =====
+         Una sola función para todos los botones de "Salir" (barra superior y
+         pie del sidebar): así ninguno puede quedar desincronizado. */
+      async function cerrarSesion() {
+        try { await apiLogout(); } catch (e) { /* local-first: se limpia igual */ }
         logueado = false;
         usuarioActual = null;
         window.usuarioActual = null;
@@ -888,12 +963,18 @@ import { initForos } from "./modules/foros/foro-app.js";
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = '';
         var ui = $('user-info'); ui.style.display = 'none'; ui.classList.add('hidden');
         var sui = $('sidebar-user-info'); sui.style.display = 'none'; sui.classList.add('hidden');
+        var btnSalir = $('btn-logout-top');
+        if (btnSalir) { btnSalir.style.display = 'none'; btnSalir.classList.add('hidden'); }
         // Sin sesión no queda ningún rango: se oculta todo lo docente
         actualizarPermisosUI();
         closeSidebar();
         mostrarApp('inicio');
         mostrarToast('Sesión cerrada.', 'success');
-      });
+      }
+
+      $('btn-logout').addEventListener('click', function () { cerrarSesion(); });
+      var btnLogoutTop = $('btn-logout-top');
+      if (btnLogoutTop) btnLogoutTop.addEventListener('click', function () { cerrarSesion(); });
 
       /* ---- Olvidé mi contraseña: flujo real de recuperación local ---- */
       $('link-olvide').addEventListener('click', function (e) {
@@ -1021,7 +1102,9 @@ import { initForos } from "./modules/foros/foro-app.js";
       /* ===== ROLE & PERMISSIONS ===== */
 
       function esAdmin() { return usuarioActual && (usuarioActual.rol === 'admin' || usuarioActual.rol === 'director' || usuarioActual.rol === 'subdirector'); }
-      function esDocente() { return usuarioActual && (usuarioActual.rol === 'docente' || esAdmin()); }
+      /* El coordinador es personal docente: puede crear y editar igual que un
+         docente (solo no borra). Antes quedaba fuera y no veía nada de eso. */
+      function esDocente() { return usuarioActual && (usuarioActual.rol === 'docente' || usuarioActual.rol === 'coordinador' || esAdmin()); }
       function esEstudiante() { return usuarioActual && usuarioActual.rol === 'estudiante'; }
       function _esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
 
@@ -1317,6 +1400,67 @@ import { initForos } from "./modules/foros/foro-app.js";
         });
       }
 
+      /* ---------- Cuentas ↔ backend ----------
+         El backend (accounts.json) es la FUENTE DE VERDAD de los rangos;
+         localStorage es el espejo local (local-first: la app sigue
+         funcionando sin internet). Toda cambio de rango/estado se guarda
+         primero en el servidor y después se refleja localmente. */
+
+      function _esErrorRed(msg) {
+        // "API 401: ..." = el servidor respondió (no es problema de red).
+        // Cualquier otra cosa = no hay conexión.
+        return !/^API\s+\d+/.test(String(msg || ''));
+      }
+
+      async function sincronizarCuentasBackend() {
+        try {
+          var data = await apiCuentas();
+          var lista = (data && data.accounts) || [];
+          if (!lista.length) return;
+          var db = leerCuentas() || {};
+          lista.forEach(function (c) {
+            var key = normalizaEmail(c.email);
+            if (!key) return;
+            var local = db[key] || {};
+            db[key] = {
+              email: key,
+              nombre: c.nombre || local.nombre || key.split('@')[0],
+              rol: c.rol || local.rol || ROL_REGISTRO,
+              semestre: c.semestre != null ? c.semestre : (local.semestre || ''),
+              activo: c.activo !== false,
+              creado: c.creado || local.creado || new Date().toISOString(),
+              // La contraseña nunca viene del backend: se conserva la local.
+              passwordHash: local.passwordHash || '',
+            };
+          });
+          guardarCuentas(db);
+          renderAuth();
+        } catch (e) {
+          // Sin backend (o sin permiso): se sigue con la copia local.
+          console.warn('[cuentas] No se pudo sincronizar con el servidor:', e);
+        }
+      }
+
+      async function sincronizarCuenta(email, cambios) {
+        try {
+          await apiActualizarCuenta(email, cambios);
+          return { ok: true };
+        } catch (e) {
+          var msg = String((e && e.message) || e || '');
+          return { ok: false, offline: _esErrorRed(msg), error: msg };
+        }
+      }
+
+      async function sincronizarCrearCuenta(email, nombre, rol) {
+        try {
+          await apiCrearCuenta({ email: email, nombre: nombre, rol: rol });
+          return { ok: true };
+        } catch (e) {
+          var msg = String((e && e.message) || e || '');
+          return { ok: false, offline: _esErrorRed(msg), error: msg };
+        }
+      }
+
       function renderAuth() {
         var tabla = $('auth-tabla');
         if (!tabla) return;
@@ -1367,23 +1511,47 @@ import { initForos } from "./modules/foros/foro-app.js";
         total.innerHTML = lista.length + ' usuario' + (lista.length !== 1 ? 's' : '');
 
         tabla.querySelectorAll('.auth-rol').forEach(function (sel) {
-          sel.addEventListener('change', function () {
+          sel.addEventListener('change', async function () {
             var email = this.dataset.email;
-            var r = cambiarRango(email, this.value);
+            var nuevoRol = this.value;
+            // 1) Servidor primero: es la fuente de verdad de los rangos.
+            var res = await sincronizarCuenta(email, { rol: nuevoRol });
+            if (!res.ok && !res.offline) {
+              mostrarToast('No se pudo cambiar el rango: ' + (res.error || 'error del servidor'), 'error');
+              renderAuth();
+              return;
+            }
+            // 2) Espejo local (para seguir funcionando sin conexión).
+            var r = cambiarRango(email, nuevoRol);
             if (!r.ok) { mostrarToast(r.msg, 'error'); renderAuth(); return; }
-            mostrarToast('Rango de ' + email + ': ' + (ROLES_LABEL[r.cuenta.rol] || r.cuenta.rol) + '.', 'success');
             renderAuth();
+            mostrarToast('Rango de ' + email + ': ' + (ROLES_LABEL[r.cuenta.rol] || r.cuenta.rol) + '.', 'success');
+            if (res.offline) {
+              mostrarToast('Sin conexión: el rango quedó solo en este dispositivo.', 'error');
+            }
           });
         });
         tabla.querySelectorAll('.auth-toggle').forEach(function (btn) {
-          btn.addEventListener('click', function () {
+          btn.addEventListener('click', async function () {
             var email = this.dataset.email;
             var db = leerCuentas() || {};
             if (!db[email]) return;
-            db[email].activo = !db[email].activo;
+            var nuevo = !db[email].activo;
+            var res = await sincronizarCuenta(email, { activo: nuevo });
+            if (!res.ok && !res.offline) {
+              mostrarToast('No se pudo cambiar el estado de la cuenta: ' + (res.error || 'error del servidor'), 'error');
+              renderAuth();
+              return;
+            }
+            db = leerCuentas() || {};
+            if (!db[email]) return;
+            db[email].activo = nuevo;
             guardarCuentas(db);
             renderAuth();
-            mostrarToast('Cuenta ' + (db[email].activo ? 'activada' : 'desactivada') + '.', 'success');
+            mostrarToast('Cuenta ' + (nuevo ? 'activada' : 'desactivada') + '.', 'success');
+            if (res.offline) {
+              mostrarToast('Sin conexión: el cambio quedó solo en este dispositivo.', 'error');
+            }
           });
         });
       }
@@ -1392,7 +1560,7 @@ import { initForos } from "./modules/foros/foro-app.js";
       $('auth-rol-filtro').addEventListener('change', renderAuth);
       $('auth-semestre-filtro').addEventListener('change', renderAuth);
 
-      $('btn-auth-add').addEventListener('click', function () {
+      $('btn-auth-add').addEventListener('click', async function () {
         if (!esAdmin()) { mostrarToast('Solo los administradores crean cuentas.', 'error'); return; }
         if (!exigirPermiso('crear')) return;
         var nom = prompt('Nombre completo:');
@@ -1405,10 +1573,25 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (rango === 'profesor') rango = 'docente';
         if (rango === 'padre' || rango === 'padres de familia') rango = 'padres';
         if (ROLES_VALIDOS.indexOf(rango) === -1) { mostrarToast('Rango desconocido: ' + rango, 'error'); return; }
-        var r = crearCuenta(email.trim(), nom.trim(), rango);
-        if (!r.ok) { mostrarToast(r.msg, 'error'); return; }
-        renderAuth();
+        var mail = email.trim().toLowerCase();
+        // El servidor guarda el rango: primero ahí, después el espejo local.
+        var res = await sincronizarCrearCuenta(mail, nom.trim(), rango);
+        if (!res.ok && !res.offline) {
+          mostrarToast('No se pudo crear la cuenta: ' + (res.error || 'error del servidor'), 'error');
+          return;
+        }
+        var r = crearCuenta(mail, nom.trim(), rango);
+        if (!r.ok) {
+          // Si ya existía localmente, el servidor es el que manda: recargamos.
+          if (res.ok) { await sincronizarCuentasBackend(); renderAuth(); }
+          else { mostrarToast(r.msg, 'error'); return; }
+        } else {
+          renderAuth();
+        }
         mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[rango] || rango) + '. El usuario elige su contraseña al entrar.', 'success');
+        if (res.offline) {
+          mostrarToast('Sin conexión: la cuenta quedó solo en este dispositivo.', 'error');
+        }
       });
 
       /* ---- Backup de cuentas: exportar / importar JSON (solo admin) ----
@@ -5488,6 +5671,9 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (sui) { sui.style.display = 'flex'; sui.classList.remove('hidden'); }
         var sidebarEmail = $('sidebar-user-email');
         if (sidebarEmail) sidebarEmail.textContent = usuarioActual.email + ' (' + rolDisplay + ')';
+        // Botón de salir en la barra superior (visible también en móvil).
+        var btnSalirTop = $('btn-logout-top');
+        if (btnSalirTop) { btnSalirTop.style.display = 'inline-flex'; btnSalirTop.classList.remove('hidden'); }
         window.usuarioActual = usuarioActual; // notifications.js lo lee
         actualizarPermisosUI();
       }
