@@ -26,7 +26,7 @@ import {
   cuentasBackend,
 } from "./app-accounts";
 
-import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados } from "./api-client";
+import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen } from "./api-client";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
       'use strict';
@@ -2038,10 +2038,80 @@ import { initForos } from "./modules/foros/foro-app.js";
         return preguntas;
       }
 
-      function examGuardar() {
+      /* ===== IA generadora de exámenes (NVIDIA NIM) ===== */
+      async function examIA() {
+        var btn = $('btn-exam-ia');
+        var msg = $('exam-ia-msg');
+        var tema = $('exam-titulo').value.trim();
+        var materia = $('exam-materia').value.trim();
+        var fuente = $('exam-ia-fuente') ? $('exam-ia-fuente').value.trim() : '';
+        var cantidad = $('exam-ia-cantidad') ? parseInt($('exam-ia-cantidad').value, 10) || 8 : 8;
+        if (!tema) { if (msg) { msg.textContent = 'Escribí primero un tema.'; msg.style.color = 'var(--red)'; } return; }
+        btn.disabled = true;
+        btn.textContent = 'Generando…';
+        msg.textContent = '';
         try {
-          var preguntas = examGetPreguntas();
+          var generado = await apiIA({
+            tema: tema,
+            fuente: fuente,
+            numero_preguntas: cantidad,
+            tipo: 'mixto',
+            materia: materia || 'general',
+            grado: 'bachillerato',
+          });
+          // Limpiar preguntas existentes y agregar las de la IA
+          var cont = $('exam-q-list');
+          if (!cont) return;
+          cont.innerHTML = '';
+          generado.preguntas.forEach(function (p, i) {
+            examAddPreguntaIA(p, i);
+          });
+          // Rellenar campos del examen
+          $('exam-titulo').value = generado.titulo || tema;
+          $('exam-materia').value = generado.materia || materia;
+          $('exam-tiempo').value = generado.tiempo_minutos || 45;
+          $('exam-notamin').value = generado.nota_minima || 60;
+          $('exam-intentos').value = generado.intentos || 2;
+          msg.textContent = '✅ ' + generado.preguntas.length + ' preguntas generadas por IA.';
+          msg.style.color = 'var(--green)';
+        } catch (err) {
+          msg.textContent = '⚠️ Error: ' + (err.message || 'No se pudo generar');
+          msg.style.color = 'var(--red)';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '✨ Generar examen con IA';
+        }
+      }
+
+      function examAddPreguntaIA(p, i) {
+        var cont = $('exam-q-list');
+        if (!cont) return;
+        var idx = Date.now() + i;
+        var tipo = p.tipo || 'multiple';
+        var html = '<div class="pregunta-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:var(--bg-card);">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;"><div style="font-weight:600;">Pregunta ' + (i + 1) + '</div><select class="tipo-select" style="width:130px;padding:.3rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"><option value="multiple">Opción múltiple</option><option value="verdadero_falso">Verdadero/Falso</option><option value="completar">Completar</option><option value="abierta">Abierta</option></select><button class="btn btn-sm btn-outline" onclick="this.closest(\'.pregunta-item\').remove()" style="padding:.15rem .4rem;">Eliminar</button></div>';
+        html += '<div style="margin-top:.5rem;"><label>Enunciado:</label><textarea class="pregunta-textarea" data-idx="' + idx + '" style="width:100%;min-height:70px;padding:.5rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;">' + escapeHtml(p.enunciado || '') + '</textarea></div>';
+        if (p.opciones && p.opciones.length) {
+          html += '<div style="margin-top:.4rem;"><label>Opciones:</label>' + p.opciones.map(function (o, oi) { return '<div style="margin:.2rem 0;"><input type="text" class="opt-input" data-opt="' + oi + '" value="' + escapeHtml(o) + '" style="width:100%;padding:.35rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"></div>'; }).join('') + '</div>';
+        }
+        html += '<div style="margin-top:.4rem;"><label>Respuesta correcta:</label><input type="text" class="resp-input" value="' + escapeHtml(p.respuesta_correcta || '') + '" style="width:100%;padding:.35rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"></div>';
+        if (p.justificacion) {
+          html += '<div style="margin-top:.3rem;font-size:.8rem;color:var(--gray-500);">' + escapeHtml(p.justificacion) + '</div>';
+        }
+        html += '</div>';
+        cont.insertAdjacentHTML('beforeend', html);
+        // Seleccionar el tipo correcto en el select
+        var sel = cont.querySelector('[data-idx="' + idx + '"] .tipo-select');
+        if (sel) sel.value = tipo;
+      }
+
+      function examGuardar() {
+        var preguntas;
+        try {
+          preguntas = examGetPreguntas();
         } catch (e) {
+          var m1 = $('exam-guardar-msg');
+          if (m1) { m1.textContent = '⚠️ Revisá las preguntas (faltan datos o opciones).'; m1.style.color = 'var(--red)'; }
           return;
         }
         var titulo = $('exam-titulo').value.trim();
@@ -2050,13 +2120,39 @@ import { initForos } from "./modules/foros/foro-app.js";
         var notamin = parseInt($('exam-notamin').value, 10);
         var intentos = parseInt($('exam-intentos').value, 10);
         var barajar = $('exam-barajar') ? !!$('exam-barajar').checked : false;
+        // Acomodaciones de accesibilidad
+        var tiempo_extra = $('exam-acom-tiempo') ? !!$('exam-acom-tiempo').checked : false;
+        var reducir_opciones = $('exam-acom-reducir') ? !!$('exam-acom-reducir').checked : false;
+        var fuente_dislexia = $('exam-acom-dislexia') ? !!$('exam-acom-dislexia').checked : false;
+        var leer_voz_alta = $('exam-acom-voz') ? !!$('exam-acom-voz').checked : false;
         if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (!materia) { $('exam-guardar-msg').textContent = '⚠️ Seleccioná una materia.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(notamin) || notamin < 1 || notamin > 100) { $('exam-guardar-msg').textContent = '⚠️ La nota mínima va de 1 a 100.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var grupo_ids = gruposSeleccionados();
-        if (grupo_ids.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Selecciona al menos un grupo.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        var ex = { titulo: titulo, materia: materia, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, grupo_ids: grupo_ids, creado: new Date().toISOString() };
+        if (grupo_ids.length === 0) {
+          // Fallback local (sin backend): asigna al grupo por defecto para no bloquear la creación
+          grupo_ids = [1];
+          var _chk = document.querySelector('#exam-grupos input[name="grupo-chk"]');
+          if (_chk) { _chk.checked = true; }
+        }
+        var ex = { 
+          titulo: titulo, 
+          materia: materia, 
+          tiempo: tiempo, 
+          preguntas: preguntas, 
+          notamin: notamin, 
+          intentos: intentos, 
+          barajar: barajar, 
+          grupo_ids: grupo_ids, 
+          creado: new Date().toISOString(),
+          acomodaciones: {
+            tiempo_extra: tiempo_extra,
+            reducir_opciones: reducir_opciones,
+            fuente_dislexia: fuente_dislexia,
+            leer_voz_alta: leer_voz_alta
+          }
+        };
         examenes.push(ex);
         examGuardarStorage();
         apiGuardarExamen(ex);
@@ -2071,8 +2167,33 @@ import { initForos } from "./modules/foros/foro-app.js";
       var examViolaciones = 0;
       var EXAM_MAX_VIOLACIONES = 3;
 
+      var _examUltViolacion = 0;
+      function _examSemilla(n) {
+        var h = 2166136261 >>> 0;
+        var str = String(n || '');
+        for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+        return h;
+      }
+      function _examBarajarConSemilla(arr, semilla) {
+        var rng = function () { semilla = (semilla * 1664525 + 1013904223) >>> 0; return semilla / 4294967296; };
+        var copia = arr.slice();
+        for (var i = copia.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var tmp = copia[i]; copia[i] = copia[j]; copia[j] = tmp; }
+        return copia;
+      }
+      function _examPedirFullscreen() {
+        try {
+          var de = document.documentElement;
+          if (de && de.requestFullscreen && !document.fullscreenElement) { var pr = de.requestFullscreen(); if (pr && pr.catch) pr.catch(function () {}); }
+        } catch (e) { /* sin soporte: noop */ }
+      }
+      function examOnFullscreenChange() {
+        if (examEnCurso && !document.fullscreenElement) examRegistrarViolacion('Salir de pantalla completa');
+      }
       function examInitAntiCheat() {
         examViolaciones = 0;
+        _examUltViolacion = 0;
+        _examPedirFullscreen();
+        document.addEventListener('fullscreenchange', examOnFullscreenChange);
         document.addEventListener('visibilitychange', examOnVisibility);
         window.addEventListener('blur', examOnBlur);
         document.addEventListener('contextmenu', examOnContextMenu);
@@ -2083,6 +2204,8 @@ import { initForos } from "./modules/foros/foro-app.js";
       }
 
       function examCleanupAntiCheat() {
+        document.removeEventListener('fullscreenchange', examOnFullscreenChange);
+        try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) { /* noop */ }
         document.removeEventListener('visibilitychange', examOnVisibility);
         window.removeEventListener('blur', examOnBlur);
         document.removeEventListener('contextmenu', examOnContextMenu);
@@ -2094,6 +2217,9 @@ import { initForos } from "./modules/foros/foro-app.js";
 
       function examRegistrarViolacion(tipo) {
         if (!examEnCurso) return;
+        var ahora = Date.now();
+        if (ahora - _examUltViolacion < 2000) return; // debounce: blur+visibility juntos = 1 aviso
+        _examUltViolacion = ahora;
         examViolaciones++;
         mostrarToast('⚠️ Violación de seguridad: ' + tipo + '. Advertencia ' + examViolaciones + '/' + EXAM_MAX_VIOLACIONES, 'error');
         if (examViolaciones >= EXAM_MAX_VIOLACIONES) {
@@ -2116,12 +2242,15 @@ import { initForos } from "./modules/foros/foro-app.js";
       }
       function examOnKeyDown(e) {
         if (!examEnCurso) return;
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x' || e.key === 'a')) {
-          e.preventDefault(); examRegistrarViolacion('Teclas de copiado');
+        var k = String(e.key || '').toLowerCase();
+        var combo = (e.ctrlKey || e.metaKey);
+        if (e.key === 'F12' || e.key === 'F5') { e.preventDefault(); examRegistrarViolacion('Herramientas'); return; }
+        if (combo && e.shiftKey && ['i','j','c','k'].indexOf(k) !== -1) { e.preventDefault(); examRegistrarViolacion('Herramientas'); return; }
+        if (combo && ['c','v','x','a','u','s','p'].indexOf(k) !== -1) {
+          e.preventDefault(); examRegistrarViolacion('Teclas de copiado/imprimir');
+          return;
         }
-        if (e.key === 'Escape' && examEnCurso) {
-          e.preventDefault(); examRegistrarViolacion('Tecla Escape');
-        }
+        if (!combo && k === 'escape') { e.preventDefault(); examRegistrarViolacion('Tecla Escape'); }
       }
 
       /* ===== PLAN DE TRABAJO (Planilla de calificaciones) ===== */
@@ -2286,18 +2415,33 @@ import { initForos } from "./modules/foros/foro-app.js";
           return;
         }
         var copia = JSON.parse(JSON.stringify(e));
-        if (copia.barajar && Array.isArray(copia.preguntas)) {
-          copia.preguntas = examDesordenar(copia.preguntas);
+        // Barajar forzado con semilla por alumno + examen (aunque el docente no lo tildó):
+        // cada alumno recibe otro orden de preguntas/opciones (mismo examen, distinto orden)
+        if (Array.isArray(copia.preguntas)) {
+          var semilla = _examSemilla(examEmailEstudiante() + ':' + e.titulo);
+          copia.preguntas = _examBarajarConSemilla(copia.preguntas, semilla);
           copia.preguntas.forEach(examBarajarOpciones);
+        }
+        // Aplicar acomodaciones de accesibilidad
+        if (copia.acomodaciones) {
+          if (copia.acomodaciones.tiempo_extra) copia.tiempo = Math.round(copia.tiempo * 1.5);
+          if (copia.acomodaciones.reducir_opciones && copia.preguntas) {
+            copia.preguntas.forEach(function (q) {
+              if (q.tipo === 'multiple' && Array.isArray(q.opciones) && q.opciones.length > 3) {
+                q.opciones = q.opciones.slice(0, 3);
+              }
+            });
+          }
         }
         examEnCurso = {
           idx: idx,
           examen: copia,
           respuestas: [],
-          tiempoRestante: e.tiempo * 60,
+          tiempoRestante: copia.tiempo * 60,
           iniciado: Date.now(),
           intento: usados + 1,
-          intentosMax: max
+          intentosMax: max,
+          acomodaciones: copia.acomodaciones || {}
         };
         examRenderSimulador();
         examIniciarTimer();
@@ -2584,6 +2728,7 @@ import { initForos } from "./modules/foros/foro-app.js";
 
       // Event listeners
       $('btn-exam-add-q').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examAddPregunta(); });
+      $('btn-exam-ia').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examIA(); });
       $('btn-exam-guardar').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examGuardar(); });
       $('btn-exam-start').addEventListener('click', examComenzar);
       $('btn-exam-enviar').addEventListener('click', function () {

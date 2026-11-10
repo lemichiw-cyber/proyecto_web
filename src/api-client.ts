@@ -36,6 +36,47 @@ interface ExamenIn {
   grupo_ids: number[];
 }
 
+interface GenerarExamenIn {
+  tema: string;
+  fuente?: string;
+  numero_preguntas: number;
+  tipo: string;
+  materia: string;
+  grado: string;
+}
+
+interface PreguntaIA {
+  tipo: string;
+  enunciado: string;
+  opciones?: string[];
+  respuesta_correcta: string;
+  justificacion?: string;
+}
+
+interface ExamenGenerado {
+  titulo: string;
+  materia: string;
+  tiempo_minutos: number;
+  nota_minima: number;
+  intentos: number;
+  preguntas: PreguntaIA[];
+}
+
+interface AcomodarExamenIn {
+  examen_id: string;
+  tiempo_extra: boolean;
+  reducir_opciones: boolean;
+  fuente_dislexia: boolean;
+  leer_en_voz_alta: boolean;
+}
+
+interface ExamenAcomodado {
+  examen_id: string;
+  tiempo_minutos: number;
+  preguntas: PreguntaIA[];
+  acomodaciones_aplicadas: string[];
+}
+
 function apiHeaders(): HeadersInit {
   const h: Record<string, string> = { "Content-Type": "application/json" };
   if (API_EMAIL) h["X-User-Email"] = API_EMAIL;
@@ -108,7 +149,12 @@ export function renderGrupoCheckboxes(containerId: string, preselected?: number[
   if (container.dataset.rendered === "1") return;
   if (!_gruposCache) {
     apiGrupos().then((gs) => {
-      _gruposCache = gs;
+      // Fallback local (INCOA) si no hay backend/grupos creados: siempre hay checkboxes para no bloquear crear exámenes
+      _gruposCache = gs && gs.length ? gs : [
+        { id: 1, anio: "1", seccion: "B", especialidad: "general", ciclo_escolar: "" },
+        { id: 2, anio: "1", seccion: "C", especialidad: "software", ciclo_escolar: "" },
+        { id: 3, anio: "1", seccion: "C", especialidad: "contaduria", ciclo_escolar: "" },
+      ];
       renderGrupoCheckboxes(containerId, preselected);
     });
     return;
@@ -139,4 +185,12 @@ export function gruposSeleccionados(): number[] {
     ids.push(parseInt(input.value, 10));
   });
   return ids;
+}
+
+export function apiIA(payload: GenerarExamenIn): Promise<ExamenGenerado> {
+  return apiFetch<ExamenGenerado>("/api/ia/generar-examen", payload);
+}
+
+export function apiAcomodarExamen(payload: AcomodarExamenIn): Promise<ExamenAcomodado> {
+  return apiFetch<ExamenAcomodado>("/api/ia/acomodar-examen", payload);
 }

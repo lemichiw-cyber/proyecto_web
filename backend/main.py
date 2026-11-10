@@ -20,7 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import accounts, admin, albums, artists, actividades, auth, debug, library, lyrics, matricula, moderacion, playlists, push, search, songs, tareas_examenes, translate
+from api import accounts, admin, albums, artists, actividades, auth, debug, library, lyrics, matricula, moderacion, playlists, push, search, songs, tareas_examenes, translate, ia
 from api.deps import get_service
 
 load_dotenv()
@@ -131,6 +131,7 @@ app.include_router(actividades.router)       # <-- actividades (Postgres/Supabas
 app.include_router(matricula.router)         # <-- matrícula por grupo
 app.include_router(tareas_examenes.router)   # <-- tareas/exámenes por grupo
 app.include_router(moderacion.router)        # <-- moderación (reportes foros, P2)
+app.include_router(ia.router)                # <-- IA generativa con NVIDIA NIM (P5)
 
 
 @app.get("/", tags=["meta"])

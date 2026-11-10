@@ -1143,6 +1143,39 @@ body:not([data-perm~="participar"]) [data-perm~="participar"] {
 .flex-1-200 { flex:1; min-width:200px }
 .row-75 { display:flex; gap:.75rem; flex-wrap:wrap }
 
+/* ===== P4-A / P5: Accesibilidad (fuente dislexia y modo enfoque) ===== */
+body.fuente-dislexia, .fuente-dislexia {
+  font-family: 'OpenDyslexic', 'OpenDyslexic Alt', 'Segoe UI', 'Arial', sans-serif !important;
+  letter-spacing: 0.02em;
+  word-spacing: 0.05em;
+}
+.fuente-dislexia input, .fuente-dislexia textarea, .fuente-dislexia select, .fuente-dislexia button {
+  font-family: inherit !important;
+}
+.modo-enfoque .app-header, .modo-enfoque .sidebar, .modo-enfoque .modal-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.modo-enfoque .app-card, .modo-enfoque .card {
+  box-shadow: none !important;
+  border: 1px solid var(--border) !important;
+}
+.modo-enfoque button, .modo-enfoque input, .modo-enfoque select, .modo-enfoque textarea {
+  border: 2px solid var(--primary) !important;
+  border-radius: 6px !important;
+}
+.modo-enfoque .app-grid, .modo-enfoque .stats-grid {
+  gap: 1.5rem !important;
+}
+/* Botón de IA en formulario de examen */
+#btn-exam-ia {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  border: none;
+}
+#btn-exam-ia:hover {
+  filter: brightness(1.1);
+}
+
 
 /* ===================================================================
    FORO TIPO REDDIT — comunidad, feed, votos e hilos anidados
