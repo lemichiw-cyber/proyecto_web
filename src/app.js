@@ -30,6 +30,7 @@ import {
 } from "./app-accounts";
 
 import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta } from "./api-client";
+import { getApiBase, setApiBase, apiBaseBuild, testApiBase } from "./api-base";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
@@ -612,6 +613,74 @@ import { initForos } from "./modules/foros/foro-app.js";
         '</div>';
       }
 
+      /* ===================================================================
+         AJUSTES → BACKEND
+         Permite cambiar la URL del backend en tiempo de ejecución, sin
+         recompilar. La URL efectiva es:
+             localStorage.cherrybombApiBase  →  VITE_API_BASE  →  "" (mismo origen)
+         Guardarla sobrevive al reinicio del navegador y no se exporta en
+         los respaldos (EXCLUDED_KEYS).
+         =================================================================== */
+      function renderConfigBackend() {
+        var input = $('cfg-backend-url');
+        var status = $('cfg-backend-status');
+        var def = $('cfg-backend-default');
+        if (!input) return;
+
+        if (document.activeElement !== input) input.value = getApiBase();
+        if (def) def.textContent = apiBaseBuild() || '(mismo origen)';
+
+        function _estado(msg, ok) {
+          if (!status) return;
+          status.textContent = msg;
+          if (ok === true) status.style.color = 'var(--green)';
+          else if (ok === false) status.style.color = 'var(--red)';
+          else status.style.color = 'var(--gray-500)';
+        }
+
+        function _validar(url) {
+          if (url && !/^https?:\/\//i.test(url)) {
+            _estado('La URL debe empezar con http:// o https://', false);
+            return false;
+          }
+          return true;
+        }
+
+        var btnSave = $('btn-cfg-backend-save');
+        var btnTest = $('btn-cfg-backend-test');
+        var btnReset = $('btn-cfg-backend-reset');
+        if (btnSave && !btnSave._cbWired) {
+          btnSave._cbWired = true;
+          btnSave.addEventListener('click', function () {
+            var url = String(input.value || '').trim();
+            if (!_validar(url)) return;
+            setApiBase(url);
+            input.value = getApiBase();
+            _estado(url ? ('Guardado: ' + url) : 'Restaurado: se usará el valor por defecto', true);
+          });
+        }
+        if (btnTest && !btnTest._cbWired) {
+          btnTest._cbWired = true;
+          btnTest.addEventListener('click', function () {
+            var url = String(input.value || '').trim();
+            if (!_validar(url)) return;
+            _estado('Probando...', null);
+            testApiBase(url).then(function (r) {
+              if (r.ok) _estado('El backend respondió correctamente (HTTP ' + r.status + ')', true);
+              else _estado('No responde: ' + (r.detalle || ('HTTP ' + r.status)), false);
+            });
+          });
+        }
+        if (btnReset && !btnReset._cbWired) {
+          btnReset._cbWired = true;
+          btnReset.addEventListener('click', function () {
+            setApiBase('');
+            input.value = getApiBase();
+            _estado('Restaurado: se usará el valor por defecto del build', true);
+          });
+        }
+      }
+
       window.mostrarApp = function (app) {
         // Check feature flag first (before login check)
         var feature = appFeatures[app];
@@ -666,6 +735,9 @@ import { initForos } from "./modules/foros/foro-app.js";
             var src = $('theme-options');
             if (src) dest.innerHTML = src.innerHTML;
           }
+          // Panel "Ajustes → Backend": permite apuntar la app a otro
+          // servidor sin recompilar (clave localStorage cherrybombApiBase).
+          renderConfigBackend();
           // Add data privacy notice
           var noticeEl = $('config-data-notice');
           if (!noticeEl) {

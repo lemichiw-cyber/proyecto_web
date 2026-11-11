@@ -1,0 +1,13 @@
+[Unit]
+Description=Consulta cada minuto si el usuario está activo para prender/apagar el backend de Cherry-Bomb
+Documentation=https://github.com/lemichiw-cyber/proyecto_web
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Persistent=true
+Unit=cherrybomb-backend-control.service
+
+[Install]
+WantedBy=timers.target

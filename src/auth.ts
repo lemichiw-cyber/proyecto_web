@@ -13,8 +13,7 @@ import {
   cuentaActiva,
   verificarPassword,
 } from "./app-accounts.js";
-
-const API_BASE = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "").replace(/\/+$/, "");
+import { getApiBase } from "./api-base";
 
 const TOKEN_KEY = "cherrybombAuthToken";
 const USER_KEY = "cherrybombAuthUser";
@@ -45,7 +44,7 @@ function _headersConToken(): Record<string, string> {
 }
 
 function _api(path: string, body: any, method?: string): Promise<Response> {
-  return fetch(API_BASE + path, {
+  return fetch(getApiBase() + path, {
     method: method || (body ? "POST" : "GET"),
     headers: _headersConToken(),
     body: body ? JSON.stringify(body) : undefined,

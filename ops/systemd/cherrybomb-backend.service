@@ -1,0 +1,36 @@
+[Unit]
+Description=Cherry-Bomb backend (FastAPI) local en la laptop
+Documentation=https://github.com/lemichiw-cyber/proyecto_web
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/proyecto_web/backend
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+TimeoutStopSec=15
+KillSignal=SIGINT
+
+# La configuración sensible (NVIDIA_API_KEY y compañía) se lee de
+# backend/.env con load_dotenv(). NO se usa EnvironmentFile= para no
+# pisar el entorno definido acá abajo.
+Environment=SAKURA_ENV=production
+# Orígenes admitidos por CORS. Esta variable REEMPLAZA la lista por defecto
+# del backend, así que hay que incluir a mano el de GitHub Pages.
+Environment=SAKURA_CORS_ORIGINS=https://lemichiw-cyber.github.io,https://proyecto-web-2-bygl.onrender.com
+# Permite orígenes localhost (dev/preview) y la cabecera
+# Access-Control-Allow-Private-Network, que Chrome exige cuando una
+# página pública (GitHub Pages) llama a un servicio de la red privada.
+Environment=SAKURA_ALLOW_LOCAL_CORS=1
+# La cookie de sesión es SameSite=None para que viaje desde
+# https://lemichiw-cyber.github.io (GitHub Pages) hasta este backend
+# local: son sitios distintos, y con SameSite=Lax el navegador no la
+# mandaría. SameSite=None exige Secure (127.0.0.1 es un origen
+# confiable, así que funciona incluso sobre http).
+Environment=SAKURA_COOKIE_SAMESITE=none
+Environment=SAKURA_COOKIE_SECURE=1
+
+[Install]
+WantedBy=default.target

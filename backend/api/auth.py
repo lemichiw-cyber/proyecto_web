@@ -41,6 +41,23 @@ SESSION_COOKIE = "cherrybomb_session"
 SESSION_COOKIE_MAX_AGE = SESSION_TTL_SECONDS
 SESSION_COOKIE_SECURE = os.getenv("SAKURA_COOKIE_SECURE", "1").strip().lower() in {"1", "true", "yes", "on"}
 
+# SameSite de la cookie de sesión.
+#   "lax"    (default) → el navegador NO manda la cookie cuando la app está
+#             en otro origen (p.ej. GitHub Pages → http://127.0.0.1:8000).
+#             Es lo correcto para el despliegue normal (mismo origen).
+#   "none"             → obligatorio cuando el frontend (https) y el backend
+#             (http://127.0.0.1) están en sitios distintos. Los navegadores
+#             exigen "Secure" junto con "SameSite=None"; 127.0.0.1/localhost
+#             son orígenes "potentially trustworthy", así que la cookie
+#             funciona incluso sobre http.
+#   "strict"           → la cookie nunca sale del sitio que la puso.
+_SAMESITE_VALIDOS = {"lax", "strict", "none"}
+_samesite = os.getenv("SAKURA_COOKIE_SAMESITE", "lax").strip().lower()
+SESSION_COOKIE_SAMESITE = _samesite if _samesite in _SAMESITE_VALIDOS else "lax"
+if SESSION_COOKIE_SAMESITE == "none":
+    # Los navegadores rechazan SameSite=None sin Secure.
+    SESSION_COOKIE_SECURE = True
+
 # --- Rate limiting mínimo en memoria (P0: evita brute-force de login) ---
 # No es distribuido: bien para 1 instancia (despliegue único INCOA). Para P1, Redis/DB.
 _LOGIN_ATTEMPTS: dict[str, list[float]] = {}
@@ -277,7 +294,7 @@ def definir_contrasena(request: Request, response: Response, payload: DefinirCon
     response.set_cookie(
         SESSION_COOKIE, token,
         max_age=SESSION_COOKIE_MAX_AGE,
-        httponly=True, samesite="lax",
+        httponly=True, samesite=SESSION_COOKIE_SAMESITE,
         secure=SESSION_COOKIE_SECURE, path="/",
     )
     return {
@@ -332,7 +349,7 @@ def login(request: Request, response: Response, payload: LoginIn = Body(...)):
     response.set_cookie(
         SESSION_COOKIE, token,
         max_age=SESSION_COOKIE_MAX_AGE,
-        httponly=True, samesite="lax",
+        httponly=True, samesite=SESSION_COOKIE_SAMESITE,
         secure=SESSION_COOKIE_SECURE, path="/",
     )
     return {
@@ -360,7 +377,7 @@ def me(response: Response, user: dict = Depends(require_auth), cherrybomb_sessio
             nuevo_token = token
         response.set_cookie(
             SESSION_COOKIE, nuevo_token,
-            max_age=SESSION_COOKIE_MAX_AGE, httponly=True, samesite="lax",
+            max_age=SESSION_COOKIE_MAX_AGE, httponly=True, samesite=SESSION_COOKIE_SAMESITE,
             secure=SESSION_COOKIE_SECURE, path="/",
         )
     return {"ok": True, "email": user["email"], "rol": user["rol"], "token_nuevo": nuevo_token}
@@ -379,5 +396,10 @@ def logout(response: Response, authorization: Optional[str] = Header(default=Non
                 audit_write("auth.logout", _email, "")
             except Exception:
                 pass
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    # Se borra con los mismos atributos con los que se creó (name/domain/path
+    # son los que definen el borrado; SameSite/Secure se mantienen por coherencia).
+    response.delete_cookie(
+        SESSION_COOKIE, path="/",
+        secure=SESSION_COOKIE_SECURE, httponly=True, samesite=SESSION_COOKIE_SAMESITE,
+    )
     return {"ok": True}

@@ -1,6 +1,5 @@
 import { escapeHtml } from "./utils/escape.js";
-
-const API_BASE = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "").replace(/\/+$/, "");
+import { getApiBase } from "./api-base";
 
 /**
  * Email de la sesión actual.
@@ -131,7 +130,7 @@ async function _detalleError(r: Response): Promise<string> {
 
 export function apiFetch<T>(path: string, body?: any): Promise<T> {
   const call = () =>
-    fetch(API_BASE + path, {
+    fetch(getApiBase() + path, {
       method: body ? "POST" : "GET",
       headers: apiHeaders(),
       body: body ? JSON.stringify(body) : undefined,
@@ -161,7 +160,7 @@ export function apiGrupos(): Promise<Grupo[]> {
 }
 
 export function apiGruposPublicos(): Promise<Grupo[]> {
-  return fetch(API_BASE + "/api/matricula/grupos-publicos", { credentials: "include" }).then((r) => (r.ok ? (r.json() as Promise<Grupo[]>) : [])).catch(() => []);
+  return fetch(getApiBase() + "/api/matricula/grupos-publicos", { credentials: "include" }).then((r) => (r.ok ? (r.json() as Promise<Grupo[]>) : [])).catch(() => []);
 }
 
 export function apiMiGrupo(): Promise<MiGrupo> {
@@ -278,7 +277,7 @@ export interface CuentaActualizar {
 
 /** fetch + JSON con método libre (apiFetch solo hace GET/POST). */
 async function _apiJson<T>(method: string, path: string, body?: any): Promise<T> {
-  const r = await fetch(API_BASE + path, {
+  const r = await fetch(getApiBase() + path, {
     method,
     headers: apiHeaders(),
     body: body !== undefined ? JSON.stringify(body) : undefined,

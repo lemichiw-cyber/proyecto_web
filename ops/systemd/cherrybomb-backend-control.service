@@ -1,0 +1,10 @@
+[Unit]
+Description=Controla el backend de Cherry-Bomb según la actividad del usuario
+Documentation=https://github.com/lemichiw-cyber/proyecto_web
+
+[Service]
+Type=oneshot
+# El script vive en ~/.local/bin (instalado por ops/install-backend-service.sh).
+ExecStart=%h/.local/bin/cherrybomb-backend-control.sh
+# Timeout corto: el script solo consulta loginctl/busctl y systemd.
+TimeoutStartSec=30

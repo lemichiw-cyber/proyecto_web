@@ -111,7 +111,10 @@ async def security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     # CSP para la API: solo JSON, sin scripts remotos. En dev se reporta además.
     response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'self'"
-    if _ENV != "dev":
+    # HSTS solo tiene sentido si la respuesta vino por HTTPS: enviarlo sobre
+    # http://127.0.0.1 (backend local) haría que el navegador intente
+    # https://127.0.0.1 y no llegaría al backend.
+    if _ENV != "dev" and request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     return response
 
