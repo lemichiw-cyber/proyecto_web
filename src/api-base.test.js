@@ -37,6 +37,7 @@ describe('api-base — URL del backend', () => {
     localStorage.clear();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    delete window.__CB_API_BASE__;
   });
 
   it('usa el valor de compilación cuando no hay override', async () => {
@@ -97,6 +98,43 @@ describe('api-base — URL del backend', () => {
   });
 });
 
+describe('api-base — valor inyectado por el servidor y mismo origen', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    delete window.__CB_API_BASE__;
+  });
+
+  it('el servidor (window.__CB_API_BASE__) manda sobre el build', async () => {
+    window.__CB_API_BASE__ = '';
+    const { getApiBase, apiBaseServidor } = await cargar('https://backend.ejemplo.test');
+    expect(apiBaseServidor()).toBe('');
+    // "" = mismo origen: la app usa rutas /api relativas.
+    expect(getApiBase()).toBe('');
+  });
+
+  it('el override manual sigue teniendo la máxima prioridad', async () => {
+    window.__CB_API_BASE__ = '';
+    const { getApiBase, setApiBase } = await cargar('https://backend.ejemplo.test');
+    setApiBase('http://192.168.1.50:8000');
+    expect(getApiBase()).toBe('http://192.168.1.50:8000');
+  });
+
+  it('si el build ya es el mismo origen, usa rutas relativas', async () => {
+    // jsdom sirve la página en http://localhost:3000
+    const { getApiBase } = await cargar('http://localhost:3000');
+    expect(getApiBase()).toBe('');
+  });
+
+  it('apiBaseDefault ignora el override manual', async () => {
+    const { getApiBase, apiBaseDefault, setApiBase } = await cargar('https://backend.ejemplo.test');
+    setApiBase('http://otro.test');
+    expect(getApiBase()).toBe('http://otro.test');
+    expect(apiBaseDefault()).toBe('https://backend.ejemplo.test');
+  });
+});
+
 describe('api-base — diagnóstico de red local', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -125,6 +163,29 @@ describe('api-base — diagnóstico de red local', () => {
   it('no se mete si el error no es de red', async () => {
     const { explicaErrorRed } = await cargar('http://127.0.0.1:8000');
     expect(explicaErrorRed(new Error('Credenciales inválidas.'))).toBe('');
+  });
+
+  it('detecta el timeout (el navegador deja la petición colgada)', async () => {
+    const { explicaErrorRed } = await cargar('http://127.0.0.1:8000');
+    const msg = explicaErrorRed(new Error('tiempo de espera agotado'), 'https:');
+    expect(msg).toContain('red local');
+    expect(msg).toContain('127.0.0.1:8000/');
+  });
+
+  it('detecta el AbortError del AbortController', async () => {
+    const { explicaErrorRed } = await cargar('http://127.0.0.1:8000');
+    const err = new Error('The operation was aborted.');
+    err.name = 'AbortError';
+    const msg = explicaErrorRed(err, 'https:');
+    expect(msg).toContain('red local');
+    expect(msg).toContain('network.lna.enabled');
+  });
+
+  it('ofrece la app local como atajo', async () => {
+    const { explicaErrorRed } = await cargar('http://127.0.0.1:8000');
+    const msg = explicaErrorRed(new TypeError('NetworkError when attempting to fetch resource.'), 'https:');
+    expect(msg).toContain('http://127.0.0.1:8000/');
+    expect(msg).toContain('sin permisos');
   });
 
   it('no se mete si el backend no es local', async () => {

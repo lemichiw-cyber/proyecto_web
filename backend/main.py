@@ -18,7 +18,9 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # El .env debe cargarse ANTES de importar los routers: varios módulos leen
 # variables al importarse (NVIDIA_API_KEY en api.ia, flags de cookie, etc.).
@@ -57,6 +59,28 @@ _CORS_DEFAULT = ",".join([
 _CORS = [o.strip() for o in os.getenv("SAKURA_CORS_ORIGINS", _CORS_DEFAULT).split(",") if o.strip()]
 _ENV = os.getenv("SAKURA_ENV", "production").strip().lower()
 _ALLOW_LOCAL = _ENV == "dev" or os.getenv("SAKURA_ALLOW_LOCAL_CORS", "").strip().lower() in {"1", "true", "yes", "on"}
+
+# ===================================================================
+# Servir la PWA desde el propio backend (mismo origen)
+# -------------------------------------------------------------------
+# La PWA de GitHub Pages (https) llama a este backend (http://127.0.0.1)
+# → son sitios distintos: cookie cross-site (SameSite=None) y, sobre
+# todo, el permiso de "acceso a la red local" (LNA) que Firefox/Chrome
+# piden explícitamente. Si además el backend sirve la propia app, en
+# http://127.0.0.1:8000/ queda TODO en el mismo origen: sin CORS, sin LNA
+# y con la cookie normal (SameSite=Lax).
+#
+# Se activa con SAKURA_SERVE_APP=1 o automáticamente si existe dist/.
+# ===================================================================
+_DIST_DIR = pathlib.Path(__file__).resolve().parent.parent / "dist"
+_serve_raw = os.getenv("SAKURA_SERVE_APP", "").strip().lower()
+if _serve_raw in {"0", "false", "no", "off"}:
+    _SERVE_APP = False
+elif _serve_raw in {"1", "true", "yes", "on"}:
+    _SERVE_APP = True
+else:
+    # Automático: sólo si hay una build disponible en el repo.
+    _SERVE_APP = (_DIST_DIR / "index.html").exists()
 
 # Cualquier localhost/puerto local (dev, preview, serve…) — solo en dev
 _CORS_LOCAL = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$" if _ALLOW_LOCAL else r"^$"  # nunca matchea en prod
@@ -102,6 +126,25 @@ async def cors_middleware(request: Request, call_next):
     return response
 
 # Headers de seguridad en toda respuesta del backend (P0: CSP + HSTS).
+# La API usa una CSP estricta (solo JSON); la PWA servida por el backend
+# necesita una CSP que permita sus propios scripts, estilos, medios y el
+# reproductor de YouTube.
+_CSP_API = "default-src 'none'; frame-ancestors 'self'"
+_CSP_PWA = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob: https:; "
+    "media-src 'self' data: blob:; "
+    "font-src 'self' data:; "
+    "connect-src 'self' http: https: blob: data:; "
+    "worker-src 'self' blob:; "
+    "frame-src https://www.youtube.com https://www.youtube-nocookie.com; "
+    "manifest-src 'self'; "
+    "frame-ancestors 'self'"
+)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -109,8 +152,16 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    # CSP para la API: solo JSON, sin scripts remotos. En dev se reporta además.
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'self'"
+    # CSP para la API: solo JSON, sin scripts remotos. La PWA servida por el
+    # backend necesita una CSP que permita sus scripts, estilos, medios y el
+    # reproductor de YouTube.
+    ctype = response.headers.get("content-type", "")
+    es_api = (
+        request.url.path.startswith("/api")
+        or request.url.path in ("/docs", "/redoc", "/openapi.json")
+        or ctype.startswith("application/json")
+    )
+    response.headers["Content-Security-Policy"] = _CSP_API if es_api else _CSP_PWA
     # HSTS solo tiene sentido si la respuesta vino por HTTPS: enviarlo sobre
     # http://127.0.0.1 (backend local) haría que el navegador intente
     # https://127.0.0.1 y no llegaría al backend.
@@ -140,14 +191,18 @@ app.include_router(moderacion.router)        # <-- moderación (reportes foros, 
 app.include_router(ia.router)                # <-- IA generativa con NVIDIA NIM (P5)
 
 
-@app.get("/", tags=["meta"])
-def root() -> dict:
-    """Respuesta para el health check por defecto de la plataforma.
+if not _SERVE_APP:
+    @app.get("/", tags=["meta"])
+    def root() -> dict:
+        """Respuesta para el health check por defecto de la plataforma.
 
-    Render/Heroku comprueban `/` al arrancar: sin esta ruta el servicio
-    marcaría 404 y quedaría en loop de reinicios.
-    """
-    return {"ok": True, "service": "sakura-player", "health": "/api/health", "docs": "/docs"}
+        Render/Heroku comprueban `/` al arrancar: sin esta ruta el servicio
+        marcaría 404 y quedaría en loop de reinicios.
+
+        Cuando el backend sirve la PWA, `/` lo ocupa la app (más útil que un
+        JSON) y el estado queda en `/api/health`.
+        """
+        return {"ok": True, "service": "sakura-player", "health": "/api/health", "docs": "/docs"}
 
 
 @app.get("/api/health", tags=["meta"])
@@ -198,6 +253,68 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:  # noqa: ANN001, BLE001
     """Nunca exponer errores técnicos crudos al frontend."""
     return JSONResponse(status_code=500, content={"detail": "Error interno del servidor"})
+
+
+# ===================================================================
+# Servir la PWA desde el propio backend (mismo origen)
+# -------------------------------------------------------------------
+# Ver la nota de _SERVE_APP arriba. Aquí sólo va la implementación.
+# ===================================================================
+class PWAStaticFiles(StaticFiles):
+    """Sirve `dist/` con dos ajustes para la PWA:
+
+    1. Si una ruta no existe (SPA), devuelve index.html en vez de 404.
+    2. Al servir index.html inyecta `window.__CB_API_BASE__ = ""` para que
+       la app use rutas /api relativas (mismo origen), sin importar desde
+       qué host (localhost, 127.0.0.1 o la IP de la laptop en la LAN) se
+       haya abierto.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dir = pathlib.Path(str(self.directory))
+        self._index_html: bytes | None = None
+
+    def _inyectar(self, html: bytes) -> bytes:
+        if self._index_html is None:
+            tag = b'<script>window.__CB_API_BASE__="";</script>'
+            if b"</head>" in html:
+                html = html.replace(b"</head>", tag + b"</head>", 1)
+            else:
+                html = tag + html
+            self._index_html = html
+        return self._index_html
+
+    def _es_index(self, path: str) -> bool:
+        # Starlette normaliza la raíz del mount a "." (os.path.normpath).
+        limpio = (path or "").strip("/").strip(".")
+        return limpio in ("", "index.html", "index.htm")
+
+    async def get_response(self, path: str, scope):
+        fallback = False
+        try:
+            response = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404 and (self._dir / "index.html").exists():
+                # Ruta de la SPA (p.ej. /tareas): se devuelve index.html.
+                response = await super().get_response("index.html", scope)
+                fallback = True
+            else:
+                raise
+        if fallback or self._es_index(path):
+            try:
+                html = (self._dir / "index.html").read_bytes()
+            except OSError:
+                return response
+            return HTMLResponse(self._inyectar(html), status_code=200)
+        return response
+
+
+if _SERVE_APP and (_DIST_DIR / "index.html").exists():
+    app.mount("/", PWAStaticFiles(directory=str(_DIST_DIR), html=True), name="pwa")
+    print(f"[sakura] PWA servida en http://{_HOST}:{_PORT}/ (mismo origen)", flush=True)
+else:
+    print("[sakura] PWA no servida por el backend (SAKURA_SERVE_APP=0 o sin dist/)", flush=True)
 
 
 def main() -> None:

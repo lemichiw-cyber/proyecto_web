@@ -31,6 +31,9 @@ Environment=SAKURA_ALLOW_LOCAL_CORS=1
 # confiable, así que funciona incluso sobre http).
 Environment=SAKURA_COOKIE_SAMESITE=none
 Environment=SAKURA_COOKIE_SECURE=1
+# Sirve la propia PWA en http://127.0.0.1:8000/ (mismo origen: sin CORS,
+# sin permiso de "acceso a la red local" y con la cookie normal).
+Environment=SAKURA_SERVE_APP=1
 
 [Install]
 WantedBy=default.target

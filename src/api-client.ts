@@ -129,9 +129,25 @@ async function _detalleError(r: Response): Promise<string> {
   }
 }
 
+/** Tiempo máximo de espera de una llamada al backend (ms). */
+const TIMEOUT_API_MS = 15000;
+
+/**
+ * fetch con timeout: si el backend está apagado o bloqueado (p.ej. por el
+ * permiso de "acceso a la red local"), la petición no queda colgada para
+ * siempre.
+ */
+function _fetchConTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), TIMEOUT_API_MS) : null;
+  return fetch(url, { ...init, signal: ctrl ? ctrl.signal : init.signal }).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 export function apiFetch<T>(path: string, body?: any): Promise<T> {
   const call = () =>
-    fetch(getApiBase() + path, {
+    _fetchConTimeout(getApiBase() + path, {
       method: body ? "POST" : "GET",
       headers: apiHeaders(),
       body: body ? JSON.stringify(body) : undefined,
@@ -145,7 +161,7 @@ export function apiFetch<T>(path: string, body?: any): Promise<T> {
     });
   return call().catch(async (e) => {
     // P2: sin red (TypeError) → encola para reintentar al volver online
-    if (e instanceof TypeError) {
+    if (e instanceof TypeError || (e as any)?.name === "AbortError") {
       try {
         const mod: any = await import("./offline-sync.js");
         mod.enqueue?.({ path, body: body ?? null });
@@ -278,7 +294,7 @@ export interface CuentaActualizar {
 
 /** fetch + JSON con método libre (apiFetch solo hace GET/POST). */
 async function _apiJson<T>(method: string, path: string, body?: any): Promise<T> {
-  const r = await fetch(getApiBase() + path, {
+  const r = await _fetchConTimeout(getApiBase() + path, {
     method,
     headers: apiHeaders(),
     body: body !== undefined ? JSON.stringify(body) : undefined,
