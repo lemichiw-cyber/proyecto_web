@@ -10,7 +10,8 @@ import { getApiBase } from "./api-base";
  * congelada en "" y los endpoints /api/items/* respondían 401.
  */
 function _emailSesion(): string {
-  const env = (import.meta as any)?.env?.VITE_API_EMAIL || "";
+  // `import.meta.env` literal: es lo único que Vite reemplaza en el bundle.
+  const env = import.meta.env.VITE_API_EMAIL || "";
   if (env) return env.trim().toLowerCase();
   try {
     const raw = localStorage.getItem("cherrybombSession");
