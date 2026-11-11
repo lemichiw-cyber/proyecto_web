@@ -40,3 +40,6 @@ backend/sessions.json
 backend/auth.json
 audit.log
 backend/foro_reportes.json
+# Reportes de incidentes de "Colegio Protegido": datos sensibles de personas.
+backend/protegido_incidentes.json
+backend/subscriptions.json

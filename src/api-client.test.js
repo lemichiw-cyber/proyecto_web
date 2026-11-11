@@ -84,3 +84,76 @@ describe('api-client — apiCuentas()', () => {
     expect(r.count).toBe(0);
   });
 });
+
+/* ===================================================================
+   api-client — Colegio Protegido (/api/protegido/incidentes)
+   =================================================================== */
+describe('api-client — incidentes de Colegio Protegido', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('apiIncidentes() consulta la lista', async () => {
+    const { apiIncidentes } = await cargarApiClient();
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, count: 1, incidentes: [{ id: 'x1', tipo: 'Robo' }], gestion: false }),
+    }));
+    const r = await apiIncidentes();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = globalThis.fetch.mock.calls[0];
+    expect(String(url)).toContain('/api/protegido/incidentes');
+    expect(init.method).toBe('GET');
+    expect(r.count).toBe(1);
+    expect(r.incidentes[0].tipo).toBe('Robo');
+  });
+
+  it('apiReportarIncidente() manda tipo, descripción y urgente', async () => {
+    const { apiReportarIncidente } = await cargarApiClient();
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      json: async () => ({ ok: true, id: 'n1' }),
+    }));
+    const r = await apiReportarIncidente('Acoso', 'en el patio', true);
+    const [, init] = globalThis.fetch.mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ tipo: 'Acoso', desc: 'en el patio', urgente: true });
+    expect(r.id).toBe('n1');
+  });
+
+  it('apiBorrarIncidente() borra por id', async () => {
+    const { apiBorrarIncidente } = await cargarApiClient();
+    globalThis.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true }) }));
+    await apiBorrarIncidente('a b/c');
+    const [url, init] = globalThis.fetch.mock.calls[0];
+    expect(String(url)).toContain('/api/protegido/incidentes/a%20b%2Fc');
+    expect(init.method).toBe('DELETE');
+  });
+
+  it('apiResolverIncidente() marca el reporte como atendido', async () => {
+    const { apiResolverIncidente } = await cargarApiClient();
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, incidente: { id: 'n1', estado: 'resuelto' } }),
+    }));
+    const r = await apiResolverIncidente('n1');
+    const [url, init] = globalThis.fetch.mock.calls[0];
+    expect(String(url)).toContain('/api/protegido/incidentes/n1/resolver');
+    expect(init.method).toBe('POST');
+    expect(r.incidente.estado).toBe('resuelto');
+  });
+
+  it('un 401 del backend se reporta como error (no como red)', async () => {
+    const { apiIncidentes } = await cargarApiClient();
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 401,
+      text: async () => JSON.stringify({ detail: 'No autenticado' }),
+    }));
+    await expect(apiIncidentes()).rejects.toThrow(/API 401/);
+  });
+});

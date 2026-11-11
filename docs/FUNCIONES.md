@@ -25,7 +25,7 @@
 | **Foros** | `app-foros` | 🔒 Próximamente | Backend real + WebSockets / polling + moderación + RLS en BD |
 | **Mensajes** | `app-mensajes` | 🔒 Próximamente | Backend real + WebSockets / polling + cifrado extremo-a-extremo opcional + RLS |
 | **Actividades grupales** | `app-grupales` | 🔒 Próximamente | Backend real + gestión de grupos + invitaciones + RLS |
-| **Colegio Protegido (reportes)** | `app-protegido` | 🔒 Próximamente | **Canal real con responsable** (psicólogo, orientador, dirección) + protocolo de actuación + anonimato real + notificación a adulto responsable |
+| **Colegio Protegido (reportes)** | `app-protegido` | ✅ Activa (con backend) | Backend real: `/api/protegido/incidentes`. Reportar: cualquiera con sesión. Ver: el autor ve los suyos, el personal docente ve todos. Atender: sólo personal docente. **Pendiente**: protocolo de actuación escrito y canal de contacto al adulto responsable (hoy la app no es un canal de emergencia) |
 | **Aulas Virtuales** | `app-aulas` | 🔒 Próximamente | Backend real + BD con RLS + gestión de inscripciones + tareas + calificaciones + asistencia |
 | **Inscripciones a aulas** | (parte de `app-aulas`) | 🔒 Próximamente | Backend real + BD con RLS + aprobación docente/director |
 | **Tareas de aula** | (parte de `app-aulas`) | 🔒 Próximamente | Backend real + BD con RLS + entregas + calificaciones |
@@ -48,12 +48,11 @@
 
 2. **Datos locales no se borran**: Al desactivar una función, sus datos en `localStorage` (`foros`, `mensajesItems`, `gruposItems`, `protegidoItems`, `aulas`, `aula_*`, `estudiantes_db`, `asistencia_historial`, `bachillerato_plan_trabajo`, etc.) **permanecen intactos**. Si se reactiva la bandera, los datos siguen ahí.
 
-3. **Reactivaión de "Colegio Protegido" (`PROTEGIDO`)**: Solo habilitar cuando exista:
-   - Un canal real de comunicación con un adulto responsable (psicólogo, orientador, dirección)
-   - Protocolo de actuación escrito y conocido
-   - Garantía de anonimato real (no trazable a IP/usuario)
-   - Notificación inmediata a adulto responsable
-   - Documentar en `docs/FUNCIONES.md` la fecha y responsable de la reactivación.
+3. **Reactivaión de "Colegio Protegido" (`PROTEGIDO`)**: Se reactivó el **2026-11-11** porque ya existe backend real (`backend/api/protegido.py`): los reportes llegan al servidor, los ve el personal docente y quedan auditados. **Sigue pendiente**:
+   - Protocolo de actuación escrito y conocido por el colegio
+   - Canal real de contacto al adulto responsable (psicólogo, orientador, dirección)
+   - Notificación inmediata al adulto responsable (hoy es una cola que el docente consulta)
+   - Definir la política de anonimato (hoy el reporte guarda el email del autor)
 
 4. **Registro / Roles**: Mientras `ROLES_DOCENTE` sea `false`, el formulario de registro **no muestra** el selector de rol y asigna `estudiante` por defecto. El usuario no puede elegir `docente`, `director`, `subdirector` ni `admin`.
 

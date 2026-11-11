@@ -354,3 +354,45 @@ export function apiBorrarCuenta(email: string): Promise<{ ok: boolean }> {
   return _apiJson<{ ok: boolean }>("DELETE", "/api/accounts/" + encodeURIComponent(email));
 }
 
+/* ===================================================================
+   Colegio Protegido — reportes de incidentes de seguridad escolar.
+   =================================================================== */
+
+export interface Incidente {
+  id: string;
+  tipo: string;
+  desc: string;
+  urgente: boolean;
+  autor: string;
+  autor_rol?: string;
+  estado: "pendiente" | "resuelto";
+  creado: number;
+  resuelto?: number | null;
+  resuelto_por?: string;
+}
+
+export function apiIncidentes(): Promise<{
+  ok: boolean;
+  count: number;
+  incidentes: Incidente[];
+  gestion: boolean;
+}> {
+  return _apiJson("GET", "/api/protegido/incidentes");
+}
+
+export function apiReportarIncidente(
+  tipo: string,
+  desc: string,
+  urgente = false,
+): Promise<{ ok: boolean; id: string; incidente?: Incidente }> {
+  return _apiJson("POST", "/api/protegido/incidentes", { tipo, desc, urgente });
+}
+
+export function apiBorrarIncidente(id: string): Promise<{ ok: boolean }> {
+  return _apiJson("DELETE", "/api/protegido/incidentes/" + encodeURIComponent(id));
+}
+
+export function apiResolverIncidente(id: string): Promise<{ ok: boolean; incidente?: Incidente }> {
+  return _apiJson("POST", "/api/protegido/incidentes/" + encodeURIComponent(id) + "/resolver");
+}
+

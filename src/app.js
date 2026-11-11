@@ -29,7 +29,18 @@ import {
   cuentasBackend,
 } from "./app-accounts";
 
-import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta } from "./api-client";
+import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta, apiIncidentes, apiReportarIncidente, apiBorrarIncidente, apiResolverIncidente } from "./api-client";
+import {
+  esGestor as esGestorProtegido,
+  fusionar as fusionarProtegido,
+  normalizarLocal as normalizarProtegidoLocal,
+  normalizarRemoto as normalizarProtegidoRemoto,
+  pendientesDeSubir as pendientesProtegidoSubir,
+  pendientesDeBorrar as pendientesProtegidoBorrar,
+  puedeBorrar as puedeBorrarProtegido,
+  formatearFecha as formatearFechaProtegido,
+  etiquetaEstado as etiquetaEstadoProtegido,
+} from "./modules/protegido/protegido-sync.js";
 import { getApiBase, setApiBase, apiBaseDefault, testApiBase, explicaErrorRed } from "./api-base";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import { initForos } from "./modules/foros/foro-app.js";
@@ -729,6 +740,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); renderCuadro(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
         if (app === 'auth') { renderAuth(); sincronizarCuentasBackend(); }
+        if (app === 'protegido') sincronizarProtegido();
         if (app === 'aulas' && window.CherryBombNotifications) {
           window.CherryBombNotifications.showPermissionBanner();
         }
@@ -779,8 +791,14 @@ import { initForos } from "./modules/foros/foro-app.js";
           if (window.mountSakuraPlayer) {
             montarSakura();
           } else if (!window.__sakuraPlayerImport) {
-            var ts = new Date().getTime();
-            window.__sakuraPlayerImport = import('./sakura-player/sakura-player.js?t=' + ts)
+            // OJO: el import dinámico NO puede llevar un query string
+            // ("?t=" + Date.now()): Vite no puede resolverlo en build time
+            // y deja la ruta cruda en el bundle → el navegador pide
+            // ./sakura-player/sakura-player.js?t=... y da 404 (el reproductor
+            // no cargaba nunca). El chunk lleva hash en el nombre, así que
+            // una build nueva ya es una URL nueva: no hace falta el
+            // cache-busting.
+            window.__sakuraPlayerImport = import('./sakura-player/sakura-player.js')
               .then(function (mod) {
                 window.mountSakuraPlayer = mod.mountSakuraPlayer;
                 window.getSakuraPlayer = mod.getSakuraPlayer;
@@ -792,7 +810,7 @@ import { initForos } from "./modules/foros/foro-app.js";
                 if (playerRoot) playerRoot.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--player-error);">No se pudo cargar el reproductor. Recargá la página e intentá de nuevo.</div>';
                 mostrarToast('No se pudo cargar el reproductor.', 'error');
               });
-          } else {
+          } else if (window.__sakuraPlayerImport.then) {
             window.__sakuraPlayerImport.then(montarSakura);
           }
         }
@@ -1028,6 +1046,9 @@ import { initForos } from "./modules/foros/foro-app.js";
         actualizarPermisosUI();
         renderInicio();
         if ($('aula-tab-tareas') && !$('aula-tab-tareas').classList.contains('hidden')) renderAulaTareas();
+        // Con la sesión nueva ya se pueden subir los reportes que quedaron
+        // guardados en el dispositivo (y ver los del servidor).
+        sincronizarProtegido();
       }
 
       /* ===== CIERRE DE SESIÓN =====
@@ -1050,6 +1071,10 @@ import { initForos } from "./modules/foros/foro-app.js";
         // Sin sesión no queda ningún rango: se oculta todo lo docente
         actualizarPermisosUI();
         closeSidebar();
+        // Los incidentes del servidor son datos sensibles: al cerrar la
+        // sesión se borran de la memoria (no quedan en pantalla).
+        protegidoRemotos = [];
+        renderProtegido();
         mostrarApp('inicio');
         mostrarToast('Sesión cerrada.', 'success');
       }
@@ -3864,6 +3889,21 @@ import { initForos } from "./modules/foros/foro-app.js";
       var mensajesItems = JSON.parse(localStorage.getItem('mensajesItems') || '[]');
       var gruposItems = JSON.parse(localStorage.getItem('gruposItems') || '[]');
       var protegidoItems = JSON.parse(localStorage.getItem('protegidoItems') || '[]');
+      /* Migración: los reportes guardados antes quedaban sólo en el
+         dispositivo y sin id. Ahora cada uno tiene id propio (para poder
+         borrarlo y sincronizarlo uno por uno) y queda marcado "sin enviar"
+         para que la primera sincronización lo suba al servidor. */
+      (function () {
+        var vistos = {};
+        protegidoItems = (Array.isArray(protegidoItems) ? protegidoItems : []).map(function (it) {
+          var n = normalizarProtegidoLocal(it);
+          if (!n) return null;
+          if (!n.id) n.id = 'loc-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+          while (vistos[n.id]) n.id = 'loc-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+          vistos[n.id] = true;
+          return n;
+        }).filter(Boolean);
+      })();
 
       function guardarSeccion(nombre, arr) {
         localStorage.setItem(nombre, JSON.stringify(arr));
@@ -4507,44 +4547,258 @@ import { initForos } from "./modules/foros/foro-app.js";
       });
       renderGrupos();
 
+      /* ===================================================================
+         COLEGIO PROTEGIDO — reportes de incidentes (servidor + espejo local)
+         -------------------------------------------------------------------
+         Antes los reportes se quedaban SOLO en el dispositivo y la sección
+         estaba apagada (PROTEGIDO=false): un reporte no llegaba a nadie.
+         Ahora:
+           * el reporte va al backend (POST /api/protegido/incidentes),
+           * el personal docente lo ve y lo marca como atendido,
+           * sin conexión el reporte queda en el dispositivo y se sube solo
+             en la próxima sincronización (local-first, Android gama baja).
+         =================================================================== */
+      /* Los incidentes que devuelve el servidor NO se guardan en el
+         dispositivo (son datos sensibles de terceros). En el dispositivo
+         sólo viven: los reportes que todavía no se pudieron subir y los
+         borrados que quedaron pendientes de confirmar. */
+      var protegidoRemotos = [];
+      var protegidoSincronizando = false;
+
+      function _guardarProtegido() {
+        guardarSeccion('protegidoItems', protegidoItems);
+      }
+
       function renderProtegido() {
-        // FEATURES.PROTEGIDO flag - default: false (hidden). Set to true to enable.
-        // WARNING: Only enable when a real reporting channel with a responsible person exists.
         if (!isEnabled('PROTEGIDO')) return;
         var el = $('prot-lista');
-        // Permanent warning notice (shown when feature is enabled)
+        if (!el) return;
+        // Aviso permanente: ahora los reportes SÍ llegan a una persona.
         if (!el.querySelector('.protegido-warning')) {
           var warning = document.createElement('div');
           warning.className = 'protegido-warning';
           warning.style.cssText = 'margin-bottom:1rem;padding:.75rem;background:var(--red-50);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:.875rem;';
-          warning.innerHTML = '<strong>⚠️ Importante:</strong> Este formulario guarda el texto solo en este dispositivo. No se envía a ninguna persona. Si necesitas ayuda, habla con un docente, el orientador o la dirección de tu centro. En una emergencia, llama al 911.';
+          warning.innerHTML = '<strong>⚠️ Importante:</strong> Los reportes se envían al servidor del colegio y el personal docente los ve y los atiende. Si no tenés conexión, el reporte queda guardado en este dispositivo y se envía solo al volver la red. En una emergencia, llama al 911.';
           el.parentNode.insertBefore(warning, el);
         }
-        if (protegidoItems.length === 0) { el.innerHTML = emptyMsg('Sin incidentes reportados.', { icon: '🛡️', title: 'Colegio Protegido', desc: 'No hay incidentes reportados. ¡Todo tranquilo!' }); return; }
+        var items = fusionarProtegido(protegidoItems, protegidoRemotos);
+        if (!items.length) {
+          el.innerHTML = emptyMsg('Sin incidentes reportados.', { icon: '🛡️', title: 'Colegio Protegido', desc: 'No hay incidentes reportados. ¡Todo tranquilo!' });
+          return;
+        }
+        var usuario = usuarioActual || { email: '', rol: '' };
+        var gestion = esGestorProtegido(usuario.rol);
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          protegidoItems.map(function (p, i) {
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(p.tipo) + '</strong><br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(p.desc) + '</span></div>' +
-              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
+          items.map(function (p) {
+            var badges = '';
+            if (p.urgente) badges += '<span style="display:inline-block;padding:.05rem .4rem;border-radius:999px;background:var(--red);color:#fff;font-size:.68rem;font-weight:700;">URGENTE</span> ';
+            badges += '<span style="display:inline-block;padding:.05rem .4rem;border-radius:999px;background:' + (p.estado === 'resuelto' ? '#dcfce7' : 'var(--gray-200)') + ';color:var(--gray-700);font-size:.68rem;">' + etiquetaEstadoProtegido(p.estado) + '</span>';
+            if (p.pendiente) badges += ' <span style="font-size:.68rem;color:var(--gray-500);">· sin enviar</span>';
+            var pie = '';
+            if (p.autor) pie += escapeHtml(p.autor) + ' · ';
+            pie += escapeHtml(formatearFechaProtegido(p.creado));
+            var acciones = '';
+            if (gestion && p.estado !== 'resuelto' && !p.pendiente) {
+              acciones += '<button class="btn btn-sm btn-outline prot-resolver" data-id="' + escapeHtml(p.id) + '" style="color:#15803d;">Atender</button>';
+            }
+            if (puedeBorrarProtegido(p, usuario)) {
+              // OJO: sin data-perm: un estudiante tiene que poder borrar SU
+              // reporte (el backend valida que sea el autor o el personal docente).
+              acciones += '<button class="btn btn-sm prot-del" data-id="' + escapeHtml(p.id) + '" style="background:var(--red);color:#fff;">🗑️</button>';
+            }
+            return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
+              '<div style="min-width:0;flex:1;"><strong>' + escapeHtml(p.tipo) + '</strong> ' + badges +
+              (p.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(p.desc) + '</span>' : '') +
+              '<br><span style="font-size:.72rem;color:var(--gray-500);">' + pie + '</span></div>' +
+              (acciones ? '<div style="display:flex;gap:.25rem;flex-shrink:0;">' + acciones + '</div>' : '') +
+              '</div>';
           }).join('') + '</div>';
-        el.querySelectorAll('.seccion-del').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            protegidoItems.splice(parseInt(this.dataset.idx), 1);
-            guardarSeccion('protegidoItems', protegidoItems);
-            renderProtegido();
-            mostrarToast('Reporte eliminado.', 'success');
-          });
+        el.querySelectorAll('.prot-del').forEach(function (btn) {
+          btn.addEventListener('click', function () { borrarIncidenteProtegido(this.dataset.id); });
+        });
+        el.querySelectorAll('.prot-resolver').forEach(function (btn) {
+          btn.addEventListener('click', function () { resolverIncidenteProtegido(this.dataset.id); });
         });
       }
+
+      /* Quita el prefijo "API 403: " de los errores del backend. */
+      function _mensajeProtegido(e) {
+        var msg = String((e && e.message) || e || '');
+        return msg.replace(/^API\s+\d+:\s*/, '') || 'No se pudo completar la operación.';
+      }
+
+      async function reportarIncidenteProtegido(tipo, desc, urgente) {
+        var item = {
+          id: 'loc-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
+          tipo: tipo,
+          desc: desc,
+          urgente: !!urgente,
+          autor: (usuarioActual && usuarioActual.email ? usuarioActual.email : '').toLowerCase(),
+          estado: 'pendiente',
+          creado: Date.now(),
+          pendiente: true,
+          borrar: false,
+          remoto: '',
+        };
+        // Primero local (local-first): el reporte aparece aunque no haya red.
+        protegidoItems.push(item);
+        _guardarProtegido();
+        renderProtegido();
+        if (!logueado) {
+          mostrarToast('Reporte guardado en este dispositivo.', 'success');
+          return;
+        }
+        try {
+          await apiReportarIncidente(item.tipo, item.desc, item.urgente);
+          // Ya está en el servidor: el espejo local sobra (lo muestra el servidor).
+          protegidoItems = protegidoItems.filter(function (x) { return x.id !== item.id; });
+          _guardarProtegido();
+          renderProtegido();
+          mostrarToast('Reporte enviado al personal del colegio.', 'success');
+          sincronizarProtegido();
+        } catch (e) {
+          if (_esErrorRed(String((e && e.message) || e || ''))) {
+            mostrarToast('Sin conexión: el reporte quedó guardado y se enviará solo.', 'error');
+          } else {
+            // El servidor lo rechazó (p.ej. sesión vencida): no se reintenta.
+            protegidoItems = protegidoItems.filter(function (x) { return x.id !== item.id; });
+            _guardarProtegido();
+            renderProtegido();
+            mostrarToast(_mensajeProtegido(e), 'error');
+          }
+        }
+      }
+
+      async function borrarIncidenteProtegido(id) {
+        var local = null;
+        for (var i = 0; i < protegidoItems.length; i++) if (protegidoItems[i].id === id) { local = protegidoItems[i]; break; }
+        var remoto = null;
+        for (var j = 0; j < protegidoRemotos.length; j++) if (protegidoRemotos[j].id === id) { remoto = protegidoRemotos[j]; break; }
+        if (!local && !remoto) return;
+        var ok = await dialogConfirm('¿Eliminar este reporte?', 'Colegio Protegido');
+        if (!ok) return;
+        var remotoId = (remoto && remoto.id) || (local && local.remoto) || '';
+        if (!remotoId) {
+          // Nunca llegó al servidor: se borra local y listo.
+          protegidoItems = protegidoItems.filter(function (x) { return x.id !== id; });
+          _guardarProtegido();
+          renderProtegido();
+          mostrarToast('Reporte eliminado.', 'success');
+          return;
+        }
+        try {
+          await apiBorrarIncidente(remotoId);
+          protegidoRemotos = protegidoRemotos.filter(function (x) { return x.id !== remotoId; });
+          protegidoItems = protegidoItems.filter(function (x) { return x.remoto !== remotoId; });
+          _guardarProtegido();
+          renderProtegido();
+          mostrarToast('Reporte eliminado.', 'success');
+        } catch (e) {
+          if (_esErrorRed(String((e && e.message) || e || ''))) {
+            // Sin red: se anota el borrado y se reintenta en la próxima sync.
+            if (!local) {
+              protegidoItems.push({
+                id: 'loc-del-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
+                tipo: remoto ? remoto.tipo : 'Reporte', desc: '', urgente: false,
+                autor: '', estado: 'pendiente', creado: Date.now(),
+                pendiente: false, borrar: true, remoto: remotoId,
+              });
+            } else {
+              local.borrar = true;
+            }
+            _guardarProtegido();
+            renderProtegido();
+            mostrarToast('Sin conexión: se eliminará cuando vuelva la red.', 'error');
+          } else {
+            mostrarToast(_mensajeProtegido(e), 'error');
+          }
+        }
+      }
+
+      async function resolverIncidenteProtegido(id) {
+        if (!esGestorProtegido(usuarioActual && usuarioActual.rol)) {
+          mostrarToast('Sólo el personal docente puede atender reportes.', 'error');
+          return;
+        }
+        try {
+          var r = await apiResolverIncidente(id);
+          var nr = normalizarProtegidoRemoto(r && r.incidente);
+          if (nr) {
+            protegidoRemotos = [nr].concat(protegidoRemotos.filter(function (x) { return x.id !== nr.id; }));
+          }
+          renderProtegido();
+          mostrarToast('Reporte marcado como atendido.', 'success');
+        } catch (e) {
+          if (_esErrorRed(String((e && e.message) || e || ''))) {
+            mostrarToast('Sin conexión: no se pudo actualizar el reporte.', 'error');
+          } else {
+            mostrarToast(_mensajeProtegido(e), 'error');
+          }
+        }
+      }
+
+      async function sincronizarProtegido() {
+        if (!isEnabled('PROTEGIDO')) return;
+        if (protegidoSincronizando) return;
+        if (!logueado) { renderProtegido(); return; }
+        protegidoSincronizando = true;
+        try {
+          // 1) subir lo que quedó pendiente sin conexión
+          var suben = pendientesProtegidoSubir(protegidoItems);
+          for (var i = 0; i < suben.length; i++) {
+            var real = null;
+            for (var k = 0; k < protegidoItems.length; k++) if (protegidoItems[k].id === suben[i].id) real = protegidoItems[k];
+            if (!real) continue;
+            try {
+              await apiReportarIncidente(real.tipo, real.desc, !!real.urgente);
+              // Ya está en el servidor: el espejo local sobra.
+              protegidoItems = protegidoItems.filter(function (x) { return x.id !== real.id; });
+            } catch (e) {
+              if (!_esErrorRed(String((e && e.message) || e || ''))) {
+                // El servidor lo rechazó: no se reintenta en loop.
+                protegidoItems = protegidoItems.filter(function (x) { return x.id !== real.id; });
+              }
+              break; // sin red no tiene sentido seguir
+            }
+          }
+          // 2) borrar lo que quedó pendiente
+          var borran = pendientesProtegidoBorrar(protegidoItems);
+          for (var j = 0; j < borran.length; j++) {
+            var b = borran[j];
+            try {
+              await apiBorrarIncidente(b.remoto);
+              protegidoItems = protegidoItems.filter(function (x) { return x.id !== b.id; });
+            } catch (e) {
+              if (!_esErrorRed(String((e && e.message) || e || ''))) {
+                protegidoItems = protegidoItems.filter(function (x) { return x.id !== b.id; });
+              }
+              break;
+            }
+          }
+          // 3) traer la lista del servidor (el backend ya la filtra por rol)
+          try {
+            var data = await apiIncidentes();
+            if (data && Array.isArray(data.incidentes)) {
+              protegidoRemotos = data.incidentes.map(normalizarProtegidoRemoto).filter(Boolean);
+            }
+          } catch (e) {
+            console.warn('[protegido] No se pudo actualizar la lista del servidor:', e);
+          }
+          _guardarProtegido();
+          renderProtegido();
+        } finally {
+          protegidoSincronizando = false;
+        }
+      }
+
       $('btn-prot-add').addEventListener('click', function () {
         if (!exigirPermiso('participar')) return;
         dialogPrompt('Tipo de incidente (ej: Acoso, Robo, Emergencia):', 'Reportar incidente').then(function (tipo) {
-          if (!tipo) return;
-          dialogPrompt('Describe lo sucedido:', 'Descripci\u00F3n').then(function (desc) {
-            protegidoItems.push({ tipo: tipo.trim(), desc: (desc || '').trim() });
-            guardarSeccion('protegidoItems', protegidoItems);
-            renderProtegido();
-            mostrarToast('Reporte enviado.', 'success');
+          if (!tipo || !tipo.trim()) return;
+          dialogPrompt('Describe lo sucedido:', 'Descripción').then(function (desc) {
+            dialogConfirm('¿Marcar este reporte como urgente?', 'Colegio Protegido').then(function (urgente) {
+              reportarIncidenteProtegido(tipo.trim(), (desc || '').trim(), !!urgente);
+            });
           });
         });
       });

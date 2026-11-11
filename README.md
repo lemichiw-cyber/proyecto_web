@@ -202,6 +202,39 @@ local (archivos cargados) sigue disponible.
 
 ---
 
+## 🛡️ Colegio Protegido — reportes de incidentes
+
+La sección "Colegio Protegido" estaba implementada pero **guardaba los
+reportes sólo en el dispositivo** (y el feature flag estaba apagado): un
+reporte no llegaba a nadie. Ahora hay backend real:
+
+| Acción | Quién puede |
+|---|---|
+| Reportar un incidente | Cualquier usuario con sesión (incluido un estudiante) |
+| Ver los reportes | El autor ve los suyos; el **personal docente** (docente, coordinador, director, subdirector, admin) ve **todos** |
+| Marcar como atendido | Sólo el personal docente |
+| Eliminar | El autor o el personal docente |
+
+- **Backend**: `backend/api/protegido.py` → `/api/protegido/incidentes`
+  (la sesión va por la cookie HttpOnly `cherrybomb_session`; el frontend
+  nunca manda `Authorization`).
+- **Datos**: `protegido_incidentes.json` en el directorio de datos
+  (`SAKURA_DATA_DIR`, por defecto `backend/`), permisos `0600` y escritura
+  atómica. En el servidor Debian queda en `/var/lib/cherrybomb/`.
+- **Auditoría**: cada reporte, borrado y resolución queda en `audit.log`.
+- **Frontend**: `src/modules/protegido/protegido-sync.js` (mezcla
+  servidor ↔ dispositivo, permisos) + `src/app.js` (render y acciones).
+
+**Local-first**: el reporte se guarda primero en el dispositivo y se muestra
+enseguida. Si no hay conexión queda pendiente y se sube solo en la próxima
+sincronización (al abrir la sección, al iniciar sesión o al volver la red).
+Si no hay sesión, el reporte queda en el dispositivo y se envía al iniciar
+sesión.
+
+> En una emergencia real, llamá al 911: la app no es un canal de emergencia.
+
+---
+
 ## Requisitos
 
 | Herramienta | Versión | Para qué |
@@ -317,6 +350,14 @@ worker respondan `200`.
 Existe porque el bug de `base` de Vite llegó a producción dos veces. Ninguna
 prueba unitaria lo detecta: el problema no está en el código, sino en cómo se
 compone la URL final. Si tocás `base` o movés assets, corré esto.
+
+Además verifica que **el chunk del reproductor (Sakura Player) exista** y que
+el bundle no contenga una ruta cruda a `src/sakura-player/`. Ese chequeo
+existe porque el import dinámico llevaba un query string (`?t=...`): Vite no
+puede resolverlo en build time, dejaba la ruta cruda en el bundle y el
+navegador pedía una URL inexistente → *"No se pudo cargar el reproductor"*.
+Un chunk con hash en el nombre ya es una URL nueva: no hace falta el
+cache-busting.
 
 ## Tests y lint
 
@@ -632,16 +673,22 @@ no hay cuentas en la nube.
 - Exámenes (creador y simulador) · Respaldos (Export/Import JSON)
 - Configuración (tema, volumen, URL de backend) · 13 temas visuales
 
+**Lo que funciona con backend (multiusuario, requiere sesión):**
+- **Colegio Protegido** — reportes de incidentes de seguridad escolar: el
+  reporte llega al servidor y lo ve el personal docente (ver abajo).
+
 **Lo que NO funciona (funciones MULTIUSUARIO — desactivadas por defecto):**
 - Foros · Mensajes · Actividades grupales · Aulas virtuales · Matrícula
 - Planificación docente · Asistencia · Roles docente/director/admin
-- Reportes de incidentes (Colegio Protegido) · Portal Padres
+- Portal Padres
 - Estas funciones requieren **backend real con autenticación, base de datos
   con RLS y canales de comunicación reales**. Están desactivadas por defecto
   (`src/config/features.js`).
 
-> ⚠️ **Tus datos viven solo en este dispositivo.** Si lo compartes, otras
+> ⚠️ **Tus datos viven solo en este dispositivo.** Si lo compartis, otras
 > personas pueden verlos. Haz un respaldo en **Ajustes → Respaldos**.
+> La única excepción es *Colegio Protegido*: los reportes de incidentes van
+> al servidor del colegio (ver la sección siguiente).
 
 ## Hoja de ruta — Lo multiusuario
 
@@ -650,7 +697,6 @@ no hay cuentas en la nube.
 | Foros, Mensajes, Grupales | Backend real + WebSockets/polling + moderación + RLS en BD |
 | Aulas, Matrícula, Planificación, Asistencia | Backend real + BD con RLS + gestión de inscripciones/tareas/calificaciones/asistencia |
 | Roles docente/director/admin | Autenticación real (no editable en consola) + backend + RLS + auditoría |
-| Reportes (Colegio Protegido) | **Canal real con responsable** (psicólogo, orientador, dirección) + protocolo + anonimato real + notificación a adulto |
 | Portal Padres | Backend real + BD con RLS + vínculo estudiante-padre verificado + auth real |
 
 Ver `docs/FUNCIONES.md` para la tabla completa con estado y requisitos.

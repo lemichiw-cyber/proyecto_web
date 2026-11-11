@@ -20,6 +20,11 @@ import pytest
 
 # --- Aislamiento de los archivos de datos -------------------------------
 _TMP_DIR = Path(tempfile.mkdtemp(prefix="cherrybomb-tests-"))
+# TODO lo que el backend escribe (cuentas, sesiones, auditoría,
+# suscripciones push, reportes del foro, incidentes) va al temporal:
+# así las pruebas no tocan los datos reales de la laptop NI ensucian el
+# directorio del código.
+os.environ.setdefault("SAKURA_DATA_DIR", str(_TMP_DIR))
 os.environ.setdefault("SAKURA_ACCOUNTS_FILE", str(_TMP_DIR / "accounts.json"))
 os.environ.setdefault("SAKURA_SESSIONS_FILE", str(_TMP_DIR / "sessions.json"))
 # La app servida por el backend no debe activarse durante las pruebas
