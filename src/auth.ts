@@ -43,12 +43,22 @@ function _headersConToken(): Record<string, string> {
   return h;
 }
 
+/** Tiempo máximo de espera de una llamada al backend (ms). */
+const TIMEOUT_API_MS = 10000;
+
 function _api(path: string, body: any, method?: string): Promise<Response> {
+  // Sin timeout, un fetch bloqueado (p.ej. por el permiso de "acceso a la
+  // red local") queda colgado para siempre y el usuario no ve ningún error.
+  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), TIMEOUT_API_MS) : null;
   return fetch(getApiBase() + path, {
     method: method || (body ? "POST" : "GET"),
     headers: _headersConToken(),
     body: body ? JSON.stringify(body) : undefined,
     credentials: "include",
+    signal: ctrl ? ctrl.signal : undefined,
+  }).finally(() => {
+    if (timer) clearTimeout(timer);
   });
 }
 
@@ -67,6 +77,20 @@ export const PASSWORD_PENDIENTE = "PASSWORD_PENDIENTE";
 export function esPasswordPendiente(err: unknown): boolean {
   const msg = String((err as any)?.message || err || "");
   return msg.indexOf(PASSWORD_PENDIENTE) !== -1;
+}
+
+/**
+ * ¿El error es de red (backend apagado, inaccesible o bloqueado por el
+ * permiso de "acceso a la red local") y no de credenciales?
+ */
+export function esErrorDeRed(err: unknown): boolean {
+  const msg = String((err as any)?.message || err || "");
+  const nombre = String((err as any)?.name || "");
+  return (
+    err instanceof TypeError ||
+    nombre === "AbortError" ||
+    /networkerror|failed to fetch|load failed|timeout|tiempo de espera agotado|abort/i.test(msg)
+  );
 }
 
 export function isAuthenticated(): boolean {
@@ -110,6 +134,10 @@ export async function login(email: string, password: string): Promise<AuthResult
     // 2) Fallback local: verificar cuenta y contraseña en localStorage
     const cuenta = obtenerCuenta(e);
     if (!cuenta || !cuentaActiva(cuenta)) {
+      // Si lo que falló fue la RED (backend apagado o bloqueado por el
+      // permiso de "acceso a la red local"), se informa eso y no un falso
+      // "credenciales inválidas".
+      if (esErrorDeRed(err)) throw err;
       throw new Error("Credenciales inválidas.");
     }
     if (!cuenta.passwordHash) {

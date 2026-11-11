@@ -8,8 +8,13 @@
 
    Ahora la prioridad es:
      1) localStorage.cherrybombApiBase  → override manual (Ajustes → Backend)
-     2) VITE_API_BASE                   → valor por defecto del build
-     3) ""                              → mismo origen (rutas /api/... relativas)
+     2) window.__CB_API_BASE__          → valor inyectado por el servidor
+                                          ("" = mismo origen). Lo inyecta
+                                          el backend cuando sirve la PWA.
+     3) VITE_API_BASE                   → valor por defecto del build
+                                          (colapsado a "" si ya es el
+                                          mismo origen que la página)
+     4) ""                              → mismo origen (rutas /api/... relativas)
 
    La clave `cherrybombApiBase` está en EXCLUDED_KEYS del módulo de
    respaldos: no se copia al JSON de exportación (es configuración del
@@ -45,7 +50,38 @@ export function apiBaseBuild(): string {
   return "";
 }
 
-/** URL base efectiva: override en tiempo de ejecución > valor del build. */
+/**
+ * ¿La URL base y la página están en el mismo origen?
+ * Si es así, conviene usar rutas relativas (/api/...): así la app funciona
+ * igual desde localhost, 127.0.0.1 o la IP de la laptop en la LAN.
+ */
+export function esMismoOrigen(url: string): boolean {
+  try {
+    if (!url) return true;
+    if (typeof location === "undefined") return false;
+    const u = new URL(url, location.href);
+    return u.origin === location.origin;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * URL base inyectada por el servidor que sirve la PWA.
+ * El backend la inserta en index.html como `window.__CB_API_BASE__=""`.
+ * Devuelve undefined si el servidor no inyectó nada.
+ */
+export function apiBaseServidor(): string | undefined {
+  try {
+    const v = (window as any).__CB_API_BASE__;
+    if (typeof v === "string") return _normaliza(v);
+  } catch (e) {
+    /* noop */
+  }
+  return undefined;
+}
+
+/** URL base efectiva: override manual > servidor > build > mismo origen. */
 export function getApiBase(): string {
   try {
     const saved = localStorage.getItem(LS_API_BASE);
@@ -53,7 +89,19 @@ export function getApiBase(): string {
   } catch (e) {
     /* localStorage no disponible (modo privado, SSR, tests) */
   }
-  return apiBaseBuild();
+  return apiBaseDefault();
+}
+
+/**
+ * Valor por defecto (sin override manual): lo que se usaría al pulsar
+ * "Restaurar" en Ajustes → Backend.
+ */
+export function apiBaseDefault(): string {
+  const delServidor = apiBaseServidor();
+  if (delServidor !== undefined) return delServidor;
+  const build = apiBaseBuild();
+  // Si el backend ya está en el mismo origen que la página, rutas relativas.
+  return esMismoOrigen(build) ? "" : build;
 }
 
 /** Override manual guardado ("" si no hay). */
@@ -100,24 +148,39 @@ export function esLoopback(url?: string): boolean {
  * backend local. A partir de 2025 los navegadores (Firefox "Local Network
  * Access", Chrome "Local network access") piden permiso explícito antes de
  * dejar que una página pública acceda a 127.0.0.1; si se deniega, el fetch
- * falla sin más explicación.
+ * falla (o se queda colgado) sin más explicación.
  *
  * Devuelve "" si el error no es de ese tipo.
  */
 export function explicaErrorRed(err: unknown, protocolo?: string): string {
   const msg = String((err as any)?.message || err || "");
+  const nombre = String((err as any)?.name || "");
   const esErrorRed =
     err instanceof TypeError ||
+    nombre === "AbortError" ||
     /networkerror|failed to fetch|load failed|no se pudo fetch|conexi[oó]n|conexion/i.test(msg);
-  if (!esErrorRed) return "";
+  // Un timeout hacia un backend local desde una página https también es
+  // síntoma del bloqueo: el navegador deja la petición colgada.
+  const esTimeout =
+    nombre === "AbortError" ||
+    /timeout|tiempo de espera agotado|abort/i.test(msg);
+  if (!esErrorRed && !esTimeout) return "";
   if (!esLoopback()) return "";
   const proto = protocolo ?? (typeof location !== "undefined" ? location.protocol : "");
   if (proto !== "https:") return "";
+  // El backend local sirve la propia app: esa vía es same-origin y NO
+  // necesita ningún permiso del navegador.
+  const local = getApiBase();
+  const atajo = local ? " O abrí " + local + "/ directamente (app local, sin permisos)." : "";
+  const inicio = esTimeout
+    ? "No se pudo acceder al backend local (se agotó el tiempo de espera)."
+    : "El navegador bloqueó el acceso a la red local (tu backend está en 127.0.0.1).";
   return (
-    "El navegador bloqueó el acceso a la red local (tu backend está en 127.0.0.1). " +
-    "Permití el acceso a la red local para este sitio —icono junto a la URL en la barra— " +
+    inicio +
+    " Permití el acceso a la red local para este sitio —icono junto a la URL en la barra— " +
     "y recargá la página. En Firefox: about:config → network.lna.enabled = false. " +
-    "En Chrome: Configuración → Privacidad y seguridad → Acceso a la red local."
+    "En Chrome: Configuración → Privacidad y seguridad → Acceso a la red local." +
+    atajo
   );
 }
 

@@ -59,12 +59,29 @@ systemctl --user daemon-reload
 systemctl --user enable --now cherrybomb-backend.service
 systemctl --user enable --now cherrybomb-backend-control.timer
 
+# --- Build de la PWA (para poder abrir la app en el propio backend) ----
+# El backend sirve dist/ en http://127.0.0.1:8000/ (mismo origen: sin
+# CORS, sin permiso de "acceso a la red local" y con la cookie normal).
+if [ ! -f "$RUTA_PROYECTO/dist/index.html" ]; then
+  echo "No hay build de la PWA (dist/index.html). Intentando compilar..."
+  if command -v npm >/dev/null 2>&1; then
+    ( cd "$RUTA_PROYECTO" && npm ci && npm run build ) \
+      && echo "Build OK" \
+      || echo "AVISO: falló el build. Corré 'npm ci && npm run build' a mano."
+  else
+    echo "AVISO: npm no está instalado. Corré 'npm ci && npm run build' a mano."
+  fi
+fi
+
 cat <<EOF
 
 Listo.
 
   Servicio   : cherrybomb-backend.service   (http://127.0.0.1:8000)
   Control    : cherrybomb-backend-control.timer (cada 1 min)
+
+  App local  : http://127.0.0.1:8000/   ← misma origen, sin permisos
+  App pública: https://lemichiw-cyber.github.io/proyecto_web/
 
 Comandos útiles:
   systemctl --user status cherrybomb-backend.service
@@ -73,6 +90,7 @@ Comandos útiles:
   systemctl --user list-timers cherrybomb-backend-control.timer
   journalctl --user -u cherrybomb-backend.service -f
   journalctl --user -t cherrybomb-backend-control -f
+  bash ops/rebuild-app.sh                # recompila la PWA y reinicia
 
 Nota: si cerrás sesión y querés que el backend siga disponible,
        activá el linger:  loginctl enable-linger "$USER"

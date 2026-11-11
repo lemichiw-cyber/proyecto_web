@@ -28,7 +28,12 @@ router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 # Archivo de persistencia simple (JSON) en el directorio del backend
 # ------------------------------------------------------------
 BASE_DIR = pathlib.Path(__file__).parent.parent  # .../proyecto_web/backend
-ACCOUNTS_FILE = BASE_DIR / "accounts.json"
+# La ruta se puede sobreescribir por entorno (SAKURA_ACCOUNTS_FILE) para que
+# las pruebas usen un archivo temporal y NO borren las cuentas reales de la
+# laptop (accounts.json es la fuente de verdad de los roles).
+ACCOUNTS_FILE = pathlib.Path(
+    os.getenv("SAKURA_ACCOUNTS_FILE") or (BASE_DIR / "accounts.json")
+).expanduser()
 
 DEFAULT_ACCOUNTS: dict = {
     # Cuenta admin semilla — contraseña se establece en el primer login

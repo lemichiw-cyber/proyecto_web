@@ -34,7 +34,11 @@ from db import write_json_atomic
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 BASE_DIR = Path(__file__).parent.parent  # .../proyecto_web/backend
-SESSIONS_FILE = BASE_DIR / "sessions.json"
+# Igual que accounts.json: la ruta se puede sobreescribir por entorno para
+# que las pruebas no toquen las sesiones reales de la laptop.
+SESSIONS_FILE = Path(
+    os.getenv("SAKURA_SESSIONS_FILE") or (BASE_DIR / "sessions.json")
+).expanduser()
 
 SESSION_TTL_SECONDS = 24 * 60 * 60  # 24 horas
 SESSION_COOKIE = "cherrybomb_session"

@@ -30,7 +30,7 @@ import {
 } from "./app-accounts";
 
 import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta } from "./api-client";
-import { getApiBase, setApiBase, apiBaseBuild, testApiBase, explicaErrorRed } from "./api-base";
+import { getApiBase, setApiBase, apiBaseDefault, testApiBase, explicaErrorRed } from "./api-base";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
@@ -628,7 +628,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (!input) return;
 
         if (document.activeElement !== input) input.value = getApiBase();
-        if (def) def.textContent = apiBaseBuild() || '(mismo origen)';
+        if (def) def.textContent = apiBaseDefault() || '(mismo origen)';
 
         function _estado(msg, ok) {
           if (!status) return;

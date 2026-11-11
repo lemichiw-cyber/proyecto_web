@@ -175,6 +175,7 @@ Copiá `backend/.env.example` a `backend/.env` y ajustá:
 | `SAKURA_COOKIE_SECURE` | `1` = cookie de sesión con `Secure` (default en producción) |
 | `SAKURA_COOKIE_SAMESITE` | `lax` (default) / `strict` / `none`. `none` hace falta si el frontend y el backend están en sitios distintos (GitHub Pages → backend local). |
 | `SAKURA_ALLOW_LOCAL_CORS` | `1` = permite orígenes localhost y la cabecera `Access-Control-Allow-Private-Network` |
+| `SAKURA_SERVE_APP` | `1`/`0`/`auto` = sirve la PWA compilada (`dist/`) desde el propio backend (mismo origen) |
 | `YTMUSIC_AUTH_FILE` | Ruta del archivo de sesión (default: `auth.json`) |
 | `YTMUSIC_ALLOW_ANONYMOUS` | Permitir modo invitado si no hay auth |
 
@@ -365,6 +366,30 @@ Qué instala:
 | `~/.config/systemd/user/cherrybomb-backend-control.service` | Ejecuta el script de control. |
 | `~/.local/bin/cherrybomb-backend-control.sh` | Decide si estás activo: pantalla bloqueada / `IdleHint` de logind / `org.freedesktop.ScreenSaver` (hypridle). Activo → enciende; inactivo 5 min → apaga. |
 
+### 🏠 La app local: `http://127.0.0.1:8000/`
+
+El backend **también sirve la PWA** (la carpeta `dist/`). Abrida desde
+ahí, la app y la API están en el **mismo origen**:
+
+| | GitHub Pages (`https://…github.io`) | App local (`http://127.0.0.1:8000`) |
+|---|---|---|
+| Permiso de "acceso a la red local" | **sí, hay que aceptarlo** | no hace falta |
+| Cookie de sesión | `SameSite=None; Secure` | normal (`Lax`) |
+| CORS | sí (allowlist) | no |
+| Funciona sin internet | sí (PWA cacheada) | sí |
+
+En la práctica: **usá `http://127.0.0.1:8000/`** en la laptop. La URL de
+GitHub Pages sirve para instalar la PWA y para entrar desde el celular (con
+el permiso de red local aceptado, o apuntando a un backend en la nube).
+
+```bash
+bash ops/rebuild-app.sh     # recompila dist/ y reinicia el servicio
+```
+
+`SAKURA_SERVE_APP` controla este comportamiento: `1` fuerza que se
+sirva, `0` lo desactiva (útil en despliegues en la nube) y `auto`
+(por defecto) sirve la PWA sólo si existe `dist/index.html`.
+
 > La cookie de sesión necesita `SameSite=None; Secure` para viajar desde
 > `https://lemichiw-cyber.github.io` (GitHub Pages) hasta `http://127.0.0.1:8000`:
 > son sitios distintos y con `SameSite=Lax` el navegador no la manda. El
@@ -380,13 +405,15 @@ función *Local Network Access* (LNA). Sin ese permiso, la web de GitHub
 Pages no puede hablar con el backend de la laptop y el login falla con
 `NetworkError when attempting to fetch resource`.
 
-Hay dos formas de resolverlo:
+Hay tres formas de resolverlo:
 
-1. **Aceptar el aviso del navegador** (una sola vez, queda recordado):
+1. **Usar la app local** (`http://127.0.0.1:8000/`): no aplica, porque
+   todo queda en el mismo origen. Es la vía recomendada.
+2. **Aceptar el aviso del navegador** (una sola vez, queda recordado):
    - Firefox: aparece un aviso "Permitir acceso a la red local" → *Permitir*.
    - Chrome/Chromium: *Configuración → Privacidad y seguridad → Acceso a la
      red local* → agregar `https://lemichiw-cyber.github.io` en *Permitir*.
-2. **Desactivar la restricción en Firefox** (para todos los sitios):
+3. **Desactivar la restricción en Firefox** (para todos los sitios):
 
    ```bash
    bash ops/allow-local-network-firefox.sh
@@ -407,6 +434,12 @@ La app detecta este caso y lo explica en el formulario de login y en
   (dentro de Configuración). Eso guarda la URL en `localStorage`
   (`cherrybombApiBase`) y tiene prioridad sobre `VITE_API_BASE`. La clave
   está en `EXCLUDED_KEYS` del módulo de respaldos: no se exporta.
+- Cuando el **backend sirve la propia PWA**, inyecta
+  `window.__CB_API_BASE__=""` en el `index.html`: la app usa rutas
+  `/api/...` relativas y funciona desde cualquier host (localhost,
+  127.0.0.1 o la IP de la laptop en la LAN).
+- Si la URL del build ya es el **mismo origen** que la página, se
+  colapsa sola a rutas relativas.
 - El reproductor de música tiene su propio ajuste
   (`sakuraPlayerApiBase`), independiente del anterior.
 
