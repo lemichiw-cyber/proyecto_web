@@ -1,7 +1,8 @@
-name: Deploy Legacy (GitHub Pages from tag)
+name: Deploy GitHub Pages
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v*-migration-ready'
   workflow_dispatch:
@@ -19,6 +20,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      # URL del backend que la PWA usa por defecto. Se puede cambiar en
+      # tiempo de ejecución desde "Ajustes → Backend" (localStorage
+      # cherrybombApiBase), así que este valor solo es el punto de partida.
+      VITE_API_BASE: ${{ vars.VITE_API_BASE }}
       VITE_LEGACY_ORIGINS: ${{ vars.VITE_LEGACY_ORIGINS }}
       VITE_NEW_APP_URL: ${{ vars.VITE_NEW_APP_URL }}
     steps:

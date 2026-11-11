@@ -171,7 +171,10 @@ Copiá `backend/.env.example` a `backend/.env` y ajustá:
 | Variable | Para qué |
 |---|---|
 | `SAKURA_HOST` / `SAKURA_PORT` | Escucha del backend |
-| `SAKURA_CORS_ORIGINS` | Orígenes extra permitidos (default: dev/preview/`github.io`) |
+| `SAKURA_CORS_ORIGINS` | Orígenes permitidos por CORS (default: dev/preview/`github.io`). **Reemplaza** la lista por defecto. |
+| `SAKURA_COOKIE_SECURE` | `1` = cookie de sesión con `Secure` (default en producción) |
+| `SAKURA_COOKIE_SAMESITE` | `lax` (default) / `strict` / `none`. `none` hace falta si el frontend y el backend están en sitios distintos (GitHub Pages → backend local). |
+| `SAKURA_ALLOW_LOCAL_CORS` | `1` = permite orígenes localhost y la cabecera `Access-Control-Allow-Private-Network` |
 | `YTMUSIC_AUTH_FILE` | Ruta del archivo de sesión (default: `auth.json`) |
 | `YTMUSIC_ALLOW_ANONYMOUS` | Permitir modo invitado si no hay auth |
 
@@ -331,9 +334,55 @@ Si cambiás `base`, volvé a correr `npm run verify:build`.
 
 ### GitHub Pages
 
-El workflow publica el contenido de `dist/` en cada push a `main`. La
-configuración de Pages en el repo debe apuntar a **GitHub Actions** (no a la
-rama), y el build usar `./` como base.
+El workflow `.github/workflows/deploy-legacy.yml` publica el contenido de
+`dist/` en cada push a `main` (y también con `workflow_dispatch`). La
+configuración de Pages en el repo apunta a **GitHub Actions** (no a la rama),
+y el build usa `./` como base.
+
+- URL: <https://lemichiw-cyber.github.io/proyecto_web/>
+- Variable del repo que define el backend por defecto:
+  `VITE_API_BASE=http://127.0.0.1:8000` (se puede cambiar en *Ajustes →
+  Backend* sin recompilar; ver "Cómo funciona la URL del backend").
+
+### Backend local que se prende solo (systemd de usuario)
+
+Si la PWA de GitHub Pages debe hablar con el backend de **tu laptop**, el
+backend queda escuchando en `http://127.0.0.1:8000` y se enciende/apaga
+según si estás usando la máquina.
+
+```bash
+bash ops/install-backend-service.sh          # instala servicio + timer
+systemctl --user status cherrybomb-backend.service
+systemctl --user list-timers cherrybomb-backend-control.timer
+```
+
+Qué instala:
+
+| Archivo | Función |
+|---|---|
+| `~/.config/systemd/user/cherrybomb-backend.service` | Corre uvicorn en `127.0.0.1:8000`. Lee la clave de NVIDIA de `backend/.env` (`load_dotenv`). |
+| `~/.config/systemd/user/cherrybomb-backend-control.timer` | Corre el control cada 1 minuto. |
+| `~/.config/systemd/user/cherrybomb-backend-control.service` | Ejecuta el script de control. |
+| `~/.local/bin/cherrybomb-backend-control.sh` | Decide si estás activo: pantalla bloqueada / `IdleHint` de logind / `org.freedesktop.ScreenSaver` (hypridle). Activo → enciende; inactivo 5 min → apaga. |
+
+> La cookie de sesión necesita `SameSite=None; Secure` para viajar desde
+> `https://lemichiw-cyber.github.io` (GitHub Pages) hasta `http://127.0.0.1:8000`:
+> son sitios distintos y con `SameSite=Lax` el navegador no la manda. El
+> servicio ya lo configura (`SAKURA_COOKIE_SAMESITE=none`) y el backend
+> acepta la cabecera `Access-Control-Allow-Private-Network` que Chrome exige
+> para que una página pública llame a un servicio de la red privada.
+
+### Cómo funciona la URL del backend
+
+- En build time: `VITE_API_BASE` define la URL por defecto del backend
+  (login, roles, tareas, exámenes, IA). Si no se define, se usan rutas
+  relativas `/api/...` (mismo origen).
+- En runtime: el usuario puede sobrescribir la URL en *Ajustes → Backend*
+  (dentro de Configuración). Eso guarda la URL en `localStorage`
+  (`cherrybombApiBase`) y tiene prioridad sobre `VITE_API_BASE`. La clave
+  está en `EXCLUDED_KEYS` del módulo de respaldos: no se exporta.
+- El reproductor de música tiene su propio ajuste
+  (`sakuraPlayerApiBase`), independiente del anterior.
 
 ---
 

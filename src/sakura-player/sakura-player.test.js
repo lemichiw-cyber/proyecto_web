@@ -221,10 +221,20 @@ describe('Catálogo curado', () => {
   });
 
   it('buscar con un enlace de YouTube lo coloca como primer resultado reproducible', async () => {
-    const { api } = await import('./api/client.js');
-    const res = await api.search('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    expect(res.songs[0].id).toBe('dQw4w9WgXcQ');
-    expect(res.songs[0].source).toBe('yt');
+    // El catálogo local es el que garantiza el resultado reproducible. Si hay
+    // un backend corriendo en 127.0.0.1:8000 (en la laptop del usuario) la
+    // búsqueda iría a YouTube y el resultado no sería determinista, así que
+    // se anula el backend durante esta prueba.
+    const fetchReal = globalThis.fetch;
+    globalThis.fetch = async () => { throw new TypeError('sin backend (test)'); };
+    try {
+      const { api } = await import('./api/client.js');
+      const res = await api.search('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      expect(res.songs[0].id).toBe('dQw4w9WgXcQ');
+      expect(res.songs[0].source).toBe('yt');
+    } finally {
+      globalThis.fetch = fetchReal;
+    }
   });
 
   it('api.search devuelve artistas y álbumes derivados de los resultados', async () => {

@@ -131,7 +131,8 @@ try {
   window.addEventListener('online', async () => {
     try {
       const m: any = await import('./offline-sync.js');
-      const apiBase = (import.meta as any).env?.VITE_API_BASE || "";
+      const { getApiBase } = await import('./api-base');
+      const apiBase = getApiBase();
       await m.flush?.(async (a: any) => {
         const r = await fetch(apiBase + (a.path || ""), { method: a.body ? "POST" : "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: a.body ? JSON.stringify(a.body) : undefined });
         if (!r.ok) throw new Error("sync " + r.status);

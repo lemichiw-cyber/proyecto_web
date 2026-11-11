@@ -2,6 +2,8 @@
    notifications.js — Notificaciones push locales (Notification API)
    Notificaciones de "tarea asignada" y "recordatorio 24h antes"
    =================================================================== */
+import { getApiBase } from "./api-base";
+
 (function () {
   'use strict';
 
@@ -289,10 +291,6 @@
 
   /* ---- Push API (VAPID) ---- */
   var VAPID_PUBLIC_KEY = (typeof VITE_VAPID_PUBLIC_KEY !== "undefined" ? VITE_VAPID_PUBLIC_KEY : "");
-  var API_BASE = (function () {
-    var v = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "") || "";
-    return v.replace(/\/+$/, "");
-  })();
   var pushSubscription = null;
 
   function urlBase64ToUint8Array(base64String) {
@@ -325,7 +323,7 @@
       pushSubscription = subscription;
       var email = window.usuarioActual ? window.usuarioActual.email : "";
       try {
-        await fetch(API_BASE + "/api/push/suscribir", {
+        await fetch(getApiBase() + "/api/push/suscribir", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email, subscription: subscription }),
@@ -351,7 +349,7 @@
   function enviarPush(titulo, cuerpo, tag) {
     if (!pushSubscription) return Promise.resolve();
     var payload = JSON.stringify({ title: titulo, body: cuerpo, tag: tag });
-    return fetch(API_BASE + "/api/push/enviar", {
+    return fetch(getApiBase() + "/api/push/enviar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subscription: pushSubscription, payload: payload }),
