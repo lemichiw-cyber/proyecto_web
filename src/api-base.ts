@@ -25,12 +25,23 @@ function _normaliza(url: string | null | undefined): string {
 
 /** URL base configurada en el build (puede estar vacía → mismo origen). */
 export function apiBaseBuild(): string {
+  // OJO: Vite solo reemplaza `import.meta.env.VITE_*` por el literal en el
+  // bundle. Un identificador global suelto (`VITE_API_BASE`) NO se reemplaza
+  // nunca, así que leerlo acá devolvía siempre "" y el valor de build se
+  // perdía silenciosamente.
   try {
-    const v = (typeof VITE_API_BASE !== "undefined" ? VITE_API_BASE : "") || "";
-    return _normaliza(v);
+    const v = (import.meta as any)?.env?.VITE_API_BASE;
+    if (typeof v === "string" && v.trim()) return _normaliza(v);
   } catch (e) {
-    return "";
+    /* import.meta.env no disponible */
   }
+  // Fallback: compilers que sí definan la constante global.
+  try {
+    if (typeof VITE_API_BASE !== "undefined" && VITE_API_BASE) return _normaliza(VITE_API_BASE);
+  } catch (e) {
+    /* noop */
+  }
+  return "";
 }
 
 /** URL base efectiva: override en tiempo de ejecución > valor del build. */

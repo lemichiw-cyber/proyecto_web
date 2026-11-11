@@ -26,13 +26,16 @@ if (typeof localStorage === 'undefined' || !localStorage) {
 
 async function cargar(build = 'https://backend.ejemplo.test') {
   vi.resetModules();
-  vi.stubGlobal('VITE_API_BASE', build);
+  // vi.stubEnv parchea import.meta.env (que es lo que lee el código) y
+  // process.env.
+  vi.stubEnv('VITE_API_BASE', build);
   return await import('./api-base.ts');
 }
 
 describe('api-base — URL del backend', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 

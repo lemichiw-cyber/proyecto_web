@@ -10,7 +10,7 @@ import { getApiBase } from "./api-base";
  * congelada en "" y los endpoints /api/items/* respondían 401.
  */
 function _emailSesion(): string {
-  const env = (typeof VITE_API_EMAIL !== "undefined" ? VITE_API_EMAIL : "") || "";
+  const env = (import.meta as any)?.env?.VITE_API_EMAIL || "";
   if (env) return env.trim().toLowerCase();
   try {
     const raw = localStorage.getItem("cherrybombSession");
