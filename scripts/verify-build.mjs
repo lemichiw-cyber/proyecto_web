@@ -128,6 +128,42 @@ const scenarios = [
 let failures = 0;
 const servers = [];
 
+/* ===================================================================
+   Regresión del reproductor (Sakura Player)
+   -------------------------------------------------------------------
+   El import dinámico del reproductor llevaba un query string
+   ("?t=" + Date.now()). Vite no puede resolver eso en build time, así
+   que dejaba la ruta CRUDA en el bundle: el navegador pedía
+   ./sakura-player/sakura-player.js?t=... → 404 → "No se pudo cargar el
+   reproductor". Ninguna prueba unitaria lo detectaba (el bug es de
+   composición de la build), por eso se comprueba acá:
+
+     1) existe el chunk del reproductor en dist/assets/
+     2) el bundle NO contiene una ruta cruda a src/sakura-player/
+   =================================================================== */
+{
+  const files = existsSync(assetsDir) ? await readdir(assetsDir) : [];
+  const chunk = files.find((f) => /^sakura-player-.*\.js$/.test(f));
+  if (!chunk) {
+    console.error("✗ No se generó el chunk del reproductor (dist/assets/sakura-player-*.js).");
+    console.error('    El import dinámico de sakura-player.js no se pudo empaquetar.');
+    failures += 1;
+  } else {
+    console.log(`✓ chunk del reproductor: assets/${chunk}`);
+  }
+
+  const mains = files.filter((f) => /^main-.*\.js$/.test(f));
+  for (const m of mains) {
+    const txt = readFileSync(join(assetsDir, m), 'utf8');
+    const crudo = txt.match(/["'`]\.\/sakura-player\/sakura-player\.js[^"'`]*["'`]/);
+    if (crudo) {
+      console.error(`✗ ${m} contiene una ruta CRUDA al reproductor: ${crudo[0]}`);
+      console.error('    El import dinámico tiene que compilarse en un chunk (sin query string).');
+      failures += 1;
+    }
+  }
+}
+
 for (const { label, prefix } of scenarios) {
   // Para el escenario subdir montamos dist/ dentro de un dir con subcarpeta.
   const base = prefix === '/' ? dist : join(dist, '..', '__verify_subdir__', 'proyecto_web');

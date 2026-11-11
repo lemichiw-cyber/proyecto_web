@@ -32,7 +32,7 @@ export const FEATURES = {
   FOROS: true,             // app-foros
   MENSAJES: false,          // app-mensajes
   GRUPALES: false,          // app-grupales
-  PROTEGIDO: false,         // app-protegido (reportes de incidentes)
+  PROTEGIDO: true,          // app-protegido (reportes de incidentes: backend /api/protegido)
   AULAS: false,             // app-aulas + aula_inscripciones, aula_tareas, aula_entregas, aula_calificaciones, aula_asistencia
   ROLES_DOCENTE: false,     // app-auth (panel admin), app-asistencias (requieren backend)
   ASISTENCIA_DOCENTE: false, // app-asistencias

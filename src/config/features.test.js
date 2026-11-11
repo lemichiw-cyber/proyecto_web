@@ -19,10 +19,17 @@ describe('features.js — Feature flags', () => {
   });
 
   it('Multiusuario features are disabled (false) by default', () => {
-    const multiusuario = ['MENSAJES', 'GRUPALES', 'PROTEGIDO', 'AULAS', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
+    const multiusuario = ['MENSAJES', 'GRUPALES', 'AULAS', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
     multiusuario.forEach(f => {
       expect(FEATURES[f]).toBe(false);
     });
+  });
+
+  it('PROTEGIDO está habilitado: ya hay backend de incidentes', () => {
+    // Colegio Protegido pasó a usar el backend real
+    // (/api/protegido/incidentes): los reportes llegan al personal docente.
+    expect(FEATURES.PROTEGIDO).toBe(true);
+    expect(isEnabled('PROTEGIDO')).toBe(true);
   });
 
   it('isEnabled returns true for personal features', () => {
