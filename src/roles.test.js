@@ -126,4 +126,33 @@ describe('auth — registro y login con roles', () => {
     expect(l.ok).toBe(true);
     expect(l.rol).toBe('docente');
   });
+
+  it('si el navegador bloquea la red local (página https → backend loopback), informa ese error', async () => {
+    const { cuentas, auth } = await cargarAuth();
+    cuentas.crearCuenta('admin@bachillerato.edu', 'Admin', 'admin');
+    // El diagnóstico de LNA sólo se activa en páginas https con backend loopback.
+    vi.stubEnv('VITE_API_BASE', 'http://127.0.0.1:8000');
+    vi.stubGlobal('location', {
+      protocol: 'https:',
+      href: 'https://lemichiw-cyber.github.io/proyecto_web/',
+      origin: 'https://lemichiw-cyber.github.io',
+    });
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('NetworkError when attempting to fetch resource.');
+    });
+    await expect(auth.login('admin@bachillerato.edu', 'clave-que-no-es-la-local')).rejects.toThrow(
+      /NetworkError/,
+    );
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it('sin bloqueo de red local mantiene el fallback local (backend apagado)', async () => {
+    const { auth } = await cargarAuth();
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    // Página http (mismo origen): no hay LNA → el fallback local manda.
+    await expect(auth.login('nadie@test.local', 'clave-123456')).rejects.toThrow(/Credenciales inválidas/);
+  });
 });

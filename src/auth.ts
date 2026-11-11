@@ -13,7 +13,7 @@ import {
   cuentaActiva,
   verificarPassword,
 } from "./app-accounts.js";
-import { getApiBase } from "./api-base";
+import { getApiBase, explicaErrorRed } from "./api-base";
 
 const TOKEN_KEY = "cherrybombAuthToken";
 const USER_KEY = "cherrybombAuthUser";
@@ -131,20 +131,26 @@ export async function login(email: string, password: string): Promise<AuthResult
   } catch (err) {
     // La cuenta sin contraseña se reporta tal cual (no es "credencial inválida").
     if (esPasswordPendiente(err)) throw err;
+    // Si lo que falló fue la RED y además es el caso "página https → backend
+    // local" (el navegador bloqueó el acceso a la red local), el error real
+    // es ese: no se lo disfraza de "credenciales inválidas" ni se cae al
+    // fallback local, porque la cuenta buena está en el backend.
+    const bloqueoRedLocal = !!explicaErrorRed(err);
     // 2) Fallback local: verificar cuenta y contraseña en localStorage
     const cuenta = obtenerCuenta(e);
     if (!cuenta || !cuentaActiva(cuenta)) {
-      // Si lo que falló fue la RED (backend apagado o bloqueado por el
-      // permiso de "acceso a la red local"), se informa eso y no un falso
-      // "credenciales inválidas".
-      if (esErrorDeRed(err)) throw err;
+      if (bloqueoRedLocal) throw err;
       throw new Error("Credenciales inválidas.");
     }
     if (!cuenta.passwordHash) {
       // Cuenta creada por el admin (o la semilla admin) sin contraseña.
+      if (bloqueoRedLocal) throw err;
       throw new Error(PASSWORD_PENDIENTE + ": definí tu contraseña para entrar.");
     }
     if (!verificarPassword(password, cuenta)) {
+      // La contraseña local no coincide. Si además el backend no respondió,
+      // la contraseña correcta puede estar sólo en el backend.
+      if (bloqueoRedLocal) throw err;
       throw new Error("Credenciales inválidas.");
     }
     _guardarSesion(null, { email: e, rol: cuenta.rol, nombre: cuenta.nombre });
