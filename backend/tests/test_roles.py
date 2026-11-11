@@ -102,6 +102,12 @@ def test_estudiante_no_puede_administrar_cuentas():
     assert r.status_code == 403, r.text
 
 
+def test_sesion_invalida_devuelve_401_no_403():
+    """Cookie de sesión que no existe → 401 (hay que re-loguear)."""
+    r = client.get("/api/accounts/", headers=_cookie("token-inventado"))
+    assert r.status_code == 401, r.text
+
+
 def test_admin_crea_cuenta_con_el_rango_elegido():
     """El admin decide el rango: se respeta (antes se forzaba estudiante)."""
     token = _login_admin()

@@ -146,8 +146,13 @@ def require_admin(
 
         try:
             user = require_auth(authorization=None, cherrybomb_session=cherrybomb_session.strip())
-        except HTTPException:
-            user = None
+        except HTTPException as e:
+            # Sesión inválida/expirada (o cuenta desactivada) → 401, para que
+            # el frontend sepa que tiene que volver a iniciar sesión.
+            raise HTTPException(
+                status_code=401,
+                detail=e.detail or "Sesión inválida o expirada",
+            )
         if isinstance(user, dict) and str(user.get("rol") or "") in ROLES_ADMIN:
             return str(user.get("email") or "")
         raise HTTPException(
