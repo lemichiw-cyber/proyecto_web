@@ -229,8 +229,10 @@ def health() -> dict:
             "python": f"{sys.version_info.major}.{sys.version_info.minor}",
         },
         "version": "1.0.0-p2",
-        "audit_count": __import__("audit").read_tail(1).__len__() if pathlib.Path(__file__).parent.joinpath("audit.log").exists() else 0,
-        "reportes_pendientes": len([v for v in __import__("json").loads(__import__("pathlib").Path(__file__).parent.joinpath("foro_reportes.json").read_text() or "{}").values() if not v.get("resuelto")]) if __import__("pathlib").Path(__file__).parent.joinpath("foro_reportes.json").exists() else 0,
+        # Los archivos de datos pueden estar en SAKURA_DATA_DIR (servidor
+        # Debian), así que se consulta la ruta real, no la del código.
+        "audit_count": len(__import__("audit").read_tail(1)) if __import__("audit").AUDIT_FILE.exists() else 0,
+        "reportes_pendientes": len([v for v in __import__("json").loads(__import__("api.moderacion", fromlist=["REPORTES_FILE"]).REPORTES_FILE.read_text() or "{}").values() if not v.get("resuelto")]) if __import__("api.moderacion", fromlist=["REPORTES_FILE"]).REPORTES_FILE.exists() else 0,
     }
 
 

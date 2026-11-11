@@ -7,8 +7,13 @@ No guarda contraseñas ni tokens. Solo eventos de auth/cuentas (PII mínima).
 from __future__ import annotations
 import json, os, time
 from pathlib import Path
+from paths import data_file  # noqa: E402
+
 BASE_DIR = Path(__file__).parent
-AUDIT_FILE = BASE_DIR / "audit.log"
+# El log de auditoría va al directorio de datos (SAKURA_DATA_DIR) para que
+# en el servidor Debian el código desplegado pueda ser de sólo lectura
+# (ProtectSystem=strict) y el log sobreviva a los despliegues.
+AUDIT_FILE = data_file("audit.log")
 
 def write(evento: str, email: str = "", ip: str = "") -> None:
     try:

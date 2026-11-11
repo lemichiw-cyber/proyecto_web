@@ -28,12 +28,17 @@ router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 # Archivo de persistencia simple (JSON) en el directorio del backend
 # ------------------------------------------------------------
 BASE_DIR = pathlib.Path(__file__).parent.parent  # .../proyecto_web/backend
+# Directorio de datos. En producción (servidor Debian) conviene ponerlo
+# FUERA del repositorio (SAKURA_DATA_DIR=/var/lib/cherrybomb) para que:
+#   * los datos sobrevivan a los despliegues (git pull / npm ci),
+#   * el código desplegado pueda ser de sólo lectura,
+#   * el servicio corra con un usuario sin permisos de escritura en /srv.
 # La ruta se puede sobreescribir por entorno (SAKURA_ACCOUNTS_FILE) para que
 # las pruebas usen un archivo temporal y NO borren las cuentas reales de la
 # laptop (accounts.json es la fuente de verdad de los roles).
-ACCOUNTS_FILE = pathlib.Path(
-    os.getenv("SAKURA_ACCOUNTS_FILE") or (BASE_DIR / "accounts.json")
-).expanduser()
+from paths import data_file  # noqa: E402
+
+ACCOUNTS_FILE = data_file("accounts.json", "SAKURA_ACCOUNTS_FILE")
 
 DEFAULT_ACCOUNTS: dict = {
     # Cuenta admin semilla — contraseña se establece en el primer login
