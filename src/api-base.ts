@@ -25,17 +25,18 @@ function _normaliza(url: string | null | undefined): string {
 
 /** URL base configurada en el build (puede estar vacía → mismo origen). */
 export function apiBaseBuild(): string {
-  // OJO: Vite solo reemplaza `import.meta.env.VITE_*` por el literal en el
-  // bundle. Un identificador global suelto (`VITE_API_BASE`) NO se reemplaza
-  // nunca, así que leerlo acá devolvía siempre "" y el valor de build se
-  // perdía silenciosamente.
+  // OJO 1: Vite solo reemplaza la expresión LITERAL `import.meta.env` por el
+  // objeto de variables del build. Con optional chaining (`import.meta?.env`)
+  // el reemplazo no ocurre y el valor se pierde en silencio.
+  // OJO 2: Vite tampoco reemplaza un identificador global suelto
+  // (`typeof VITE_API_BASE !== "undefined"`), así que tampoco sirve.
   try {
-    const v = (import.meta as any)?.env?.VITE_API_BASE;
+    const v = import.meta.env.VITE_API_BASE;
     if (typeof v === "string" && v.trim()) return _normaliza(v);
   } catch (e) {
     /* import.meta.env no disponible */
   }
-  // Fallback: compilers que sí definan la constante global.
+  // Fallback: compilaciones que sí definan la constante global.
   try {
     if (typeof VITE_API_BASE !== "undefined" && VITE_API_BASE) return _normaliza(VITE_API_BASE);
   } catch (e) {
