@@ -54,7 +54,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf,otf}'],
         // La app es una SPA: cualquier navegación cae en el index precacheado.
         navigateFallback: 'index.html',
-        importScripts: ['public/push-listener.js'],
+        // El service worker se sirve en la raíz del sitio (dist/sw.js), así
+        // que la ruta es relativa a él. Con "public/..." el archivo se
+        // pedía en /public/push-listener.js (404 en Pages) y el SW no
+        // instalaba: sin offline ni push.
+        importScripts: ['push-listener.js'],
         runtimeCaching: [
           {
             // Música de los temas ya descargada: disponible sin conexión.

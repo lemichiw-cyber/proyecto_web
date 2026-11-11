@@ -372,6 +372,32 @@ Qué instala:
 > acepta la cabecera `Access-Control-Allow-Private-Network` que Chrome exige
 > para que una página pública llame a un servicio de la red privada.
 
+### ⚠️ Permiso de "acceso a la red local" (Firefox / Chrome)
+
+Desde 2025 los navegadores bloquean por defecto que una página servida por
+**HTTPS** acceda a un servicio de tu propia máquina (127.0.0.1): es la
+función *Local Network Access* (LNA). Sin ese permiso, la web de GitHub
+Pages no puede hablar con el backend de la laptop y el login falla con
+`NetworkError when attempting to fetch resource`.
+
+Hay dos formas de resolverlo:
+
+1. **Aceptar el aviso del navegador** (una sola vez, queda recordado):
+   - Firefox: aparece un aviso "Permitir acceso a la red local" → *Permitir*.
+   - Chrome/Chromium: *Configuración → Privacidad y seguridad → Acceso a la
+     red local* → agregar `https://lemichiw-cyber.github.io` en *Permitir*.
+2. **Desactivar la restricción en Firefox** (para todos los sitios):
+
+   ```bash
+   bash ops/allow-local-network-firefox.sh
+   ```
+
+   Escribe `user_pref("network.lna.enabled", false);` en el `user.js` de cada
+   perfil. Cerrá y volvé a abrir Firefox.
+
+La app detecta este caso y lo explica en el formulario de login y en
+*Ajustes → Backend → Probar*, en vez de mostrar un error genérico.
+
 ### Cómo funciona la URL del backend
 
 - En build time: `VITE_API_BASE` define la URL por defecto del backend
