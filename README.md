@@ -176,6 +176,8 @@ Copiá `backend/.env.example` a `backend/.env` y ajustá:
 | `SAKURA_COOKIE_SAMESITE` | `lax` (default) / `strict` / `none`. `none` hace falta si el frontend y el backend están en sitios distintos (GitHub Pages → backend local). |
 | `SAKURA_ALLOW_LOCAL_CORS` | `1` = permite orígenes localhost y la cabecera `Access-Control-Allow-Private-Network` |
 | `SAKURA_SERVE_APP` | `1`/`0`/`auto` = sirve la PWA compilada (`dist/`) desde el propio backend (mismo origen) |
+| `SAKURA_DATA_DIR` | Directorio de `accounts.json` y `sessions.json`. En el servidor Debian: `/var/lib/cherrybomb` (fuera del repo, sobrevive a los despliegues). |
+| `SAKURA_ACCOUNTS_FILE` / `SAKURA_SESSIONS_FILE` | Rutas exactas de esos archivos (tienen prioridad sobre `SAKURA_DATA_DIR`; las usa `pytest` para no tocar los datos reales). |
 | `YTMUSIC_AUTH_FILE` | Ruta del archivo de sesión (default: `auth.json`) |
 | `YTMUSIC_ALLOW_ANONYMOUS` | Permitir modo invitado si no hay auth |
 
@@ -333,6 +335,56 @@ build funcione en un subdirectorio (`/proyecto_web/`) y en la raíz.
 
 Si cambiás `base`, volvé a correr `npm run verify:build`.
 
+### 🖥️ Producción en un servidor Debian (nginx + systemd)
+
+**Esta es la_topología objetivo**: frontend y backend en **el mismo
+servidor y el mismo dominio**.
+
+```
+https://cherrybomb.io/          → nginx sirve la PWA compilada (dist/)
+https://cherrybomb.io/api/...   → nginx hace proxy a 127.0.0.1:8000 (FastAPI)
+```
+
+Todo queda en el **mismo origen**, así que en producción:
+
+| | GitHub Pages + laptop | Producción (Debian) |
+|---|---|---|
+| Permiso de "acceso a la red local" | sí | **no** |
+| CORS | sí | **no** |
+| Cookie de sesión | `SameSite=None; Secure` | `SameSite=Lax; Secure` |
+| Backend expuesto a internet | sí (con CORS) | **no** (sólo `127.0.0.1`) |
+
+Instalación (Debian 12/13):
+
+```bash
+sudo bash ops/server/install-server.sh --dominio cherrybomb.io
+```
+
+Qué hace:
+
+| Archivo | Función |
+|---|---|
+| `ops/server/install-server.sh` | Instala nginx, python, node y certbot; crea el usuario de servicio `cherrybomb`; clona el repo en `/srv/cherrybomb`; crea el virtualenv; instala la unidad systemd y el sitio de nginx; compila la PWA; pide el certificado de Let's Encrypt. |
+| `ops/server/nginx/cherrybomb.conf` | Sitio de nginx: estáticos con cache Appropriate, proxy de `/api`, fallback de la SPA, cabeceras de seguridad y HSTS. |
+| `ops/server/systemd/cherrybomb-backend.service` | Servicio **del sistema** (no de usuario): uvicorn en `127.0.0.1:8000` con `--proxy-headers` (para que el backend sepa que llegó por HTTPS) y *hardening* (`ProtectSystem=strict`, `ReadWritePaths=/var/lib/cherrybomb`, etc.). |
+| `ops/server/cherrybomb.env.example` | Plantilla de `/etc/cherrybomb/cherrybomb.env` (permisos 640). Acá va la `NVIDIA_API_KEY`. |
+| `ops/server/deploy-server.sh` | Despliegue de una actualización: `git pull` → `npm ci` → build → reinicio del backend → recarga de nginx → chequeo de `/api/health`. |
+
+Después:
+
+```bash
+sudoedit /etc/cherrybomb/cherrybomb.env     # poner la NVIDIA_API_KEY
+sudo bash /srv/cherrybomb/ops/server/deploy-server.sh   # actualizar
+```
+
+**Los datos viven fuera del repositorio**: `SAKURA_DATA_DIR=/var/lib/cherrybomb`
+(`accounts.json` y `sessions.json`). Un `git pull` o un `npm ci` no tocan
+las cuentas ni las sesiones.
+
+> La build de producción se compila **sin** `VITE_API_BASE`: la app usa
+> rutas `/api/...` relativas (mismo origen). Si se define, la app apunta
+> a ese backend y deja de ser same-origin.
+
 ### GitHub Pages
 
 El workflow `.github/workflows/deploy-legacy.yml` publica el contenido de
@@ -346,6 +398,13 @@ y el build usa `./` como base.
   Backend* sin recompilar; ver "Cómo funciona la URL del backend").
 
 ### Backend local que se prende solo (systemd de usuario)
+
+> **Modo temporal de la laptop.** Es lo que se usa mientras el backend no
+> está todavía en el servidor Debian: el backend queda escuchando en
+> `http://127.0.0.1:8000` y se enciende/apaga según si estás usando la
+> máquina. Cuando la web esté en producción, esta vía deja de ser necesaria
+> (ver "Producción en un servidor Debian" más arriba) y el servicio local
+> se puede desactivar con `systemctl --user disable --now cherrybomb-backend.service`.
 
 Si la PWA de GitHub Pages debe hablar con el backend de **tu laptop**, el
 backend queda escuchando en `http://127.0.0.1:8000` y se enciende/apaga
@@ -544,8 +603,18 @@ src/
   sakura-player/         reproductor de música (ver arriba)
 backend/
   main.py                API FastAPI (YouTube Music vía ytmusicapi)
+  paths.py               rutas de datos (SAKURA_DATA_DIR: fuera del repo)
   api/                   endpoints REST
   services/              capa de abstracción ytmusicapi
+ops/
+  install-backend-service.sh   servicio local (systemd de usuario) en la laptop
+  rebuild-app.sh                recompila la PWA y reinicia el servicio local
+  server/                      despliegue de PRODUCCIÓN en Debian
+    install-server.sh             instalador completo (nginx + systemd + TLS)
+    deploy-server.sh              despliega una actualización
+    nginx/cherrybomb.conf         sitio de nginx (estáticos + proxy /api)
+    systemd/cherrybomb-backend.service   unidad del servicio del sistema
+    cherrybomb.env.example        plantilla de /etc/cherrybomb/cherrybomb.env
 index.html               markup (24 secciones app-*)
 ```
 

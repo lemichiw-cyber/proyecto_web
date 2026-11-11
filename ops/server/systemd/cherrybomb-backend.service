@@ -1,0 +1,62 @@
+[Unit]
+Description=Cherry-Bomb backend (FastAPI) — producción en servidor Debian
+Documentation=https://github.com/lemichiw-cyber/proyecto_web
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=cherrybomb
+Group=cherrybomb
+WorkingDirectory=/srv/cherrybomb/backend
+
+# Configuración sensible (NVIDIA_API_KEY, orígenes CORS…). Archivo del
+# sistema, legible sólo por root:
+#   sudo install -m 600 -o root -g cherrybomb ops/server/cherrybomb.env.example /etc/cherrybomb/cherrybomb.env
+#   sudoedit /etc/cherrybomb/cherrybomb.env
+EnvironmentFile=/etc/cherrybomb/cherrybomb.env
+
+Environment=SAKURA_ENV=production
+# nginx sirve la PWA compilada: el backend sólo expone la API.
+Environment=SAKURA_SERVE_APP=0
+# Datos (cuentas y sesiones) FUERA del repositorio: sobreviven a los
+# despliegues (git pull / npm ci) y el código puede ser de sólo lectura.
+Environment=SAKURA_DATA_DIR=/var/lib/cherrybomb
+
+# --proxy-headers: para que el backend vea el esquema real (https) que
+# nginx le pasa en X-Forwarded-Proto. Sin esto, el backend creería que
+# la petición llegó por http y no mandaría el HSTS.
+# --app-dir: asegura que el directorio del backend esté en el sys.path
+# (imports de `api`, `paths`, `db`…).
+ExecStart=/srv/cherrybomb/backend/.venv/bin/uvicorn main:app --app-dir /srv/cherrybomb/backend --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1 --no-server-header
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGINT
+
+# --- Endurecimiento ---
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# Único directorio donde el backend puede escribir.
+ReadWritePaths=/var/lib/cherrybomb
+# Registro en el journal del sistema.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cherrybomb-backend
+
+[Install]
+WantedBy=multi-user.target

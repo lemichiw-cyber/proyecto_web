@@ -10,7 +10,11 @@ from db import write_json_atomic
 
 router = APIRouter(prefix="/api/moderacion", tags=["moderacion"])
 BASE_DIR = Path(__file__).parent.parent
-REPORTES_FILE = BASE_DIR / "foro_reportes.json"
+# Los reportes van al directorio de datos (ver backend/paths.py): en el
+# servidor Debian el código es de sólo lectura.
+from paths import data_file  # noqa: E402
+
+REPORTES_FILE = data_file("foro_reportes.json")
 
 def _load() -> dict:
     if not REPORTES_FILE.exists():

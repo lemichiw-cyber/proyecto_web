@@ -24,7 +24,11 @@ from pydantic import BaseModel, Field
 router = APIRouter(prefix="/api/push", tags=["push"])
 
 BASE_DIR = Path(__file__).parent.parent  # .../proyecto_web/backend
-SUBS_FILE = BASE_DIR / "subscriptions.json"
+# Las suscripciones push van al directorio de datos (ver backend/paths.py):
+# en el servidor Debian el código es de sólo lectura.
+from paths import data_file  # noqa: E402
+
+SUBS_FILE = data_file("subscriptions.json")
 
 
 def _load() -> dict:
