@@ -69,11 +69,31 @@ export function verificarPassword(password, cuenta) {
   return hashPasswordLocal(String(password || '')) === cuenta.passwordHash;
 }
 
+/* Primer ingreso: define la contraseña de una cuenta que todavía no tiene
+   (creada por un administrador o la semilla admin). */
+export function definirPasswordLocal(email, password) {
+  const key = normalizaEmail(email);
+  if (!key) return { ok: false, msg: 'Falta el correo.' };
+  if (!password || String(password).length < 6) {
+    return { ok: false, msg: 'La contraseña debe tener al menos 6 caracteres.' };
+  }
+  const db = leerCuentas();
+  if (!db[key]) return { ok: false, msg: 'No existe esa cuenta.' };
+  db[key].passwordHash = hashPasswordLocal(password);
+  db[key].passwordDefinido = new Date().toISOString();
+  guardarCuentas(db);
+  return { ok: true, cuenta: db[key] };
+}
+
 export function crearCuenta(email, nombre, rol, password) {
   const key = normalizaEmail(email);
   if (!key) return { ok: false, msg: 'Falta el correo.' };
   if (obtenerCuenta(key)) return { ok: false, msg: 'Ese correo ya est\u00e1 registrado. Inici\u00e1 sesi\u00f3n.' };
-  if (!password || password.length < 6) return { ok: false, msg: 'La contraseña debe tener al menos 6 caracteres.' };
+  // La contraseña es OPCIONAL: si el admin no la pone, la cuenta queda sin
+  // contraseña y la persona la define en su primer ingreso.
+  if (password && String(password).length < 6) {
+    return { ok: false, msg: 'La contraseña debe tener al menos 6 caracteres.' };
+  }
 
   const rango = ROLES_VALIDOS.indexOf(rol) !== -1 ? rol : ROL_REGISTRO;
   const nuevo = {
@@ -83,7 +103,7 @@ export function crearCuenta(email, nombre, rol, password) {
     semestre: rango === ROL_REGISTRO ? '1' : '',
     activo: true,
     creado: new Date().toISOString(),
-    passwordHash: hashPasswordLocal(password),
+    passwordHash: password ? hashPasswordLocal(password) : '',
   };
   const db = leerCuentas();
   db[key] = nuevo;

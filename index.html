@@ -36,7 +36,7 @@ category: System
 version: "1.11"
 unicode: "ec42"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -52,17 +52,17 @@ unicode: "ec42"
 </svg>
 </button>
       <a href="#" class="logo-link" data-onclick="mostrarApp+null">
-        <img src="logo.png" alt="Cherry-Bomb" width="32" height="32" style="vertical-align:middle">
+        <img src="logo.png" alt="Cherry-Bomb" width="32" height="32" class="v-middle">
         <span>Cherry-Bomb</span>
       </a>
-      <div style="flex:1;"></div>
+      <div class="flex-1"></div>
       <button id="btn-theme" class="btn-theme-toggle" title="Cambiar tema" data-onclick="abrirTemas"><!--
 tags: [night, dark mode, moon, climate, forecast, meteorology, atmospheric, conditions]
 category: Weather
 version: "1.0"
 unicode: "eaf8"
 -->
-<svg width="20" height="20" style="width:18px;height:18px;display:block"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-18"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -75,6 +75,9 @@ unicode: "eaf8"
   <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" />
 </svg>
 </button>
+      <button id="btn-font-dec" class="btn-ghost" title="Letra más pequeña" aria-label="Reducir letra">A−</button>
+      <button id="btn-font-inc" class="btn-ghost" title="Letra más grande" aria-label="Aumentar letra">A+</button>
+      <button id="btn-contrast" class="btn-ghost" title="Alto contraste" aria-label="Alto contraste">◐</button>
       <div class="vol-control hidden" id="vol-control">
         <button class="btn-vol-toggle" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
 tags: [speaker, volume, loud, speaker-high]
@@ -82,7 +85,7 @@ category: Media
 version: "1.0"
 unicode: "ea05"
 -->
-<svg width="20" height="20" style="width:18px;height:18px;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<svg width="20" height="20" class="icon-18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M11 5 6 9H2v6h4l5 4V5z" />
   <path id="vol-wave1" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
   <path id="vol-wave2" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
@@ -95,6 +98,14 @@ unicode: "ea05"
       <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
         <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
       </div>
+      <button type="button" id="btn-logout-top" class="btn btn-sm btn-logout-top hidden" style="display:none;" title="Salir de la cuenta" aria-label="Salir de la cuenta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span class="btn-logout-label">Salir</span>
+      </button>
     </div>
     <div id="app-offline-banner" class="app-offline-banner hidden" role="status" aria-live="polite">
       <span class="app-offline-dot" aria-hidden="true"></span>
@@ -120,7 +131,7 @@ category: Buildings
 version: "1.0"
 unicode: "eac1"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg" 
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg" 
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -141,7 +152,7 @@ category: Document
 version: "1.0"
 unicode: "ea6d"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -165,7 +176,7 @@ category: Document
 version: "1.0"
 unicode: "eaa2"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -188,7 +199,7 @@ category: Communication
 version: "1.0"
 unicode: "eaed"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -207,7 +218,7 @@ tags: [schedule, event, confirm, appointment, planning, date, reminder, online, 
 version: "2.10"
 unicode: "f824"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -230,7 +241,7 @@ category: System
 version: "1.0"
 unicode: "ea53"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -254,7 +265,7 @@ category: System
 version: "1.39"
 unicode: "ee21"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -278,7 +289,7 @@ category: Media
 version: "1.25"
 unicode: "ed22"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -298,7 +309,7 @@ category: Communication
 version: "1.0"
 unicode: "eae5"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -318,7 +329,7 @@ category: System
 version: "1.7"
 unicode: "ebf2"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -340,7 +351,7 @@ category: System
 version: "1.0"
 unicode: "eb22"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -382,7 +393,7 @@ category: Buildings
 version: "1.8"
 unicode: "ebf6"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -405,7 +416,7 @@ category: Document
 version: "1.106"
 unicode: "f563"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -429,7 +440,7 @@ category: System
 version: "1.0"
 unicode: "eb4b"
 -->
-<svg width="20" height="20" style=""   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -445,7 +456,7 @@ unicode: "eb4b"
   <path d="M6 21v-2a4 4 0 0 1 4 -4h4" />
 </svg>
 </span> Matrícula</a></li>
-<li><a data-app="estudio"><span class="nav-icon"><svg width="20" height="20" style="" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> Estudio</a></li>
+<li><a data-app="estudio"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> Estudio</a></li>
 <li><a data-app="sakura-player"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span> Sakura Player</a></li>
 <li id="nav-auth" class="hidden"><a data-app="auth"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Usuarios</a></li>
 <li><a data-app="configuracion"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /></svg></span> Configuración</a></li>
@@ -453,13 +464,13 @@ unicode: "eb4b"
     </nav>
     <div class="sidebar-footer">
       <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">
-        <button class="btn btn-outline btn-sm" id="btn-login" style="flex:1;"><!--
+        <button class="btn btn-outline btn-sm flex-1" id="btn-login" ><!--
 category: Design
 tags: [password, login, authentication, secure, key]
 version: "1.0"
 unicode: "eac7"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -479,7 +490,7 @@ category: Weather
 version: "1.0"
 unicode: "eaf8"
 -->
-<svg width="20" height="20" style="width:18px;height:18px;display:block"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-18"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -493,11 +504,11 @@ unicode: "eaf8"
 </svg>
 </button>
       </div>
-      <div id="sidebar-user-info" class="hidden" style="display:none;">
+      <div id="sidebar-user-info" class="hidden hidden-d" >
         <span id="sidebar-user-email" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;"></span>
         <button class="btn btn-sm" id="btn-logout" style="background:var(--gray-100);color:var(--gray-700);flex-shrink:0;">Salir</button>
       </div>
-      <button class="btn btn-outline btn-sm btn-block hidden" id="btn-install-app" type="button" style="margin-top:.5rem;">
+      <button class="btn btn-outline btn-sm btn-block hidden mt-2" id="btn-install-app" type="button" >
         Instalar aplicación
       </button>
     </div>
@@ -509,24 +520,42 @@ unicode: "eaf8"
       <div class="flex-between"><h3 id="login-title">Iniciar sesión</h3><button class="modal-close" id="modal-login-close" aria-label="Cerrar">&times;</button></div>
       <form id="form-login">
 
-        <div class="form-group"><label>Correo institucional</label><input type="email" id="login-email" placeholder="profesor@bachillerato.edu" required></div>
-        <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" required minlength="6"></div>
-        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+        <div class="form-group"><label>Correo institucional</label><input type="email" id="login-email" autocomplete="email" inputmode="email" placeholder="profesor@bachillerato.edu" required></div>
+        <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••" required minlength="6"> <button type="button" id="btn-toggle-pass" class="btn btn-outline btn-sm" aria-label="Mostrar contraseña" style="margin-top:.4rem;">👁 Mostrar</button></div>
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit">Ingresar</button>
         <div id="login-error" class="alert alert-error" role="alert" hidden>Credenciales inválidas.</div>
       </form>
 
-      <!-- Registro: la persona elige el rol de su cuenta entre los
-           disponibles (estudiante, docente, director, subdirector o admin) -->
+      <!-- Registro público: la cuenta se crea SIEMPRE como Estudiante.
+           Los rangos docente/coordinador/director/subdirector/padres/admin
+           los asigna un administrador desde el panel "Usuarios". -->
       <form id="form-registro" class="hidden">
         <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-nombre" placeholder="Ana García" required></div>
         <div class="form-group"><label>Correo institucional</label><input type="email" id="reg-email" placeholder="estudiante@bachillerato.edu" required></div>
-        <div class="form-group" id="reg-rol-wrap"><label for="reg-rol">Rol de la cuenta</label>
-          <select id="reg-rol" required>
-            <option value="estudiante" selected>Estudiante</option>
-            <option value="docente">Docente</option>
-            <option value="director">Director</option>
-            <option value="subdirector">Subdirector</option>
-            <option value="admin">Administrador</option>
+        <div class="form-group" id="reg-rol-wrap">
+          <p style="margin:0;font-size:.82rem;color:var(--gray-600);">
+            Tu cuenta se crea como <strong>Estudiante</strong>. Si sos docente o administración,
+            pedí al administrador del colegio que ajuste tu rango desde el panel de usuarios.
+          </p>
+        </div>
+        <div class="form-group" id="reg-grupo-wrap">
+          <label>Año, especialidad y sección (solo estudiantes)</label>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <select id="reg-anio" aria-label="Año" style="flex:1;min-width:80px;">
+              <option value="1">1° año</option><option value="2">2° año</option><option value="3">3° año</option><option value="9">9° grado</option>
+            </select>
+            <select id="reg-especialidad" aria-label="Especialidad" style="flex:1;min-width:110px;">
+              <option value="general">General</option>
+              <option value="software">Software</option>
+              <option value="contaduria">Contaduría</option>
+            </select>
+            <select id="reg-seccion" aria-label="Sección" style="flex:1;min-width:70px;">
+              <option value="A">Sección A</option><option value="B" selected>Sección B</option><option value="C">Sección C</option>
+            </select>
+          </div>
+          <label for="reg-grupo" style="margin-top:.4rem;">Grupo (se completa desde año/especialidad/sección)</label>
+          <select id="reg-grupo" aria-label="Grupo">
+            <option value="">Sin grupo (podrás elegirlo después)</option>
           </select>
         </div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="••••••" required minlength="6"></div>
@@ -538,6 +567,23 @@ unicode: "eaf8"
       <p class="link-muted" id="link-registro-wrap"><a href="#" id="link-registro">¿No tenés cuenta? Crear cuenta</a></p>
       <p class="link-muted hidden" id="link-login-wrap"><a href="#" id="link-volver-login">¿Ya tenés cuenta? Iniciar sesión</a></p>
       <p class="link-muted" id="link-olvide-wrap"><a href="#" id="link-olvide">Olvidé mi contraseña</a></p>
+    </div>
+  </div>
+
+  <!-- ===== DEFINIR CONTRASEÑA (primer ingreso de cuentas creadas por admin) ===== -->
+  <div class="modal-overlay" id="modal-definir-pass" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+      <div class="flex-between"><h3>Definí tu contraseña</h3><button class="modal-close" id="modal-definir-pass-close" aria-label="Cerrar">&times;</button></div>
+      <p style="font-size:.85rem;color:var(--gray-600);margin:.25rem 0 .6rem;">
+        Esta cuenta todavía no tiene contraseña. Creala ahora para poder entrar.
+      </p>
+      <form id="form-definir-pass">
+        <div class="form-group"><label>Correo institucional</label><input type="email" id="def-pass-email" autocomplete="email" inputmode="email" required></div>
+        <div class="form-group"><label>Contraseña</label><input type="password" id="def-pass-pass" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6"></div>
+        <div class="form-group"><label>Repetí la contraseña</label><input type="password" id="def-pass-pass2" autocomplete="new-password" placeholder="••••••" required minlength="6"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="def-pass-submit">Guardar contraseña y entrar</button>
+        <div id="def-pass-error" class="alert alert-error" role="alert" hidden></div>
+      </form>
     </div>
   </div>
 
@@ -561,7 +607,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -576,18 +622,18 @@ unicode: "ea6f"
 </svg>
  Entregar tarea</h3><button class="modal-close" id="modal-entrega-close" aria-label="Cerrar">&times;</button></div>
       <div style="margin:1rem 0;">
-        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:.35rem;">Respuesta (opcional)</label>
-        <textarea id="entrega-respuesta" placeholder="Escribe tu respuesta aqu&iacute;..." rows="3" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>
+        <label class="label-85">Respuesta (opcional)</label>
+        <textarea id="entrega-respuesta" placeholder="Escribe tu respuesta aqu&iacute;..." rows="3" class="field-ta"></textarea>
       </div>
-      <div style="margin-bottom:1rem;">
-        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:.35rem;">Archivo (opcional)</label>
-        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+      <div class="mb-4">
+        <label class="label-85">Archivo (opcional)</label>
+        <div class="row-gap-center">
           <input type="file" id="entrega-archivo" accept=".pdf,.doc,.docx,.txt,.zip,.png,.jpg,.jpeg" style="flex:1;font-size:.85rem;">
           <span id="entrega-archivo-info" style="font-size:.78rem;color:var(--gray-500);"></span>
         </div>
         <div style="font-size:.75rem;color:var(--gray-400);margin-top:.25rem;">M&aacute;ximo 2 MB. Formatos: PDF, DOC, DOCX, TXT, ZIP, PNG, JPG.</div>
       </div>
-      <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+      <div class="row-gap-end">
         <button class="btn btn-outline" id="btn-entrega-cancelar">Cancelar</button>
         <button class="btn btn-primary" id="btn-entrega-enviar"><!--
 tags: [file, arrow, upload, import, transfer, navigation, flow, send, publish, movement]
@@ -595,7 +641,7 @@ category: Arrows
 version: "1.0"
 unicode: "eb47"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -634,7 +680,7 @@ category: Design
 version: "1.1"
 unicode: "eb01"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -658,13 +704,13 @@ unicode: "eb01"
             <div style="height:4px;width:60%;background:#e5e7eb;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#e5e7eb;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [weather, light, mode, brightness, sun, climate, forecast, meteorology, atmospheric, conditions]
 category: Weather
 version: "1.0"
 unicode: "eb30"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -685,13 +731,13 @@ unicode: "eb30"
             <div style="height:4px;width:60%;background:#334155;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#334155;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [night, dark mode, moon, climate, forecast, meteorology, atmospheric, conditions]
 category: Weather
 version: "1.0"
 unicode: "eaf8"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -711,13 +757,13 @@ unicode: "eaf8"
             <div style="height:4px;width:60%;background:#e8dde5;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#e8dde5;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [plant, garden, rose, lotus, flower, environment, natural, outdoor, ecosystem, earth]
 category: Nature
 version: "1.52"
 unicode: "eff6"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -738,13 +784,13 @@ unicode: "eff6"
             <div style="height:4px;width:60%;background:#4a3428;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#4a3428;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [east, horizon, landscape, morning, sunset, climate, forecast, meteorology, atmospheric, conditions]
 category: Weather
 version: "1.10"
 unicode: "ec31"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -766,13 +812,13 @@ unicode: "ec31"
             <div style="height:4px;width:60%;background:#e8e0cc;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#e8e0cc;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [temperature, hot, wheater, thermometer, forecast, sun, high, climate, meteorology, atmospheric]
 category: Weather
 version: "1.73"
 unicode: "f236"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -800,13 +846,13 @@ unicode: "f236"
             <div style="height:4px;width:60%;background:#c8dee0;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#c8dee0;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [water, rain, liquid, droplet, creative, artistic, visual, aesthetic, style]
 category: Design
 version: "1.0"
 unicode: "ea97"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -823,20 +869,20 @@ unicode: "ea97"
         <div class="theme-card" data-theme="mlp" data-onclick="seleccionarTema+mlp">
           <div class="theme-preview" style="background:#f8f0fa;border:2px solid #e0d5e5;border-radius:10px;padding:.25rem;text-align:center;">
             <div style="height:28px;background:linear-gradient(135deg,#e8d0f0,#9b59b6);border-radius:6px;margin-bottom:.3rem;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <img src="/base64-images/base64-img-10f7429a.webp" style="height:24px;width:24px;object-fit:contain;" alt="Rarity">
-              <img src="/base64-images/base64-img-479d6654.webp" style="height:24px;width:24px;object-fit:contain;" alt="Fluttershy">
-              <img src="/base64-images/base64-img-17310fac.webp" style="height:24px;width:24px;object-fit:contain;" alt="Rainbow Dash">
+              <img src="/base64-images/base64-img-10f7429a.webp" class="icon-24" alt="Rarity">
+              <img src="/base64-images/base64-img-479d6654.webp" class="icon-24" alt="Fluttershy">
+              <img src="/base64-images/base64-img-17310fac.webp" class="icon-24" alt="Rainbow Dash">
             </div>
             <div style="height:4px;width:60%;background:#e0d5e5;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#e0d5e5;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><!--
+          <span class="badge-mini"><!--
 tags: [favorite, like, mark, bookmark, grade, star, control, operation, rating, function]
 category: System
 version: "1.0"
 unicode: "eb2e"
 -->
-<svg width="20" height="20" style="width:14px;height:14px;"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-14"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -856,7 +902,7 @@ unicode: "eb2e"
             <div style="height:4px;width:60%;background:#FFE0E5;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#FFE0E5;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><svg width="20" height="20" style="width:14px;height:14px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6a4 4 0 0 1 4 4c0 2 -2 3 -3 4c-1 1 -1 2 -1 3" /><path d="M12 18.5v.5" /></svg> Chicawa</span>
+          <span class="badge-mini"><svg width="20" height="20" class="icon-14" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6a4 4 0 0 1 4 4c0 2 -2 3 -3 4c-1 1 -1 2 -1 3" /><path d="M12 18.5v.5" /></svg> Chicawa</span>
         </div>
         <div class="theme-card" data-theme="sakura" data-onclick="seleccionarTema+sakura">
           <div class="theme-preview" style="background:#FFF5F7;border:2px solid #FFD0D8;border-radius:10px;padding:.25rem;text-align:center;">
@@ -864,7 +910,7 @@ unicode: "eb2e"
             <div style="height:4px;width:60%;background:#FFD0D8;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#FFD0D8;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><svg width="20" height="20" style="width:14px;height:14px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245" /></svg> Sakura</span>
+          <span class="badge-mini"><svg width="20" height="20" class="icon-14" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245" /></svg> Sakura</span>
         </div>
         <div class="theme-card" data-theme="paraiso" data-onclick="seleccionarTema+paraiso">
           <div class="theme-preview" style="background:#14101A;border:2px solid #2A2435;border-radius:10px;padding:.25rem;text-align:center;">
@@ -872,7 +918,7 @@ unicode: "eb2e"
             <div style="height:4px;width:60%;background:#2A2435;border-radius:4px;margin:0 auto .1rem;"></div>
             <div style="height:4px;width:40%;background:#2A2435;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><svg width="20" height="20" style="width:14px;height:14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" /></svg> Paraíso</span>
+          <span class="badge-mini"><svg width="20" height="20" class="icon-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" /></svg> Paraíso</span>
         </div>
         <div class="theme-card" data-theme="frutiger" data-onclick="seleccionarTema+frutiger">
           <div class="theme-preview" style="background:linear-gradient(170deg,#a8ddfa,#eaf7ff 55%,#d6f7d0);border:2px solid #a9dcf5;border-radius:10px;padding:.25rem;text-align:center;">
@@ -884,7 +930,7 @@ unicode: "eb2e"
             <div style="height:4px;width:60%;background:#a9dcf5;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#c3ecae;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><svg width="20" height="20" style="width:14px;height:14px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.502 19.423c2.602 2.105 6.395 2.105 8.996 0c2.602 -2.105 3.262 -5.708 1.566 -8.546l-4.89 -7.26c-.42 -.625 -1.287 -.803 -1.936 -.397a1.376 1.376 0 0 0 -.41 .397l-4.893 7.26c-1.695 2.838 -1.035 6.441 1.567 8.546" /></svg> Frutiger Aero</span>
+          <span class="badge-mini"><svg width="20" height="20" class="icon-14" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.502 19.423c2.602 2.105 6.395 2.105 8.996 0c2.602 -2.105 3.262 -5.708 1.566 -8.546l-4.89 -7.26c-.42 -.625 -1.287 -.803 -1.936 -.397a1.376 1.376 0 0 0 -.41 .397l-4.893 7.26c-1.695 2.838 -1.035 6.441 1.567 8.546" /></svg> Frutiger Aero</span>
         </div>
         <div class="theme-card" data-theme="dreamcore" data-onclick="seleccionarTema+dreamcore">
           <div class="theme-preview" style="background:linear-gradient(170deg,#d9d4ff,#f5dbf0 50%,#cfe4ff);border:2px solid #dedbf5;border-radius:10px;padding:.25rem;text-align:center;">
@@ -895,7 +941,7 @@ unicode: "eb2e"
             <div style="height:4px;width:60%;background:#dedbf5;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#cbc7ee;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;"><svg width="20" height="20" style="width:14px;height:14px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245" /></svg> Dreamcore</span>
+          <span class="badge-mini"><svg width="20" height="20" class="icon-14" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245" /></svg> Dreamcore</span>
         </div>
         <div class="theme-card" data-theme="sakura-player" data-onclick="seleccionarTema+sakura-player">
           <div class="theme-preview" style="background:linear-gradient(135deg,#050509,#10051A);border:2px solid #FF4FD8;border-radius:10px;padding:.25rem;text-align:center;box-shadow:0 0 14px rgba(255,79,216,.45);">
@@ -903,7 +949,7 @@ unicode: "eb2e"
             <div style="height:4px;width:60%;background:#FF8AD8;border-radius:4px;margin:0 auto .25rem;"></div>
             <div style="height:4px;width:40%;background:#36D9FF;border-radius:4px;margin:0 auto;"></div>
           </div>
-          <span style="font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:2px;">🌸 Sakura Player</span>
+          <span class="badge-mini">🌸 Sakura Player</span>
         </div>
       </div>
     </div>
@@ -919,9 +965,9 @@ unicode: "eb2e"
 
     <!-- ===== MODALES ===== -->
     <div class="modal-overlay" id="modal-terminos" role="dialog" aria-modal="true">
-      <div class="modal" style="max-width:520px;">
-        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M10 13l2 2l4 -4" /></svg> Términos y Condiciones</h3><button class="modal-close" aria-label="Cerrar" data-onclick="cerrarModalTexto+terminos">&times;</button></div>
-        <div style="max-height:60vh;overflow-y:auto;font-size:.85rem;line-height:1.6;color:var(--text-secondary);">
+      <div class="modal maxw-520" >
+        <div class="flex-between"><h3><svg width="20" height="20" class="icon-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M10 13l2 2l4 -4" /></svg> Términos y Condiciones</h3><button class="modal-close" aria-label="Cerrar" data-onclick="cerrarModalTexto+terminos">&times;</button></div>
+        <div class="scroll-60">
           <p><strong>1. Aceptación de términos</strong><br>Al usar Cherry-Bomb aceptás estos términos. Si no estás de acuerdo, no uses la plataforma.</p>
           <p><strong>2. Uso responsable</strong><br>Te comprometés a usar la plataforma solo para fines educativos y a no compartir tu cuenta.</p>
           <p><strong>3. Privacidad de datos</strong><br>Cherry-Bomb recopila información básica (nombre, email, rol) para el funcionamiento del sistema. No compartimos datos con terceros.</p>
@@ -933,9 +979,9 @@ unicode: "eb2e"
     </div>
 
     <div class="modal-overlay" id="modal-privacidad" role="dialog" aria-modal="true">
-      <div class="modal" style="max-width:520px;">
-        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11v-4a5 5 0 0 1 10 0v4" /></svg> Política de Privacidad</h3><button class="modal-close" aria-label="Cerrar" data-onclick="cerrarModalTexto+privacidad">&times;</button></div>
-        <div style="max-height:60vh;overflow-y:auto;font-size:.85rem;line-height:1.6;color:var(--text-secondary);">
+      <div class="modal maxw-520" >
+        <div class="flex-between"><h3><svg width="20" height="20" class="icon-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11v-4a5 5 0 0 1 10 0v4" /></svg> Política de Privacidad</h3><button class="modal-close" aria-label="Cerrar" data-onclick="cerrarModalTexto+privacidad">&times;</button></div>
+        <div class="scroll-60">
           <p><strong>Información que recopilamos</strong><br>Recopilamos nombre, correo electrónico, rol institucional y datos de uso para mejorar la experiencia educativa.</p>
           <p><strong>Uso de la información</strong><br>Usamos tus datos para autenticación, personalización del contenido y comunicación institucional.</p>
           <p><strong>Protección de datos</strong><br>Toda la información se almacena de forma segura. No vendemos ni compartimos datos personales con terceros.</p>
@@ -946,9 +992,9 @@ unicode: "eb2e"
     </div>
 
     <div class="modal-overlay" id="modal-soporte" role="dialog" aria-modal="true">
-      <div class="modal" style="max-width:520px;">
-        <div class="flex-between"><h3><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg> Soporte</h3><button class="modal-close" aria-label="Cerrar" data-onclick="cerrarModalTexto+soporte">&times;</button></div>
-        <div style="max-height:60vh;overflow-y:auto;font-size:.85rem;line-height:1.6;color:var(--text-secondary);">
+      <div class="modal maxw-520" >
+        <div class="flex-between"><h3><svg width="20" height="20" class="icon-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg> Soporte</h3><button class="modal-close" aria-label="Cerrar" data-onclick="cerrarModalTexto+soporte">&times;</button></div>
+        <div class="scroll-60">
           <p><strong>📧 Correo electrónico</strong><br><a href="mailto:soporte@cherrybomb.edu" style="color:var(--primary);">soporte@cherrybomb.edu</a></p>
           <p><strong>💬 Chat en vivo</strong><br>Disponible de lunes a viernes de 8:00 a 18:00 h.</p>
           <p><strong>📱 WhatsApp</strong><br>+54 11 2345-6789</p>
@@ -1082,7 +1128,7 @@ category: Document
 version: "1.0"
 unicode: "ea6d"
 -->
-<svg width="20" height="20" style="width:20px;height:20px;display:block"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1106,7 +1152,7 @@ tags: [schedule, event, confirm, appointment, planning, date, reminder, online, 
 version: "2.10"
 unicode: "f824"
 -->
-<svg width="20" height="20" style="width:20px;height:20px;display:block"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1129,7 +1175,7 @@ category: Communication
 version: "1.0"
 unicode: "eae5"
 -->
-<svg width="20" height="20" style="width:20px;height:20px;display:block"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1149,7 +1195,7 @@ category: Document
 version: "1.0"
 unicode: "eaa2"
 -->
-<svg width="20" height="20" style="width:20px;height:20px;display:block"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-20"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1169,13 +1215,13 @@ unicode: "eaa2"
             </div>
           </div>
           <div id="inicio-pendientes" class="hidden" style="display:none;margin-bottom:1.5rem;padding:1rem;background:var(--gray-50);border-radius:12px;border:1px solid var(--gray-200);"></div>
-          <h2 class="section-title" style="margin-bottom:1.25rem;"><!--
+          <h2 class="section-title mb-5" ><!--
 tags: [preferences, edit, settings, tools, creative, artistic, visual, aesthetic, style]
 category: Design
 version: "1.5"
 unicode: "ebca"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1208,7 +1254,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1230,7 +1276,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1250,6 +1296,7 @@ unicode: "eb6d"
     </section>
 
     <!-- ===== FOROS ===== -->
+        <!-- ===== FOROS ===== -->
     <section id="app-foros" class="section hidden">
       <div class="container">
         <h2 class="section-title"><!--
@@ -1271,42 +1318,81 @@ unicode: "eaed"
   <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />
 </svg>
  Foros · Discusión académica</h2>
-        <p class="section-sub">Participa en debates y comparte conocimiento con tu grupo.</p>
-        <div class="card">
-          <div class="flex-between"><h3><!--
-tags: [newspaper, article, news, file, paper, text, record, information]
-category: Document
-version: "1.0"
-unicode: "eafd"
--->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11" />
-  <path d="M8 8l4 0" />
-  <path d="M8 12l4 0" />
-  <path d="M8 16l4 0" />
-</svg>
- Foros activos</h3><button class="btn btn-primary btn-sm" id="btn-foro-add" data-perm="participar">+ Nuevo tema</button></div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1rem;">
-            <input type="search" id="foro-buscar" placeholder="Buscar tema..." aria-label="Buscar tema" style="flex:1;min-width:170px;padding:.5rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
-            <select id="foro-filtro-estado" aria-label="Filtrar por estado" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
-              <option value="todos">Todos los estados</option>
-              <option value="abierto">Abiertos</option>
-              <option value="resuelto">Resueltos</option>
-              <option value="cerrado">Cerrados</option>
-            </select>
-            <select id="foro-filtro-materia" aria-label="Filtrar por materia" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+        <p class="section-sub">Publicá, votá y comentá en un foro con comunidades, hilos anidados y respuestas aceptadas. Funciona en computadora, tablet y teléfono.</p>
+        <div class="fr-app card">
+          <div class="fr-cabecera">
+            <div class="fr-cabecera-titulo">
+              <span class="fr-logo" aria-hidden="true">🗣️</span>
+              <div>
+                <h3>Comunidad académica</h3>
+                <p>Debates, preguntas y recursos de todo el colegio.</p>
+              </div>
+            </div>
+            <div class="fr-cabecera-acciones">
+              <label class="fr-buscador">
+                <span aria-hidden="true">🔎</span>
+                <input type="search" id="foro-buscar" placeholder="Buscar temas, personas o comentarios…" aria-label="Buscar en el foro" autocomplete="off" aria-controls="foro-lista">
+              </label>
+              <button type="button" class="btn btn-primary btn-sm" id="foro-btn-nuevo">+ Crear publicación</button>
+            </div>
           </div>
-          <div id="foro-lista"><div class="empty-msg">No hay foros activos.</div></div>
-          <div id="foro-detalle" class="hidden"></div>
+
+          <div class="fr-layout">
+            <aside class="fr-rail fr-rail-izq" id="foro-comunidades" aria-label="Comunidades y filtros"></aside>
+
+            <main class="fr-feed">
+              <div class="fr-feed-cab">
+                <div class="fr-orden-tabs" id="foro-orden-tabs" role="tablist" aria-label="Ordenar publicaciones"></div>
+              </div>
+              <div class="fr-filtros-barra" id="foro-filtros" aria-label="Filtros rápidos"></div>
+
+              <div id="foro-compositor" class="fr-compositor hidden" aria-labelledby="foro-compositor-titulo">
+                <div class="fr-compositor-cab">
+                  <h3 id="foro-compositor-titulo">Crear publicación</h3>
+                  <button type="button" class="fr-cerrar" data-accion="cerrar-compositor" aria-label="Cerrar compositor">✕</button>
+                </div>
+                <form id="foro-form" novalidate>
+                  <label class="fr-campo">
+                    <span>Título</span>
+                    <input id="foro-form-titulo" type="text" maxlength="140" required placeholder="Una pregunta clara o un título que invite a leer">
+                  </label>
+                  <div class="fr-campo-fila">
+                    <label class="fr-campo">
+                      <span>Comunidad</span>
+                      <select id="foro-form-comunidad"></select>
+                    </label>
+                    <label class="fr-campo">
+                      <span>Tipo</span>
+                      <select id="foro-form-tipo"></select>
+                    </label>
+                  </div>
+                  <label class="fr-campo">
+                    <span>Texto <small>opcional</small></span>
+                    <textarea id="foro-form-texto" rows="6" maxlength="5000" placeholder="Contá el contexto, qué intentaste y qué necesitás saber. Podés usar **negrita**, *cursiva*, `código`, > citas y - viñetas."></textarea>
+                  </label>
+                  <div class="fr-campo">
+                    <span>Adjuntos</span>
+                    <label class="fr-adjuntar">📎 Elegir imágenes<input type="file" id="foro-form-archivo" accept="image/*,.pdf,.doc,.docx,.txt" multiple></label>
+                    <div id="foro-form-archivos" class="fr-archivos-pendientes"></div>
+                  </div>
+                  <div id="foro-form-preview" class="fr-preview hidden" aria-live="polite"></div>
+                  <div class="fr-compositor-pie">
+                    <button type="button" class="btn btn-outline btn-sm" id="foro-form-preview-btn" data-accion="preview">👁 Vista previa</button>
+                    <span class="fr-contador" id="foro-form-contador">0/5000</span>
+                    <span class="fr-acciones-pie">
+                      <button type="button" class="btn btn-ghost btn-sm" data-accion="cerrar-compositor">Cancelar</button>
+                      <button type="submit" class="btn btn-primary btn-sm" id="foro-form-publicar">Publicar</button>
+                    </span>
+                  </div>
+                </form>
+              </div>
+
+              <div id="foro-lista"><div class="empty-msg">Cargando foro…</div></div>
+              <div id="foro-detalle" class="hidden"></div>
+            </main>
+
+            <aside class="fr-rail fr-rail-der" id="foro-lateral" aria-label="Información del foro"></aside>
+          </div>
         </div>
       </div>
     </section>
@@ -1320,7 +1406,7 @@ category: System
 version: "1.0"
 unicode: "ea53"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1346,7 +1432,7 @@ category: Document
 version: "1.0"
 unicode: "eaa2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1377,7 +1463,7 @@ category: System
 version: "1.0"
 unicode: "ea53"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1403,7 +1489,7 @@ category: System
 version: "1.0"
 unicode: "ea53"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1435,7 +1521,7 @@ category: System
 version: "1.0"
 unicode: "ea70"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1457,7 +1543,7 @@ category: Document
 version: "1.0"
 unicode: "ea39"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1482,7 +1568,7 @@ category: Design
 version: "1.0"
 unicode: "ea98"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1499,15 +1585,15 @@ unicode: "ea98"
  Editar fila horaria</h4>
             <div class="horario-edit-form">
               <div class="full">
-                <label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;">Rango de hora</label>
+                <label class="label-sm">Rango de hora</label>
                 <input type="text" id="he-hora" placeholder="Ej: 7:00 am a 7:45 am">
               </div>
-              <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;">Lunes</label><input type="text" id="he-lunes" placeholder="Materia / Docente"></div>
-              <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;">Martes</label><input type="text" id="he-martes" placeholder="Materia / Docente"></div>
-              <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;">Miércoles</label><input type="text" id="he-miercoles" placeholder="Materia / Docente"></div>
-              <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;">Jueves</label><input type="text" id="he-jueves" placeholder="Materia / Docente"></div>
-              <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;">Viernes</label><input type="text" id="he-viernes" placeholder="Materia / Docente"></div>
-              <div class="full" style="display:flex;gap:.5rem;justify-content:flex-end;">
+              <div><label class="label-sm">Lunes</label><input type="text" id="he-lunes" placeholder="Materia / Docente"></div>
+              <div><label class="label-sm">Martes</label><input type="text" id="he-martes" placeholder="Materia / Docente"></div>
+              <div><label class="label-sm">Miércoles</label><input type="text" id="he-miercoles" placeholder="Materia / Docente"></div>
+              <div><label class="label-sm">Jueves</label><input type="text" id="he-jueves" placeholder="Materia / Docente"></div>
+              <div><label class="label-sm">Viernes</label><input type="text" id="he-viernes" placeholder="Materia / Docente"></div>
+              <div class="full row-gap-end" >
                 <button class="btn btn-outline btn-sm" id="he-cancelar">Cancelar</button>
                 <button class="btn btn-primary btn-sm" id="he-guardar"><!--
 tags: [save, file, disk, device, floppy, hardware, technology, electronic, gadget, equipment]
@@ -1515,7 +1601,7 @@ category: Devices
 version: "1.2"
 unicode: "eb62"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1547,7 +1633,7 @@ category: Media
 version: "1.25"
 unicode: "ed22"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1569,7 +1655,7 @@ category: Media
 version: "1.0"
 unicode: "eaf0"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1599,7 +1685,7 @@ category: Communication
 version: "1.0"
 unicode: "eae5"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1621,7 +1707,7 @@ category: Communication
 version: "1.0"
 unicode: "eae5"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1649,7 +1735,7 @@ category: System
 version: "1.7"
 unicode: "ebf2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1673,7 +1759,7 @@ version: "2.13"
 unicode: "fa21"
 category: System
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1705,7 +1791,7 @@ category: System
 version: "1.0"
 unicode: "eb22"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1727,7 +1813,7 @@ category: System
 version: "1.24"
 unicode: "ed07"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1757,7 +1843,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1780,7 +1866,7 @@ category: Document
 version: "1.52"
 unicode: "eff2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1805,7 +1891,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1829,7 +1915,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1843,11 +1929,11 @@ unicode: "eb6d"
   <path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" />
 </svg>
  Crear tarea</h3></div>
-            <div class="form-group"><label>Título</label><input type="text" id="tarea-titulo" placeholder="Ej: Investigación de la Revolución Mexicana" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-            <div class="form-group"><label>Descripción</label><textarea id="tarea-desc" placeholder="Describe la tarea, instrucciones, criterios..." rows="3" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea></div>
-            <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-              <div class="form-group" style="flex:1;min-width:120px;"><label>Materia</label>
-                <select id="tarea-materia" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+            <div class="form-group"><label>Título</label><input type="text" id="tarea-titulo" placeholder="Ej: Investigación de la Revolución Mexicana" class="field-md"></div>
+            <div class="form-group"><label>Descripción</label><textarea id="tarea-desc" placeholder="Describe la tarea, instrucciones, criterios..." rows="3" class="field-ta"></textarea></div>
+            <div class="row-75">
+              <div class="form-group flex-1-120" ><label>Materia</label>
+                <select id="tarea-materia" class="field">
                   <option value="matematicas">Matemáticas</option>
                   <option value="fisica">Física</option>
                   <option value="quimica">Química</option>
@@ -1857,22 +1943,22 @@ unicode: "eb6d"
                   <option value="ingles">Inglés</option>
                 </select>
               </div>
-              <div class="form-group" style="flex:1;min-width:120px;"><label>Grupo(s)</label>
+              <div class="form-group flex-1-120" ><label>Grupo(s)</label>
                 <div id="tarea-grupos" style="display:flex;flex-direction:wrap;gap:.4rem;font-size:.78rem;"></div>
               </div>
-              <div class="form-group" style="flex:1;min-width:120px;"><label>Fecha límite</label><input type="date" id="tarea-fecha" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
+              <div class="form-group flex-1-120" ><label>Fecha límite</label><input type="date" id="tarea-fecha" class="field"></div>
             </div>
-            <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-tarea-crear" data-perm="crear">+ Crear tarea</button></div>
+            <div class="mt-3"><button class="btn btn-primary" id="btn-tarea-crear" data-perm="crear">+ Crear tarea</button></div>
           </div>
 
-          <div class="card" style="margin-top:1rem;">
+          <div class="card mt-4" >
             <div class="flex-between"><h3><!--
 category: Document
 tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, blank]
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1898,7 +1984,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1915,14 +2001,14 @@ unicode: "ea6f"
             <div id="tarea-estudiante-lista"><div class="empty-msg">No hay tareas pendientes.</div></div>
           </div>
 
-          <div class="card" style="margin-top:1rem;">
+          <div class="card mt-4" >
             <div class="flex-between"><h3><!--
 tags: [tick, "yes", confirm, check, control, operation, approve, function, interface, management]
 category: System
 version: "1.0"
 unicode: "ea5e"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1949,7 +2035,7 @@ category: Games
 version: "1.2"
 unicode: "eb66"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -1970,7 +2056,7 @@ unicode: "eb66"
         <div class="grid-2">
           <div class="card picker-stage">
             <div class="picker-display" id="picker-display">—</div>
-            <div class="flex-between" style="margin-bottom:.75rem;">
+            <div class="flex-between mb-3" >
               <select id="picker-grupo" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;flex:1;margin-right:.5rem;">
                 <option value="todos">Todos los grupos</option>
                 <option value="1A">1° Semestre A</option>
@@ -1986,7 +2072,7 @@ category: Media
 version: "1.28"
 unicode: "ed46"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2000,14 +2086,14 @@ unicode: "ed46"
 </svg>
  Girar</button>
             </div>
-            <div class="progress-bar"><div class="progress-fill" id="picker-progress" style="width:0%"></div></div>
+            <div class="progress-bar"><div class="progress-fill w-0" id="picker-progress" ></div></div>
             <p style="font-size:.82rem;color:var(--gray-500);margin-top:.5rem;"><!--
 tags: [time, watch, alarm, clock, control, operation, function, interface, management]
 category: System
 version: "1.0"
 unicode: "ea70"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2030,7 +2116,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2059,7 +2145,7 @@ category: Document
 version: "1.0"
 unicode: "ea39"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2077,9 +2163,9 @@ unicode: "ea39"
 </svg>
  Digital · Recursos para Bachillerato</h2>
         <p class="section-sub">Biblioteca digital con libros, guías y materiales para educación media superior.</p>
-        <div class="flex-between" style="margin-bottom:1.5rem;">
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-            <select id="digital-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+        <div class="flex-between mb-6" >
+          <div class="row-gap">
+            <select id="digital-filtro" class="field-sm">
               <option value="todos">Todos</option>
               <option value="matematicas">Matemáticas</option>
               <option value="fisica">Física</option>
@@ -2094,7 +2180,7 @@ unicode: "ea39"
           <button class="btn btn-primary btn-sm" id="btn-digital-add">+ Subir recurso</button>
            </div>
         </div>
-        <div id="digital-grid" class="grid" style="margin-top:1rem;"></div>
+        <div id="digital-grid" class="grid mt-4" ></div>
     </section>
 
     <!-- ===== PARENTS ===== -->
@@ -2106,7 +2192,7 @@ category: System
 version: "1.7"
 unicode: "ebf2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2131,7 +2217,7 @@ category: Charts
 version: "1.0"
 unicode: "ea5c"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2145,14 +2231,14 @@ unicode: "ea5c"
   <path d="M4 15l4 -6l4 2l4 -5l4 4" />
 </svg>
  Rendimiento académico</h3>
-            <div class="grid-4" style="margin-bottom:1rem;">
+            <div class="grid-4 mb-4" >
               <div class="stat-box"><div class="stat-num" id="parent-promedio">8.6</div><div class="stat-label">Promedio general</div></div>
               <div class="stat-box"><div class="stat-num" id="parent-asistencia">95%</div><div class="stat-label">Asistencia</div></div>
               <div class="stat-box"><div class="stat-num" id="parent-actividades">12</div><div class="stat-label">Actividades</div></div>
               <div class="stat-box"><div class="stat-num" id="parent-pendientes">2</div><div class="stat-label">Pendientes</div></div>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:95%"></div></div>
-            <p style="font-size:.82rem;color:var(--gray-500);">Progreso del semestre</p>
+            <p class="text-82-muted">Progreso del semestre</p>
           </div>
           <div class="card">
             <div class="flex-between"><h3><!--
@@ -2161,7 +2247,7 @@ category: System
 version: "1.0"
 unicode: "ea35"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2178,14 +2264,14 @@ unicode: "ea35"
             <div id="parent-notif"><div class="empty-msg">Sin notificaciones recientes.</div></div>
           </div>
         </div>
-        <div class="card" style="margin-top:1.25rem;">
+        <div class="card mt-5" >
           <h3><!--
 tags: [data, pdf, txt, file, text, document, content, record, paper, information]
 category: Document
 version: "1.0"
 unicode: "eaa2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2216,7 +2302,7 @@ category: System
 version: "1.0"
 unicode: "eae2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2232,10 +2318,10 @@ unicode: "eae2"
 </svg>
  Auth · Usuarios del Bachillerato</h2>
         <p class="section-sub">Gestión de cuentas de docentes, estudiantes, coordinadores y padres de familia.</p>
-        <div class="flex-between" style="margin-bottom:1rem;">
-          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <div class="flex-between mb-4" >
+          <div class="row-gap-center">
             <input type="text" id="auth-buscar" placeholder="Buscar usuario..." style="padding:.5rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;min-width:200px;">
-            <select id="auth-rol-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+            <select id="auth-rol-filtro" class="field-sm">
               <option value="todos">Todos los roles</option>
               <option value="director">Director</option>
               <option value="subdirector">Subdirector</option>
@@ -2245,7 +2331,7 @@ unicode: "eae2"
               <option value="padres">Padre de familia</option>
               <option value="admin">Administrador</option>
             </select>
-            <select id="auth-semestre-filtro" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+            <select id="auth-semestre-filtro" class="field-sm">
               <option value="todos">Todos los semestres</option>
               <option value="1">1° Semestre</option>
               <option value="2">2° Semestre</option>
@@ -2255,7 +2341,7 @@ unicode: "eae2"
               <option value="6">6° Semestre</option>
             </select>
           </div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+          <div class="row-wrap">
             <button class="btn btn-outline btn-sm" id="btn-auth-export" title="Descargar backup JSON de todas las cuentas">⬇ Exportar</button>
             <button class="btn btn-outline btn-sm" id="btn-auth-import" title="Restaurar cuentas desde un backup JSON (fusiona, no borra)">⬆ Importar</button>
             <input type="file" id="auth-import-file" accept="application/json,.json" class="hidden" aria-label="Archivo de respaldo de cuentas">
@@ -2280,7 +2366,7 @@ category: System
 version: "1.0"
 unicode: "eb2e"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2294,15 +2380,15 @@ unicode: "eb2e"
 </svg>
  Experiencias · Aprendizaje en Bachillerato</h2>
         <p class="section-sub">Rutas de aprendizaje personalizadas para estudiantes de educación media superior.</p>
-        <div class="flex-between" style="margin-bottom:1.25rem;">
-          <div class="tab-bar" id="exp-tabs" style="width:auto;">
+        <div class="flex-between mb-5" >
+          <div class="tab-bar w-auto" id="exp-tabs" >
             <button class="active" data-exp-tab="disponibles">Disponibles</button>
             <button data-exp-tab="creadas">Mis creaciones</button>
           </div>
            <button class="btn btn-primary btn-sm" id="btn-exp-crear">+ Crear experiencia</button>
            </div>
         </div>
-        <div id="exp-grid" class="grid" style="margin-top:1rem;"></div>
+        <div id="exp-grid" class="grid mt-4" ></div>
     </section>
 
     <!-- ===== EXÁMENES (Profesor + Estudiante) ===== -->
@@ -2314,7 +2400,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2337,7 +2423,7 @@ tags: [students, class, teachers, professors, doctors, hall, classroom, subject,
 version: "1.22"
 unicode: "ecf7"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2357,7 +2443,7 @@ tags: [document, official, attest, signature, birth, death, gift, authenticity, 
 version: "1.33"
 unicode: "ed76"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2381,7 +2467,7 @@ category: Charts
 version: "1.0"
 unicode: "ea59"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2408,7 +2494,7 @@ category: Design
 version: "1.0"
 unicode: "ea98"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2438,20 +2524,34 @@ unicode: "ea98"
               <div class="form-group" style="max-width:160px;"><label>Tiempo (minutos) <strong>*</strong></label><input type="number" id="exam-tiempo" min="1" max="180" value="60"></div>
             </div>
             <div class="form-row" style="margin-top:.25rem;">
-              <div class="form-group" style="max-width:150px;"><label>Nota m&iacute;nima (%)</label><input type="number" id="exam-notamin" min="1" max="100" value="60"></div>
-              <div class="form-group" style="max-width:150px;"><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
+              <div class="form-group maxw-150" ><label>Nota m&iacute;nima (%)</label><input type="number" id="exam-notamin" min="1" max="100" value="60"></div>
+              <div class="form-group maxw-150" ><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
               <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-barajar"> Barajar preguntas</label></div>
+              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-tiempo"> Tiempo extra (+50%)</label></div>
+              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-reducir"> Reducir opciones (3 en vez de 4)</label></div>
+              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-dislexia"> Fuente dislexia</label></div>
+              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-voz"> Leer en voz alta</label></div>
             </div>
             <div id="exam-grupos-wrap" style="margin-top:.6rem;"><label style="font-weight:600;display:block;font-size:.85rem;margin-bottom:.3rem;">Grupo(s) destino</label><div id="exam-grupos" style="display:flex;flex-wrap:wrap;gap:.4rem;font-size:.78rem;"></div></div>
             <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
-            <div class="flex-between" style="margin-bottom:.75rem;">
+            <div class="form-row" id="exam-ia-wrap" style="background:var(--gray-50);border:1px solid var(--border);border-radius:8px;padding:.85rem;margin-top:1rem;">
+              <h3 style="font-size:.9rem;margin:0 0 .75rem 0;"><span style="margin-right:.4rem;">🤖</span>Asistente IA (Vercel/NVIDIA)</h3>
+              <div class="form-group"><label>Fuente para la IA (texto, URL o deja vacío para tema libre)</label><textarea id="exam-ia-fuente" rows="2" placeholder="Ej: Ecuaciones de segundo grado, funciones lineales..." style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></textarea></div>
+              <div class="form-group" style="display:flex;gap:.5rem;align-items:flex-end;">
+                <label style="margin:0;font-weight:600;">Cantidad de preguntas:</label>
+                <input type="number" id="exam-ia-cantidad" min="3" max="30" value="8" style="width:90px;padding:.45rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              </div>
+              <button class="btn btn-primary" id="btn-exam-ia">✨ Generar examen con IA</button>
+              <span id="exam-ia-msg" style="margin-left:.75rem;font-size:.82rem;"></span>
+            </div>
+            <div class="flex-between mb-3" >
               <h3 style="font-size:.9rem;margin:0;"><!--
 tags: [data, pdf, txt, file, text, document, content, record, paper, information]
 category: Document
 version: "1.0"
 unicode: "eaa2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2471,14 +2571,14 @@ unicode: "eaa2"
               <button class="btn btn-primary btn-sm" id="btn-exam-add-q">+ Añadir pregunta</button>
             </div>
             <div id="exam-q-list"></div>
-            <div style="margin-top:1rem;">
+            <div class="mt-4">
               <button class="btn btn-primary" id="btn-exam-guardar"><!--
 tags: [save, file, disk, device, floppy, hardware, technology, electronic, gadget, equipment]
 category: Devices
 version: "1.2"
 unicode: "eb62"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2497,14 +2597,14 @@ unicode: "eb62"
             </div>
           </div>
 
-          <div class="card" style="margin-top:1rem;">
+          <div class="card mt-4" >
             <h3><!--
 category: Document
 tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, blank]
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2521,15 +2621,15 @@ unicode: "ea6f"
             <div id="exam-lista-guardados"></div>
           </div>
 
-          <div class="card" style="margin-top:1rem;" data-perm="crear">
-            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+          <div class="card mt-4"  data-perm="crear">
+            <div class="flex-between row-wrap-gap" >
               <h3>&#128202; Resultados</h3>
-              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-                <select id="exam-res-filtro" aria-label="Filtrar resultados por examen" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></select>
+              <div class="row-wrap">
+                <select id="exam-res-filtro" aria-label="Filtrar resultados por examen" class="field-sm8585"></select>
                 <button class="btn btn-sm btn-outline" id="btn-exam-csv" data-perm="crear">&#11015; Exportar CSV</button>
               </div>
             </div>
-            <div id="exam-resultados" style="margin-top:.75rem;"></div>
+            <div id="exam-resultados" class="mt-3"></div>
           </div>
         </div>
 
@@ -2542,7 +2642,7 @@ category: Document
 version: "1.52"
 unicode: "eff2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2573,7 +2673,7 @@ category: Media
 version: "1.28"
 unicode: "ed46"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2591,15 +2691,15 @@ unicode: "ed46"
           </div>
 
           <div id="exam-simulador" class="hidden">
-            <div class="card exam-student" style="text-align:center;">
+            <div class="card exam-student text-center" >
               <div class="flex-between" style="justify-content:center;gap:2rem;">
-                <div><p style="font-size:.8rem;color:var(--gray-500);">Tiempo restante</p><div class="timer" id="exam-timer">00:00</div></div>
-                <div><p style="font-size:.8rem;color:var(--gray-500);">Progreso</p><div style="font-size:1.5rem;font-weight:800;color:var(--primary);" id="exam-progress">0/0</div></div>
+                <div><p class="muted-sm">Tiempo restante</p><div class="timer" id="exam-timer">00:00</div></div>
+                <div><p class="muted-sm">Progreso</p><div style="font-size:1.5rem;font-weight:800;color:var(--primary);" id="exam-progress">0/0</div></div>
               </div>
-              <div class="progress-bar" style="max-width:400px;margin:.75rem auto;"><div class="progress-fill" id="exam-progress-bar" style="width:0%"></div></div>
+              <div class="progress-bar" style="max-width:400px;margin:.75rem auto;"><div class="progress-fill w-0" id="exam-progress-bar" ></div></div>
             </div>
 
-            <div id="exam-preguntas" class="exam-student" style="margin-top:.75rem;"></div>
+            <div id="exam-preguntas" class="exam-student mt-3" ></div>
 
             <div style="text-align:center;margin-top:1rem;">
               <button class="btn btn-danger" id="btn-exam-enviar"><!--
@@ -2608,7 +2708,7 @@ category: Map
 version: "1.0"
 unicode: "eaa6"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2625,7 +2725,7 @@ unicode: "eaa6"
             </div>
           </div>
 
-          <div id="exam-resultado" class="hidden exam-resultado" style="margin-top:1rem;">
+          <div id="exam-resultado" class="hidden exam-resultado mt-4" >
             <div class="nota" id="exam-nota">0/0</div>
             <div class="mensaje" id="exam-mensaje"></div>
             <div id="exam-feedback" style="text-align:left;margin-top:.75rem;"></div>
@@ -2641,7 +2741,7 @@ category: Charts
 version: "1.0"
 unicode: "ea59"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2658,7 +2758,7 @@ unicode: "ea59"
 </svg>
  Plan de Trabajo · Calificaciones</h3>
               <div style="display:flex;gap:.5rem;align-items:center;">
-                <label style="font-size:.82rem;color:var(--gray-500);">Grupo:</label>
+                <label class="text-82-muted">Grupo:</label>
                 <select id="plan-grupo" style="padding:.45rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">
                   <option value="1A">1° Semestre A</option>
                   <option value="1B">1° Semestre B</option>
@@ -2685,7 +2785,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2701,9 +2801,9 @@ unicode: "ea6f"
  Asistencias · Control diario</h2>
         <p class="section-sub">Registra la asistencia de tus estudiantes por grupo y fecha.</p>
 
-        <div class="flex-between" style="margin-bottom:1rem;">
+        <div class="flex-between mb-4" >
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;flex:1;">
-            <select id="asist-grupo" style="padding:.55rem;border:1px solid var(--gray-300);border-radius:10px;font:inherit;font-size:.85rem;flex:1;min-width:140px;">
+            <select id="asist-grupo" class="field-pill">
               <option value="1A">1° Semestre A</option>
               <option value="1B">1° Semestre B</option>
               <option value="2A">2° Semestre A</option>
@@ -2711,14 +2811,14 @@ unicode: "ea6f"
               <option value="3A">3° Semestre A</option>
               <option value="3B">3° Semestre B</option>
             </select>
-            <input type="date" id="asist-fecha" style="padding:.55rem;border:1px solid var(--gray-300);border-radius:10px;font:inherit;font-size:.85rem;flex:1;min-width:140px;">
+            <input type="date" id="asist-fecha" class="field-pill">
             <button class="btn btn-outline btn-sm" id="btn-asist-marcar-todos"><!--
 tags: [tick, "yes", confirm, check, control, operation, approve, function, interface, management]
 category: System
 version: "1.0"
 unicode: "ea5e"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2738,7 +2838,7 @@ category: Devices
 version: "1.2"
 unicode: "eb62"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2758,26 +2858,26 @@ unicode: "eb62"
         <div class="card" style="padding:0;overflow:hidden;">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;background:var(--gray-100);font-weight:600;font-size:.78rem;padding:.6rem .75rem;border-bottom:1px solid var(--gray-200);">
             <span>Estudiante</span>
-            <span style="text-align:center;">Estado</span>
+            <span class="text-center">Estado</span>
             <span style="text-align:right;">Acción</span>
           </div>
           <div id="asist-lista"></div>
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1rem;">
-          <div class="stat-box"><div class="stat-num" id="asist-presentes" style="color:var(--green-ink);">0</div><div class="stat-label">Presentes</div></div>
-          <div class="stat-box"><div class="stat-num" id="asist-ausentes" style="color:var(--red-ink);">0</div><div class="stat-label">Ausentes</div></div>
+          <div class="stat-box"><div class="stat-num color-green" id="asist-presentes" >0</div><div class="stat-label">Presentes</div></div>
+          <div class="stat-box"><div class="stat-num color-red" id="asist-ausentes" >0</div><div class="stat-label">Ausentes</div></div>
           <div class="stat-box"><div class="stat-num" id="asist-justificados" style="color:var(--amber-ink);">0</div><div class="stat-label">Justificados</div></div>
         </div>
 
-        <div class="card" style="margin-top:1.25rem;">
+        <div class="card mt-5" >
           <div class="flex-between"><h3><!--
 category: Document
 tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, blank]
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2810,7 +2910,7 @@ category: Games
 version: "1.53"
 unicode: "f00b"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2832,7 +2932,7 @@ unicode: "f00b"
 </svg>
  SABI · Analítica del Bachillerato</h2>
         <p class="section-sub">Inteligencia educativa para la toma de decisiones basada en datos del bachillerato.</p>
-        <div class="grid-3" style="margin-bottom:1.5rem;">
+        <div class="grid-3 mb-6" >
           <div class="stat-box"><div class="stat-num" id="sabi-promedio">82%</div><div class="stat-label">Rendimiento general</div></div>
           <div class="stat-box"><div class="stat-num" id="sabi-riesgo">5</div><div class="stat-label">Estudiantes en riesgo</div></div>
           <div class="stat-box"><div class="stat-num" id="sabi-recomendaciones">8</div><div class="stat-label">Recomendaciones activas</div></div>
@@ -2844,7 +2944,7 @@ category: Charts
 version: "1.0"
 unicode: "ea5c"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2872,7 +2972,7 @@ tags: [students, class, teachers, professors, doctors, hall, classroom, subject,
 version: "1.22"
 unicode: "ecf7"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2888,14 +2988,14 @@ unicode: "ecf7"
  Aulas Virtuales</h2>
         <p class="section-sub">Gestión de espacios educativos del Cherry-Bomb.</p>
 
-        <div class="tab-bar" style="margin-bottom:1rem;">
+        <div class="tab-bar mb-4" >
           <button class="active" data-aula-tab="gestion" data-perm="crear"><!--
 tags: [directory, dir, clone, copy, folders, file, paper, text, record, information]
 category: Document
 version: "1.0"
 unicode: "eaae"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2915,7 +3015,7 @@ category: System
 version: "1.7"
 unicode: "ebf2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2937,7 +3037,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2952,13 +3052,13 @@ unicode: "ea6f"
 </svg>
  Tareas</button>
           <button data-aula-tab="asistencia">
-            <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" class="v-middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 11l3 3L22 4"/>
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
             </svg>
  Asistencia</button>
           <button data-aula-tab="inscripcion" data-perm="crear">
-            <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" class="v-middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
               <line x1="19" y1="8" x2="19" y2="14"/>
@@ -2966,7 +3066,7 @@ unicode: "ea6f"
             </svg>
  Inscripci&#243;n</button>
           <button data-aula-tab="sala">
-            <svg width="16" height="16" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" class="v-middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z"/>
               <rect x="3" y="6" width="12" height="12" rx="2"/>
             </svg>
@@ -2983,7 +3083,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -2998,21 +3098,21 @@ unicode: "eb6d"
 </svg>
  Registrar aula</h3>
               <div class="form-group"><label>Nombre del aula <strong>*</strong></label><input type="text" id="aula-nombre" placeholder="Ej: Aula 101"></div>
-              <div class="form-row" style="grid-template-columns:1fr 1fr;">
+              <div class="form-row grid-2col" >
                 <div class="form-group"><label>Capacidad <strong>*</strong></label><input type="number" id="aula-capacidad" min="1" max="100" value="30"></div>
                 <div class="form-group"><label>Ubicaci&oacute;n</label><input type="text" id="aula-ubicacion" placeholder="Ej: Edificio A, PB"></div>
               </div>
-              <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;">
+              <div class="form-row grid-3col" >
                 <div class="form-group"><label>Tipo</label><select id="aula-tipo"><option value="salon">Sal&oacute;n</option><option value="laboratorio">Laboratorio</option><option value="taller">Taller</option><option value="auditorio">Auditorio</option><option value="cancha">Cancha</option></select></div>
                 <div class="form-group"><label>Equipamiento</label><select id="aula-equipamiento"><option value="basico">B&aacute;sico</option><option value="proyector">Proyector</option><option value="computo">C&oacute;mputo</option><option value="laboratorio">Laboratorio</option><option value="smart">Pizarr&oacute;n inteligente</option><option value="audiovisual">Audiovisual</option></select></div>
                 <div class="form-group"><label>Especialidad</label><select id="aula-especialidad"><option value="general">General</option><option value="software">Desarrollo de Software</option><option value="administrativo">Administrativo</option></select></div>
               </div>
-              <div class="form-row" style="grid-template-columns:1fr 1fr;">
+              <div class="form-row grid-2col" >
                 <div class="form-group"><label>A&ntilde;o</label><select id="aula-anio"><option value="1">1.er A&ntilde;o</option><option value="2">2.&ordm; A&ntilde;o</option><option value="3">3.er A&ntilde;o</option></select></div>
                 <div class="form-group"><label>Secci&oacute;n</label><select id="aula-seccion"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
               </div>
               <div class="form-group"><label>Descripci&oacute;n</label><textarea id="aula-desc" placeholder="Caracter&iacute;sticas adicionales..." rows="2"></textarea></div>
-              <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+              <div class="row-gap-sm">
                 <button class="btn btn-primary" id="btn-aula-crear" data-perm="crear">+ Crear aula</button>
                 <button class="btn btn-outline" id="btn-aula-limpiar">Limpiar</button>
               </div>
@@ -3021,7 +3121,7 @@ unicode: "eb6d"
             <div>
               <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;">
                 <label style="font-size:.82rem;font-weight:600;">Filtrar:</label>
-                <select id="aula-filtro-tipo" style="padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;">
+                <select id="aula-filtro-tipo" class="field-mini">
                   <option value="todos">Todos los tipos</option>
                   <option value="salon">Sal&oacute;n</option>
                   <option value="laboratorio">Laboratorio</option>
@@ -3029,19 +3129,19 @@ unicode: "eb6d"
                   <option value="auditorio">Auditorio</option>
                   <option value="cancha">Cancha</option>
                 </select>
-                <select id="filtro-especialidad" style="padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;">
+                <select id="filtro-especialidad" class="field-mini">
                   <option value="0">Todas las especialidades</option>
                   <option value="general">General</option>
                   <option value="software">Desarrollo de Software</option>
                   <option value="administrativo">Administrativo</option>
                 </select>
-                <select id="filtro-anio" style="padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;">
+                <select id="filtro-anio" class="field-mini">
                   <option value="0">Todos los a&ntilde;os</option>
                   <option value="1">1.er A&ntilde;o</option>
                   <option value="2">2.&ordm; A&ntilde;o</option>
                   <option value="3">3.er A&ntilde;o</option>
                 </select>
-                <select id="filtro-seccion" style="padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;">
+                <select id="filtro-seccion" class="field-mini">
                   <option value="0">Todas las secciones</option>
                   <option value="A">A</option>
                   <option value="B">B</option>
@@ -3049,14 +3149,14 @@ unicode: "eb6d"
                   <option value="D">D</option>
                 </select>
                 <input type="text" id="aula-buscar" placeholder="\uD83D\uDD0E Buscar aula..." style="padding:.4rem .6rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;min-width:150px;">
-                <select id="aula-ordenar" style="padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;">
+                <select id="aula-ordenar" class="field-mini">
                   <option value="nombre-asc">Nombre A-Z</option>
                   <option value="nombre-desc">Nombre Z-A</option>
                   <option value="capacidad-desc">Mayor capacidad</option>
                   <option value="capacidad-asc">Menor capacidad</option>
                   <option value="tipo">Por tipo</option>
                 </select>
-                <button class="btn btn-sm btn-outline" id="btn-aula-csv" style="font-size:.78rem;" data-perm="crear">\uD83D\uDCC4 CSV</button>
+                <button class="btn btn-sm btn-outline text-78" id="btn-aula-csv"  data-perm="crear">\uD83D\uDCC4 CSV</button>
               </div>
               <div id="aulas-grid"><div class="empty-msg">No hay aulas registradas. Crea la primera desde el formulario.</div></div>
               <div id="aulas-total" style="margin-top:.75rem;font-size:.82rem;color:var(--gray-500);"></div>
@@ -3067,14 +3167,14 @@ unicode: "eb6d"
         <!-- ===== TAB ESTUDIANTES ===== -->
         <div id="aula-tab-estudiantes" class="hidden">
           <div class="card">
-            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+            <div class="flex-between row-wrap-gap" >
               <h3><!--
 category: System
 tags: [find, magnifier, magnifying glass, search, look, seek, query, browse]
 version: "1.0"
 unicode: "eb1c"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3094,7 +3194,7 @@ category: Document
 version: "1.0"
 unicode: "ea0b"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3141,13 +3241,13 @@ unicode: "ea0b"
           <div id="est-table-wrap" class="card" style="margin-top:1rem;overflow-x:auto;">
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;font-size:.82rem;">
               <span id="est-total">Mostrando 0 estudiantes</span>
-              <span id="est-presentes" style="color:var(--green-ink);"><!--
+              <span id="est-presentes" class="color-green"><!--
 tags: [tick, "yes", confirm, check, control, operation, approve, function, interface, management]
 category: System
 version: "1.0"
 unicode: "ea5e"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3160,13 +3260,13 @@ unicode: "ea5e"
   <path d="M5 12l5 5l10 -10" />
 </svg>
  0 Presentes</span>
-              <span id="est-ausentes" style="color:var(--red-ink);"><!--
+              <span id="est-ausentes" class="color-red"><!--
 tags: [cancel, "no", circle, round, circular, geometry, form, figure, pattern, outline]
 category: Shapes
 version: "1.0"
 unicode: "ea6a"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3199,7 +3299,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3213,11 +3313,11 @@ unicode: "eb6d"
   <path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" />
 </svg>
  Asignar tarea</h3></div>
-              <div class="form-group"><label>T&iacute;tulo <strong>*</strong></label><input type="text" id="aula-tarea-titulo" placeholder="Ej: Investigaci&oacute;n de la Revoluci&oacute;n Mexicana" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-              <div class="form-group"><label>Descripci&oacute;n</label><textarea id="aula-tarea-desc" placeholder="Describe la tarea, instrucciones, criterios..." rows="3" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea></div>
-              <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;min-width:120px;"><label>Materia</label>
-                  <select id="aula-tarea-materia" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <div class="form-group"><label>T&iacute;tulo <strong>*</strong></label><input type="text" id="aula-tarea-titulo" placeholder="Ej: Investigaci&oacute;n de la Revoluci&oacute;n Mexicana" class="field-md"></div>
+              <div class="form-group"><label>Descripci&oacute;n</label><textarea id="aula-tarea-desc" placeholder="Describe la tarea, instrucciones, criterios..." rows="3" class="field-ta"></textarea></div>
+              <div class="row-75">
+                <div class="form-group flex-1-120" ><label>Materia</label>
+                  <select id="aula-tarea-materia" class="field">
                     <option value="matematicas">Matem&aacute;ticas</option>
                     <option value="fisica">F&iacute;sica</option>
                     <option value="quimica">Qu&iacute;mica</option>
@@ -3227,8 +3327,8 @@ unicode: "eb6d"
                     <option value="ingles">Ingl&eacute;s</option>
                   </select>
                 </div>
-                <div class="form-group" style="flex:1;min-width:120px;"><label>Grupo</label>
-                  <select id="aula-tarea-grupo" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+                <div class="form-group flex-1-120" ><label>Grupo</label>
+                  <select id="aula-tarea-grupo" class="field">
                     <option value="1A">1&deg; Semestre A</option>
                     <option value="1B">1&deg; Semestre B</option>
                     <option value="2A">2&deg; Semestre A</option>
@@ -3237,23 +3337,23 @@ unicode: "eb6d"
                     <option value="3B">3&deg; Semestre B</option>
                   </select>
                 </div>
-                <div class="form-group" style="flex:1;min-width:120px;"><label>Fecha l&iacute;mite</label><input type="date" id="aula-tarea-fecha" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
+                <div class="form-group flex-1-120" ><label>Fecha l&iacute;mite</label><input type="date" id="aula-tarea-fecha" class="field"></div>
               </div>
-              <div class="form-group" style="margin-top:.5rem;"><label>Aula</label>
-                <select id="aula-tarea-aula" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <div class="form-group mt-2" ><label>Aula</label>
+                <select id="aula-tarea-aula" class="field">
                   <option value="">-- Seleccionar aula --</option>
                 </select>
               </div>
-              <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-aula-tarea-crear" data-perm="crear">+ Asignar tarea</button></div>
+              <div class="mt-3"><button class="btn btn-primary" id="btn-aula-tarea-crear" data-perm="crear">+ Asignar tarea</button></div>
             </div>
-            <div class="card" style="margin-top:1rem;">
+            <div class="card mt-4" >
               <div class="flex-between"><h3><!--
 category: Document
 tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, blank]
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3270,15 +3370,15 @@ unicode: "ea6f"
               <div id="aula-tarea-creadas-lista"><div class="empty-msg">A&uacute;n no has asignado tareas.</div></div>
             </div>
 
-            <div class="card" style="margin-top:1rem;" id="aula-libreta-card">
-              <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+            <div class="card mt-4"  id="aula-libreta-card">
+              <div class="flex-between row-wrap-gap" >
                 <h3>&#128202; Libreta del aula</h3>
-                <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-                  <select id="libreta-aula" aria-label="Aula de la libreta" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></select>
+                <div class="row-wrap">
+                  <select id="libreta-aula" aria-label="Aula de la libreta" class="field-sm8585"></select>
                   <button class="btn btn-sm btn-outline" id="btn-libreta-csv" data-perm="crear">&#11015; Exportar CSV</button>
                 </div>
               </div>
-              <div id="libreta-tabla" style="margin-top:.75rem;"></div>
+              <div id="libreta-tabla" class="mt-3"></div>
             </div>
           </div>
           <div id="aula-tarea-estudiante">
@@ -3289,7 +3389,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3305,14 +3405,14 @@ unicode: "ea6f"
  Tareas pendientes</h3></div>
               <div id="aula-tarea-pendientes-lista"><div class="empty-msg">No hay tareas pendientes.</div></div>
             </div>
-            <div class="card" style="margin-top:1rem;">
+            <div class="card mt-4" >
               <div class="flex-between"><h3><!--
 tags: [tick, "yes", confirm, check, control, operation, approve, function, interface, management]
 category: System
 version: "1.0"
 unicode: "ea5e"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3333,11 +3433,11 @@ unicode: "ea5e"
         <!-- ===== TAB ASISTENCIA ===== -->
         <div id="aula-tab-asistencia" class="hidden">
           <div class="card">
-            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+            <div class="flex-between row-wrap-gap" >
               <h3>&#9989; Asistencia del aula</h3>
-              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-                <select id="aula-asist-aula" aria-label="Aula" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;"></select>
-                <input type="date" id="aula-asist-fecha" aria-label="Fecha de la sesi&oacute;n" style="padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.85rem;">
+              <div class="row-wrap">
+                <select id="aula-asist-aula" aria-label="Aula" class="field-sm8585"></select>
+                <input type="date" id="aula-asist-fecha" aria-label="Fecha de la sesi&oacute;n" class="field-sm8585">
                 <button class="btn btn-sm btn-outline" id="btn-asist-todos" data-perm="editar">Todos presentes</button>
                 <button class="btn btn-sm btn-primary" id="btn-asist-guardar" data-perm="editar">Guardar asistencia</button>
               </div>
@@ -3345,12 +3445,12 @@ unicode: "ea5e"
             <div id="aula-asist-stats" style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0;font-size:.82rem;"></div>
             <div id="aula-asist-lista"><div class="empty-msg">Seleccion&aacute; un aula para registrar la asistencia.</div></div>
           </div>
-          <div class="card" style="margin-top:1rem;">
-            <div class="flex-between" style="flex-wrap:wrap;gap:.5rem;">
+          <div class="card mt-4" >
+            <div class="flex-between row-wrap-gap" >
               <h3>&#128200; Resumen de asistencia</h3>
               <button class="btn btn-sm btn-outline" id="btn-asist-csv" data-perm="editar">&#11015; Exportar CSV</button>
             </div>
-            <div id="aula-asist-resumen" style="margin-top:.75rem;"></div>
+            <div id="aula-asist-resumen" class="mt-3"></div>
           </div>
         </div>
 
@@ -3359,20 +3459,20 @@ unicode: "ea5e"
           <div class="card">
             <h3>&#x1F465; Inscripci&oacute;n de Estudiantes en Aulas</h3>
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin:.75rem 0;">
-              <div class="form-group" style="flex:1;min-width:180px;">
+              <div class="form-group flex-1-180" >
                 <label>Aula</label>
-                <select id="insc-aula" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+                <select id="insc-aula" class="field"></select>
               </div>
-              <div class="form-group" style="flex:1;min-width:180px;">
+              <div class="form-group flex-1-180" >
                 <label>Estudiante</label>
-                <select id="insc-estudiante" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+                <select id="insc-estudiante" class="field"></select>
               </div>
               <div style="display:flex;align-items:flex-end;">
                 <button class="btn btn-primary" id="btn-insc-agregar" data-perm="crear">+ Inscribir</button>
               </div>
             </div>
           </div>
-          <div class="card" style="margin-top:.75rem;">
+          <div class="card mt-3" >
             <h3>Estudiantes inscritos</h3>
             <div id="insc-lista"><div class="empty-msg">Selecciona un aula para ver sus estudiantes inscritos.</div></div>
           </div>
@@ -3381,9 +3481,9 @@ unicode: "ea5e"
         <!-- ===== TAB SALA VIRTUAL ===== -->
         <div id="aula-tab-sala" class="hidden">
           <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;">
-            <div class="form-group" style="flex:1;min-width:180px;">
+            <div class="form-group flex-1-180" >
               <label>Aula</label>
-              <select id="sala-aula-select" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></select>
+              <select id="sala-aula-select" class="field"></select>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
@@ -3399,14 +3499,14 @@ unicode: "ea5e"
               <h3>&#x1F3A8; Pizarra</h3>
               <div style="display:flex;gap:.5rem;margin:.5rem 0;align-items:center;flex-wrap:wrap;">
                 <input type="color" id="sala-pizarra-color" value="#000000" style="width:32px;height:32px;border:none;cursor:pointer;">
-                <input type="range" id="sala-pizarra-size" min="1" max="20" value="3" style="width:80px;">
-                <span id="sala-pizarra-size-val" style="font-size:.78rem;">3px</span>
+                <input type="range" id="sala-pizarra-size" min="1" max="20" value="3" class="w-80px">
+                <span id="sala-pizarra-size-val" class="text-78">3px</span>
                 <button class="btn btn-sm btn-outline" id="sala-pizarra-borrar">&#x1F9F9; Limpiar</button>
               </div>
               <canvas id="sala-pizarra-canvas" width="500" height="300" style="width:100%;border:1px solid var(--gray-300);border-radius:8px;cursor:crosshair;background:#fff;"></canvas>
             </div>
           </div>
-          <div class="card" style="margin-top:.75rem;">
+          <div class="card mt-3" >
             <h3>&#x1F3AC; Videoconferencia</h3>
             <p style="font-size:.82rem;color:var(--gray-500);margin-bottom:.5rem;">Inicia una videollamada con los estudiantes del aula. Se abrir&aacute; en una nueva pesta&ntilde;a.</p>
             <button class="btn btn-primary" id="sala-video-iniciar">&#x1F4F1; Iniciar videollamada (Jitsi)</button>
@@ -3423,7 +3523,7 @@ unicode: "ea5e"
         <div class="card" style="max-width:480px;margin:0 auto;text-align:center;">
           <div id="pomodoro-timer-display" style="font-size:3.5rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;letter-spacing:2px;margin:1rem 0;">25:00</div>
           <div id="pomodoro-phase" style="font-size:.9rem;color:var(--gray-500);margin-bottom:.5rem;">Fase preparatoria</div>
-          <div class="progress-bar" style="height:8px;margin:1rem auto;max-width:300px;"><div id="pomodoro-progress" class="progress-fill" style="width:0%"></div></div>
+          <div class="progress-bar" style="height:8px;margin:1rem auto;max-width:300px;"><div id="pomodoro-progress" class="progress-fill w-0" ></div></div>
           <div style="margin-top:1.5rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;">
             <button class="btn btn-primary" id="btn-pomodoro-start"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar</button>
             <button class="btn btn-outline" id="btn-pomodoro-pause"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar</button>
@@ -3436,7 +3536,7 @@ unicode: "ea5e"
           </div>
           <div style="margin-top:1rem;font-size:.78rem;color:var(--text-secondary);">Ciclos completados: <span id="pomodoro-cycles" style="font-weight:700;color:var(--primary);">0</span></div>
           <div style="margin-top:.9rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;align-items:center;font-size:.82rem;">
-            <label style="display:flex;align-items:center;gap:.3rem;">Materia
+            <label class="row-center">Materia
               <select id="pomodoro-materia" style="padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;">
                 <option value="general">General</option>
                 <option value="matematicas">Matemáticas</option>
@@ -3448,9 +3548,9 @@ unicode: "ea5e"
                 <option value="ingles">Inglés</option>
               </select>
             </label>
-            <label style="display:flex;align-items:center;gap:.3rem;">Estudio <input id="pomodoro-dur-estudio" type="number" min="1" max="180" value="25" style="width:45px;padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"> min</label>
-            <label style="display:flex;align-items:center;gap:.3rem;">Desc. corto <input id="pomodoro-dur-corto" type="number" min="1" max="60" value="5" style="width:45px;padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"> min</label>
-            <label style="display:flex;align-items:center;gap:.3rem;">Desc. largo <input id="pomodoro-dur-largo" type="number" min="1" max="120" value="15" style="width:45px;padding:.2rem;border:1px solid var(--gray-300);border-radius:6px;font:inherit;"> min</label>
+            <label class="row-center">Estudio <input id="pomodoro-dur-estudio" type="number" min="1" max="180" value="25" class="field-w45"> min</label>
+            <label class="row-center">Desc. corto <input id="pomodoro-dur-corto" type="number" min="1" max="60" value="5" class="field-w45"> min</label>
+            <label class="row-center">Desc. largo <input id="pomodoro-dur-largo" type="number" min="1" max="120" value="15" class="field-w45"> min</label>
           </div>
         </div>
       </div>
@@ -3472,7 +3572,7 @@ tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, b
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3488,7 +3588,7 @@ unicode: "ea6f"
  Planificación Docente</h2>
         <p class="section-sub">Jornalización y planificación didáctica para docentes.</p>
 
-        <div id="planif-docente" style="display:none;" data-perm="crear">
+        <div id="planif-docente" class="hidden-d" data-perm="crear">
           <div class="card">
             <div class="flex-between"><h3><!--
 tags: [checkbox, brief, record, write, message, note, file, paper, text, information]
@@ -3496,7 +3596,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3510,9 +3610,9 @@ unicode: "eb6d"
   <path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" />
 </svg>
  Nueva planificación</h3></div>
-            <div class="form-group"><label>Semana / Fecha <strong>*</strong></label><input type="text" id="planif-semana" placeholder="Ej: Semana 1 / 20-24 Ene 2026" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
+            <div class="form-group"><label>Semana / Fecha <strong>*</strong></label><input type="text" id="planif-semana" placeholder="Ej: Semana 1 / 20-24 Ene 2026" class="field-md"></div>
             <div class="form-group"><label>Materia <strong>*</strong></label>
-              <select id="planif-materia" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+              <select id="planif-materia" class="field">
                 <option value="matematicas">Matemáticas</option>
                 <option value="fisica">Física</option>
                 <option value="quimica">Química</option>
@@ -3522,26 +3622,26 @@ unicode: "eb6d"
                 <option value="ingles">Inglés</option>
               </select>
             </div>
-            <div class="form-group"><label>Unidad / Tema <strong>*</strong></label><input type="text" id="planif-tema" placeholder="Ej: Unidad I: Números Reales" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-            <div class="form-group"><label>Objetivos</label><textarea id="planif-objetivos" placeholder="Objetivos de aprendizaje..." rows="2" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea></div>
-            <div class="form-group"><label>Actividades</label><textarea id="planif-actividades" placeholder="Actividades de enseñanza-aprendizaje..." rows="2" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea></div>
-            <div class="form-group"><label>Recursos</label><input type="text" id="planif-recursos" placeholder="Ej: Libro de texto, proyector, láminas" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-            <div class="form-group"><label>Evaluación</label><input type="text" id="planif-evaluacion" placeholder="Ej: Prueba escrita, exposición" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-            <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+            <div class="form-group"><label>Unidad / Tema <strong>*</strong></label><input type="text" id="planif-tema" placeholder="Ej: Unidad I: Números Reales" class="field-md"></div>
+            <div class="form-group"><label>Objetivos</label><textarea id="planif-objetivos" placeholder="Objetivos de aprendizaje..." rows="2" class="field-ta"></textarea></div>
+            <div class="form-group"><label>Actividades</label><textarea id="planif-actividades" placeholder="Actividades de enseñanza-aprendizaje..." rows="2" class="field-ta"></textarea></div>
+            <div class="form-group"><label>Recursos</label><input type="text" id="planif-recursos" placeholder="Ej: Libro de texto, proyector, láminas" class="field-md"></div>
+            <div class="form-group"><label>Evaluación</label><input type="text" id="planif-evaluacion" placeholder="Ej: Prueba escrita, exposición" class="field-md"></div>
+            <div class="row-gap-sm">
               <button class="btn btn-primary" id="btn-planif-crear" data-perm="crear">+ Agregar planificación</button>
               <button class="btn btn-outline" id="btn-planif-limpiar">Limpiar</button>
             </div>
           </div>
         </div>
 
-        <div class="card" style="margin-top:1rem;">
+        <div class="card mt-4" >
           <div class="flex-between"><h3><!--
 category: Document
 tags: [copy, clipboard, paste, document, file, paper, note, text, page, sheet, blank]
 version: "1.0"
 unicode: "ea6f"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3556,7 +3656,7 @@ unicode: "ea6f"
 </svg>
  Planificaciones</h3></div>
           <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;">
-            <select id="planif-filtro-materia" style="padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.82rem;">
+            <select id="planif-filtro-materia" class="field-mini">
               <option value="0">Todas las materias</option>
               <option value="matematicas">Matemáticas</option>
               <option value="fisica">Física</option>
@@ -3568,6 +3668,22 @@ unicode: "ea6f"
             </select>
           </div>
           <div id="planif-lista"><div class="empty-msg">No hay planificaciones registradas.</div></div>
+        </div>
+
+        <div class="card mt-4" id="cuadro-docente" hidden>
+          <div class="flex-between"><h3>📊 Cuadro de notas</h3></div>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem;">
+            <label class="text-82-muted">Grupo:</label>
+            <select id="quad-grupo" class="field-mini">
+              <option value="1A">1° General A</option><option value="1B" selected>1° General B</option><option value="2A">2° General A</option><option value="2B">2° General B</option><option value="3A">3° General A</option><option value="3B">3° General B</option>
+            </select>
+            <span style="flex:1"></span>
+            <button class="btn btn-outline btn-sm" id="btn-quad-export">⬇ CSV</button>
+            <button class="btn btn-outline btn-sm" id="btn-quad-print">🖨 Imprimir</button>
+          </div>
+          <p class="section-sub">Notas 0–10. El promedio y el estado (≥5 aprueba) se calculan solos. Se guardan en este dispositivo.</p>
+          <div id="quad-grid"><div class="empty-msg">Selecciona un grupo.</div></div>
+          <p class="section-sub" style="margin-top:.5rem;">Escala salvadoreña usada aquí: 0–10, aprueba en 5.0.</p>
         </div>
       </div>
     </section>
@@ -3581,7 +3697,7 @@ category: Document
 version: "1.52"
 unicode: "eff2"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3610,7 +3726,7 @@ category: Document
 version: "1.2"
 unicode: "eb6d"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3624,31 +3740,31 @@ unicode: "eb6d"
   <path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" />
 </svg>
  Solicitud de inscripción</h3></div>
-            <div class="form-row" style="grid-template-columns:1fr 1fr;">
-              <div class="form-group"><label>Nombres <strong>*</strong></label><input type="text" id="mat-nombres" placeholder="Nombres del estudiante" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-              <div class="form-group"><label>Apellidos <strong>*</strong></label><input type="text" id="mat-apellidos" placeholder="Apellidos del estudiante" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
+            <div class="form-row grid-2col" >
+              <div class="form-group"><label>Nombres <strong>*</strong></label><input type="text" id="mat-nombres" placeholder="Nombres del estudiante" class="field-md"></div>
+              <div class="form-group"><label>Apellidos <strong>*</strong></label><input type="text" id="mat-apellidos" placeholder="Apellidos del estudiante" class="field-md"></div>
             </div>
-            <div class="form-row" style="grid-template-columns:1fr 1fr;">
-              <div class="form-group"><label>Correo del padre/tutor <strong>*</strong></label><input type="email" id="mat-email" placeholder="correo@ejemplo.com" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
-              <div class="form-group"><label>Teléfono <strong>*</strong></label><input type="tel" id="mat-telefono" placeholder="Teléfono de contacto" style="width:100%;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></div>
+            <div class="form-row grid-2col" >
+              <div class="form-group"><label>Correo del padre/tutor <strong>*</strong></label><input type="email" id="mat-email" placeholder="correo@ejemplo.com" class="field-md"></div>
+              <div class="form-group"><label>Teléfono <strong>*</strong></label><input type="tel" id="mat-telefono" placeholder="Teléfono de contacto" class="field-md"></div>
             </div>
-            <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="form-row grid-3col" >
               <div class="form-group"><label>Año a cursar</label>
-                <select id="mat-anio" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+                <select id="mat-anio" class="field">
                   <option value="1">1° Año</option>
                   <option value="2">2° Año</option>
                   <option value="3">3° Año</option>
                 </select>
               </div>
               <div class="form-group"><label>Especialidad</label>
-                <select id="mat-especialidad" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+                <select id="mat-especialidad" class="field">
                   <option value="general">General</option>
                   <option value="software">Desarrollo de Software</option>
                   <option value="administrativo">Administrativo</option>
                 </select>
               </div>
               <div class="form-group"><label>Sección</label>
-                <select id="mat-seccion" style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+                <select id="mat-seccion" class="field">
                   <option value="A">A</option>
                   <option value="B">B</option>
                   <option value="C">C</option>
@@ -3656,13 +3772,13 @@ unicode: "eb6d"
                 </select>
               </div>
             </div>
-            <div style="margin-top:.75rem;"><button class="btn btn-primary" id="btn-mat-enviar"><!--
+            <div class="mt-3"><button class="btn btn-primary" id="btn-mat-enviar"><!--
 tags: [file, arrow, upload, import, transfer, navigation, flow, send, publish, movement]
 category: Arrows
 version: "1.0"
 unicode: "eb47"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3680,15 +3796,15 @@ unicode: "eb47"
           </div>
         </div>
 
-        <div id="matricula-admin" style="display:none;" data-perm="crear">
-          <div class="card" style="margin-top:1rem;">
+        <div id="matricula-admin" class="hidden-d" data-perm="crear">
+          <div class="card mt-4" >
             <div class="flex-between"><h3><!--
 category: System
 tags: [find, magnifier, magnifying glass, search, look, seek, query, browse]
 version: "1.0"
 unicode: "eb1c"
 -->
-<svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle"   xmlns="http://www.w3.org/2000/svg"
+<svg width="20" height="20" class="icon-16"   xmlns="http://www.w3.org/2000/svg"
   width="24"
   height="24"
   viewBox="0 0 24 24"
@@ -3710,30 +3826,30 @@ unicode: "eb1c"
 
     <div id="app-respaldos" class="section hidden">
       <div class="container">
-        <h2 class="section-title"><svg width="20" height="20" style="width:16px;height:16px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" /><path d="M3 10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" /><path d="M3 3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3" /></svg> Respaldos</h2>
+        <h2 class="section-title"><svg width="20" height="20" class="icon-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" /><path d="M3 10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" /><path d="M3 3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3" /></svg> Respaldos</h2>
         <p class="section-sub">Exportá e importá tus datos (tareas, horarios, notas, configuración) para migrar entre dominios o hacer copias de seguridad.</p>
-          <div id="backup-aviso-cuenta" style="margin-bottom:1rem;"></div>
+          <div id="backup-aviso-cuenta" class="mb-4"></div>
 
-        <div class="card" style="margin-bottom:1.5rem;">
-          <h3 style="margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar mis datos</h3>
-          <p style="margin:0 0 1rem;color:var(--gray-500);font-size:.85rem;">Descargá un archivo JSON con tus tareas, horarios, notas, configuración de tema, biblioteca del reproductor y preferencias. <strong>No incluye</strong> contraseñas, sesiones ni datos de otras personas (alumnos, entregas, calificaciones).</p>
-          <div id="backup-export-preview" style="margin-bottom:1rem;font-size:.85rem;color:var(--gray-500);"></div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <div class="card mb-6" >
+          <h3 class="muted-row"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar mis datos</h3>
+          <p class="muted-1rem">Descargá un archivo JSON con tus tareas, horarios, notas, configuración de tema, biblioteca del reproductor y preferencias. <strong>No incluye</strong> contraseñas, sesiones ni datos de otras personas (alumnos, entregas, calificaciones).</p>
+          <div id="backup-export-preview" class="muted-1rem"></div>
+          <div class="row-gap">
             <button class="btn btn-primary" id="btn-backup-export"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar JSON</button>
             <button class="btn btn-outline" id="btn-backup-export-share"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.58" y2="10.49" /></svg> Compartir (Web Share)</button>
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:1.5rem;">
-          <h3 style="margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Importar respaldo</h3>
-          <p style="margin:0 0 1rem;color:var(--gray-500);font-size:.85rem;">Seleccioná un archivo de respaldo JSON. Verás una vista previa de lo que se importará antes de confirmar.</p>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
-            <input type="file" id="backup-import-file" accept=".json" style="display:none;" />
+        <div class="card mb-6" >
+          <h3 class="muted-row"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Importar respaldo</h3>
+          <p class="muted-1rem">Seleccioná un archivo de respaldo JSON. Verás una vista previa de lo que se importará antes de confirmar.</p>
+          <div class="row-gap-mb">
+            <input type="file" id="backup-import-file" accept=".json" class="hidden-d" />
             <button class="btn btn-outline" id="btn-backup-import-pick"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2h12a2 2 0 0 1 2-2V8z" /></svg> Seleccionar archivo JSON</button>
-            <span id="backup-import-filename" style="font-size:.8rem;color:var(--gray-500);"></span>
+            <span id="backup-import-filename" class="muted-sm"></span>
           </div>
-          <div id="backup-import-preview" style="margin-bottom:1rem;font-size:.85rem;color:var(--gray-500);"></div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+          <div id="backup-import-preview" class="muted-1rem"></div>
+          <div class="row-gap-mb">
             <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
               <input type="radio" name="backup-import-mode" value="merge" checked> Combinar (suma, no duplica)
             </label>
@@ -3741,28 +3857,28 @@ unicode: "eb1c"
               <input type="radio" name="backup-import-mode" value="replace"> Reemplazar todo
             </label>
           </div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <div class="row-gap">
             <button class="btn btn-primary" id="btn-backup-import-confirm" disabled><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg> Confirmar importación</button>
-            <button class="btn btn-outline" id="btn-backup-import-cancel" style="display:none;"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> Cancelar</button>
+            <button class="btn btn-outline hidden-d" id="btn-backup-import-cancel" ><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> Cancelar</button>
           </div>
           <p id="backup-import-status" style="margin-top:.75rem;font-size:.8rem;color:var(--gray-500);"></p>
         </div>
 
         <div class="card" style="background:var(--gray-50);border:1px solid var(--gray-200);">
-          <h3 style="margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10" /><path d="M12 16a4 4 0 0 1 0-8 4 4 0 0 1 0 8" /><path d="M12 12v-4" /></svg> Migración de dominio</h3>
-          <p style="margin:0 0 1rem;color:var(--gray-500);font-size:.85rem;">¿Cambiaste de dirección (ej. de GitHub Pages a Netlify)? Los datos locales <strong>no se comparten entre dominios</strong>. Usá los botones de arriba para exportar en el sitio viejo e importar en el nuevo.</p>
+          <h3 class="muted-row"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10" /><path d="M12 16a4 4 0 0 1 0-8 4 4 0 0 1 0 8" /><path d="M12 12v-4" /></svg> Migración de dominio</h3>
+          <p class="muted-1rem">¿Cambiaste de dirección (ej. de GitHub Pages a Netlify)? Los datos locales <strong>no se comparten entre dominios</strong>. Usá los botones de arriba para exportar en el sitio viejo e importar en el nuevo.</p>
           <div id="legacy-migration-banner" class="hidden" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;padding:1rem;background:var(--amber-light);border:1px solid var(--amber);border-radius:8px;">
-            <div style="flex:1;min-width:200px;">
+            <div class="flex-1-200">
               <strong>📍 Sitio antiguo detectado</strong><br>
-              <span id="legacy-message" style="font-size:.85rem;"></span>
+              <span id="legacy-message" class="text-85"></span>
             </div>
             <button class="btn btn-primary" id="legacy-export-btn"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Exportar ahora</button>
             <button class="btn btn-outline" id="legacy-dismiss-btn">Descartar</button>
           </div>
           <div id="new-site-banner" class="hidden" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;padding:1rem;background:var(--green-light);border:1px solid var(--green);border-radius:8px;margin-top:1rem;">
-            <div style="flex:1;min-width:200px;">
+            <div class="flex-1-200">
               <strong>🆕 Sitio nuevo detectado</strong><br>
-              <span style="font-size:.85rem;">¿Venís del sitio anterior? Importá tu respaldo para recuperar tus datos.</span>
+              <span class="text-85">¿Venís del sitio anterior? Importá tu respaldo para recuperar tus datos.</span>
             </div>
             <button class="btn btn-primary" id="new-site-import-btn"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> Importar respaldo</button>
             <button class="btn btn-outline" id="new-site-dismiss-btn">Después</button>

@@ -7,18 +7,19 @@ import {
   textoCorrecta,
   calcularResultadoExamen,
 } from "./modules/examenes/evaluador.js";
-import { ICON_DATA, iconSrc } from "./icons/icon-data.js";
+import { iconSrc } from "./icons/icon-data.js";
 import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
+  me as apiMe,
+  definirContrasena as apiDefinirContrasena,
+  esPasswordPendiente,
 } from "./auth";
 import {
-  LS_CUENTAS,
-  ROLES_VALIDOS,
+    ROLES_VALIDOS,
   ROL_REGISTRO,
-  ADMIN_EMAIL,
-  normalizaEmail,
+    normalizaEmail,
   leerCuentas,
   guardarCuentas,
   obtenerCuenta,
@@ -28,7 +29,9 @@ import {
   cuentasBackend,
 } from "./app-accounts";
 
-import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoCheckboxes, gruposSeleccionados } from "./api-client";
+import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta } from "./api-client";
+import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
+import { initForos } from "./modules/foros/foro-app.js";
 (function () {
       'use strict';
 
@@ -112,6 +115,22 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           if (window.usuarioActual) actualizarUsuarioDesdeCuenta();
           if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
         });
+        // El rango vigente vive en el servidor: al abrir la app se consulta
+        // (cookie HttpOnly) para que una promoción o una baja hecha por otro
+        // administrador surta efecto de inmediato, sin recargar a mano.
+        if (logueado) {
+          apiMe().then(function (u) {
+            if (!u || !u.rol) return;
+            if (!usuarioActual) return;
+            if (usuarioActual.rol !== u.rol) {
+              usuarioActual.rol = u.rol;
+              window.usuarioActual = usuarioActual;
+              try { localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual)); } catch (e) { /* sin storage */ }
+              if (typeof restoreUI === 'function') restoreUI();
+            }
+            if (typeof actualizarPermisosUI === 'function') actualizarPermisosUI();
+          }).catch(function () { /* sin backend: se queda el rango local */ });
+        }
       })();
 
       var toastEl = $('toast');
@@ -129,7 +148,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       var cryptoKey = null;
       var cryptoKeyStr = '';
 
-      function cryptoDeriveKey(password, salt) {
+      function _cryptoDeriveKey(password, salt) {
         // Deriva una clave AES de 256 bits a partir de la contraseña
         var s = (password || '') + ':' + (salt || 'CHERRYBOMB_SALT_2026');
         // SHA-256 simulado mediante iteración de FNV-1a para key stretching
@@ -203,7 +222,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
 
       // Hash de contraseña (SHA-256 vía Web Crypto si disponible, fallback síncrono)
-      function hashPassword(password) {
+      function _hashPassword(password) {
         if (password.length < 6) return '';
         // Fallback síncrono multiplataforma
         var s = password + ':CHERRYBOMB_HASH';
@@ -368,12 +387,10 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         else volControl.classList.add('hidden');
       }
 
-      var scrollPos = 0;
-      function lockBody() { scrollPos = window.scrollY; document.body.classList.add('no-scroll'); }
-      function unlockBody() { document.body.classList.remove('no-scroll'); window.scrollTo(0, scrollPos); }
-      document.addEventListener('touchmove', function(e) {
-        if (document.body.classList.contains('no-scroll') && !e.target.closest('.modal-overlay')) e.preventDefault();
-      }, { passive: false });
+      // P1: no bloquear touchmove global — el scroll se bloquea solo con body.no-scroll (overflow:hidden).
+      // El handler anterior preventDefault sobre toda la página dejaba la dashboard sin scroll tras cerrar sidebar/modal si el tope se quedaba atascado.
+      // El bloqueo vive en scroll-lock.js (fuente única de verdad, sincronizada con el DOM):
+      // así ningún modal puede dejar el body con overflow:hidden pegado.
 
       function abrirTemas() {
         var modal = $('modal-temas');
@@ -434,7 +451,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         'protegido': 'PROTEGIDO',
         'tareas': 'TAREAS',
         'aulas': 'AULAS',
-        'planificacion': 'ROLES_DOCENTE',
+        'planificacion': 'PLANIFICACION',
         'matricula': 'MATRICULA',
         'estudio': 'ESTUDIO',
         'sakura-player': 'SAKURA_PLAYER',
@@ -637,9 +654,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
             mostrarToast('No se pudo cargar el módulo de respaldos.', 'error');
           });
         }
-        if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); }
+        if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); renderCuadro(); }
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
-        if (app === 'auth') { renderAuth(); }
+        if (app === 'auth') { renderAuth(); sincronizarCuentasBackend(); }
         if (app === 'aulas' && window.CherryBombNotifications) {
           window.CherryBombNotifications.showPermissionBanner();
         }
@@ -662,14 +679,14 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         }
         if (app === 'sakura-player') {
           var playerRoot = $('sakura-player-root');
-          var section = $('app-sakura-player');
+          var _section = $('app-sakura-player');
 
           // Asegurar que el contenedor tenga contenido visible incluso si el JS falla
           if (playerRoot && !playerRoot.children.length) {
             playerRoot.innerHTML = '<div id="sp-loading" style="padding:2rem;text-align:center;color:var(--player-text-secondary);">Cargando reproductor…</div>';
           }
 
-          function montarSakura() {
+          var montarSakura = function () {
             if (!window.mountSakuraPlayer) {
               console.warn('[SakuraPlayer] mountSakuraPlayer no disponible aún, reintentando…');
               setTimeout(montarSakura, 200);
@@ -682,7 +699,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               console.error('[SakuraPlayer] Error al montar:', err);
               if (playerRoot) playerRoot.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--player-error);">Error cargando el reproductor. Recargá la página.</div>';
             }
-          }
+          };
 
           if (window.mountSakuraPlayer) {
             montarSakura();
@@ -746,30 +763,98 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
 
       $('form-login').addEventListener('submit', async function (e) {
         e.preventDefault();
-        var email = $('login-email').value.trim();
-        var pass = $('login-pass').value.trim();
+        var btn = $('login-submit');
+        var email = $('login-email').value.trim().toLowerCase();
+        var pass = $('login-pass').value;
         if (!email || pass.length < 6) {
-          $('login-error').hidden = false; mostrarToast('Ingresa un correo y contraseña válidos (mín. 6 caracteres).', 'error'); return;
+          $('login-error').hidden = false; $('login-error').textContent = 'Ingresa un correo y contraseña válidos (mín. 6 caracteres).'; return;
         }
         $('login-error').hidden = true;
-
+        if (btn) { btn.disabled = true; btn.textContent = 'Ingresando…'; }
         try {
           var data = await apiLogin(email, pass);
           loginSuccess(data.email, data.rol, data.nombre);
         } catch (err) {
+          var msg = String(err.message || err);
+          // La cuenta existe pero todavía no tiene contraseña (creada por un
+          // administrador o la cuenta semilla admin): se pide crearla.
+          if (esPasswordPendiente(err)) {
+            abrirDefinirContrasena(email);
+            return;
+          }
+          $('login-error').textContent = (msg.indexOf('429') !== -1 || msg.indexOf('Demasiados') !== -1) ? 'Demasiados intentos. Esperá 5 minutos.' : (msg.indexOf('Credenciales') !== -1 ? 'Credenciales inválidas.' : msg);
           $('login-error').hidden = false;
-          mostrarToast(String(err.message || err), 'error');
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = 'Ingresar'; }
         }
       });
 
-      /* ---- Registro: la persona ELIGE el rol de su cuenta ---- */
+      /* ---- Definir contraseña (primer ingreso de cuentas sin contraseña) ---- */
+      var modalDefinirPass = $('modal-definir-pass');
+      function abrirDefinirContrasena(email) {
+        if (!modalDefinirPass) return;
+        var inp = $('def-pass-email');
+        if (inp) inp.value = String(email || '');
+        var errBox = $('def-pass-error');
+        if (errBox) { errBox.hidden = true; errBox.textContent = ''; }
+        var p1 = $('def-pass-pass'); var p2 = $('def-pass-pass2');
+        if (p1) p1.value = ''; if (p2) p2.value = '';
+        modalDefinirPass.classList.add('open');
+        lockBody();
+        if (p1) p1.focus();
+      }
+      function cerrarDefinirContrasena() {
+        if (!modalDefinirPass) return;
+        modalDefinirPass.classList.remove('open');
+        unlockBody();
+      }
+      if (modalDefinirPass) {
+        $('modal-definir-pass-close').addEventListener('click', cerrarDefinirContrasena);
+        modalDefinirPass.addEventListener('click', function (e) { if (e.target === modalDefinirPass) cerrarDefinirContrasena(); });
+        $('form-definir-pass').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var errBox = $('def-pass-error');
+          var btn = $('def-pass-submit');
+          var email = $('def-pass-email').value.trim().toLowerCase();
+          var p1 = $('def-pass-pass').value;
+          var p2 = $('def-pass-pass2').value;
+          function fallo(msg) { if (errBox) { errBox.textContent = msg; errBox.hidden = false; } mostrarToast(msg, 'error'); }
+          if (!email) return fallo('Ingresá tu correo institucional.');
+          if (p1.length < 6) return fallo('La contraseña debe tener al menos 6 caracteres.');
+          if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
+          if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+          try {
+            var data = await apiDefinirContrasena(email, p1);
+            cerrarDefinirContrasena();
+            loginSuccess(data.email, data.rol, data.nombre);
+            mostrarToast('¡Contraseña creada! Bienvenido/a.', 'success');
+          } catch (err) {
+            fallo(String(err.message || err));
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar contraseña y entrar'; }
+          }
+        });
+      }
+      var _toggle = $('btn-toggle-pass');
+      if (_toggle) _toggle.addEventListener('click', function () {
+        var inp = $('login-pass');
+        var show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        _toggle.textContent = show ? '🙈 Ocultar' : '👁 Mostrar';
+        inp.focus();
+      });
+
+      /* ---- Registro: la cuenta pública se crea SIEMPRE como estudiante ----
+         Los rangos docente/coordinador/director/subdirector/padres/admin los
+         asigna un administrador desde el panel "Usuarios". */
       $('form-registro').addEventListener('submit', async function (e) {
         e.preventDefault();
         var err = $('reg-error');
         function fallo(msg) { err.textContent = msg; err.hidden = false; mostrarToast(msg, 'error'); console.log('[registro] ERROR:', msg); }
         var nom = $('reg-nombre').value.trim();
         var email = $('reg-email').value.trim();
-        var rolSel = $('reg-rol') ? $('reg-rol').value : ROL_REGISTRO;
+        var rolSel = ROL_REGISTRO; // registro público: siempre estudiante
+        if ($('reg-grupo-wrap')) $('reg-grupo-wrap').style.display = '';
         var p1 = $('reg-pass').value;
         var p2 = $('reg-pass2').value;
 
@@ -778,7 +863,6 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         if (!nom) return fallo('Poné tu nombre completo.');
         if (!email || p1.length < 6) return fallo('Correo y contraseña válidos (mín. 6 caracteres).');
         if (p1 !== p2) return fallo('Las contraseñas no coinciden.');
-        if (ROLES_VALIDOS.indexOf(rolSel) === -1) return fallo('Elegí un rol válido.');
 
         // Verificación local previa: si el email ya existe, avisar sin llamar al backend
         if (obtenerCuenta(email)) {
@@ -786,11 +870,11 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         }
 
         try {
-          var data = await apiRegister(email, nom, p1, rolSel);
+          var _gid = ($('reg-grupo') && $('reg-grupo').value) ? parseInt($('reg-grupo').value, 10) : null;
+          var data = await apiRegister(email, nom, p1, ROL_REGISTRO, Number.isFinite(_gid) ? _gid : null);
           console.log('[registro] Éxito:', data);
           err.hidden = true;
           $('form-registro').reset();
-          if ($('reg-rol')) $('reg-rol').value = ROL_REGISTRO;
           mostrarModoRegistro(false);
           loginSuccess(data.email, data.rol, data.nombre);
           mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[data.rol] || data.rol) + '.', 'success');
@@ -800,6 +884,38 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         }
       });
 
+      // P1: poblar selector de grupo en registro (estudiantes)
+      async function _poblarGrupoRegistro() {
+        var sel = $('reg-grupo'); if (!sel) return;
+        var anio = $('reg-anio') ? $('reg-anio').value : '';
+        var esp = $('reg-especialidad') ? $('reg-especialidad').value : '';
+        var sec = $('reg-seccion') ? $('reg-seccion').value : '';
+        var grupos = [];
+        try {
+          grupos = await apiGruposPublicos();
+        } catch (e) { grupos = []; }
+        if (!grupos || !grupos.length) {
+          grupos = [
+            { id: 1, anio: '1', seccion: 'B', especialidad: 'general', ciclo_escolar: '' },
+            { id: 2, anio: '1', seccion: 'C', especialidad: 'software', ciclo_escolar: '' },
+            { id: 3, anio: '1', seccion: 'C', especialidad: 'contaduria', ciclo_escolar: '' },
+          ];
+        }
+        var filtrados = grupos.filter(function (g) {
+          return (!anio || String(g.anio || '') === anio) && (!esp || (g.especialidad || '') === esp) && (!sec || (g.seccion || '') === sec);
+        });
+        var usar = filtrados.length ? filtrados : grupos;
+        sel.innerHTML = '<option value="">Sin grupo (podrás elegirlo después)</option>' + usar.map(function (g) {
+          var lbl = (g.anio || '') + '° ' + (g.especialidad || 'general') + ' ' + (g.seccion || '');
+          return '<option value="' + g.id + '">' + escapeHtml(lbl.trim()) + ' (id ' + g.id + ')</option>';
+        }).join('');
+        try { localStorage.setItem('reg-grupo-cache', JSON.stringify(usar)); } catch (e) { /* noop */ }
+      }
+      ['reg-anio', 'reg-especialidad', 'reg-seccion'].forEach(function (id) {
+        var el = $(id); if (el) el.addEventListener('change', _poblarGrupoRegistro);
+      });
+      if ($('reg-anio')) _poblarGrupoRegistro();
+
       function loginSuccess(email, rol, nombre) {
         // Rangos desconocidos degradados a estudiante (defensa extra)
         if (ROLES_VALIDOS.indexOf(rol) === -1) rol = ROL_REGISTRO;
@@ -808,6 +924,10 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         localStorage.setItem('cherrybombSession', JSON.stringify(usuarioActual));
         window.usuarioActual = usuarioActual; // notifications.js lo lee
         modalLogin.classList.remove('open');
+        // P1: cerrar el modal de login debe liberar el scroll del body.
+        // Sin esto, body.no-scroll (overflow:hidden) quedaba pegado y la
+        // página dejaba de scrollear (bug reportado por el usuario).
+        syncBodyLock();
         mostrarModoRegistro(false);
         $('btn-login').style.display = 'none';
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = 'none';
@@ -818,6 +938,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var sui = $('sidebar-user-info');
         sui.style.display = 'flex'; sui.classList.remove('hidden');
         $('sidebar-user-email').textContent = email + ' (' + rolDisplay + ')';
+        // Botón de salir en la barra superior (visible también en móvil).
+        var btnSalirTop = $('btn-logout-top');
+        if (btnSalirTop) { btnSalirTop.style.display = 'inline-flex'; btnSalirTop.classList.remove('hidden'); }
         mostrarToast('Bienvenido, ' + email.split('@')[0], 'success');
         $('form-login').reset();
         actualizarPermisosUI();
@@ -825,8 +948,11 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         if ($('aula-tab-tareas') && !$('aula-tab-tareas').classList.contains('hidden')) renderAulaTareas();
       }
 
-      $('btn-logout').addEventListener('click', async function () {
-        await apiLogout();
+      /* ===== CIERRE DE SESIÓN =====
+         Una sola función para todos los botones de "Salir" (barra superior y
+         pie del sidebar): así ninguno puede quedar desincronizado. */
+      async function cerrarSesion() {
+        try { await apiLogout(); } catch (e) { /* local-first: se limpia igual */ }
         logueado = false;
         usuarioActual = null;
         window.usuarioActual = null;
@@ -837,17 +963,24 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         if ($('btn-ingresar-hero')) $('btn-ingresar-hero').style.display = '';
         var ui = $('user-info'); ui.style.display = 'none'; ui.classList.add('hidden');
         var sui = $('sidebar-user-info'); sui.style.display = 'none'; sui.classList.add('hidden');
+        var btnSalir = $('btn-logout-top');
+        if (btnSalir) { btnSalir.style.display = 'none'; btnSalir.classList.add('hidden'); }
         // Sin sesión no queda ningún rango: se oculta todo lo docente
         actualizarPermisosUI();
         closeSidebar();
         mostrarApp('inicio');
         mostrarToast('Sesión cerrada.', 'success');
-      });
+      }
+
+      $('btn-logout').addEventListener('click', function () { cerrarSesion(); });
+      var btnLogoutTop = $('btn-logout-top');
+      if (btnLogoutTop) btnLogoutTop.addEventListener('click', function () { cerrarSesion(); });
 
       /* ---- Olvidé mi contraseña: flujo real de recuperación local ---- */
       $('link-olvide').addEventListener('click', function (e) {
         e.preventDefault();
         modalLogin.classList.remove('open');
+        syncBodyLock();
         _flujoOlvideContrasena();
       });
 
@@ -969,9 +1102,11 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       /* ===== ROLE & PERMISSIONS ===== */
 
       function esAdmin() { return usuarioActual && (usuarioActual.rol === 'admin' || usuarioActual.rol === 'director' || usuarioActual.rol === 'subdirector'); }
-      function esDocente() { return usuarioActual && (usuarioActual.rol === 'docente' || esAdmin()); }
+      /* El coordinador es personal docente: puede crear y editar igual que un
+         docente (solo no borra). Antes quedaba fuera y no veía nada de eso. */
+      function esDocente() { return usuarioActual && (usuarioActual.rol === 'docente' || usuarioActual.rol === 'coordinador' || esAdmin()); }
       function esEstudiante() { return usuarioActual && usuarioActual.rol === 'estudiante'; }
-      function esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
+      function _esPadres() { return usuarioActual && usuarioActual.rol === 'padres'; }
 
       var rolesPermisos = {
         admin: { ver: true, crear: true, editar: true, eliminar: true, participar: true },
@@ -1089,7 +1224,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var filtrados = g === 'todos' ? pickerStudents : pickerStudents.filter(function (s) { return s.grupo === g; });
         var el = $('picker-list');
         if (filtrados.length === 0) { el.innerHTML = emptyMsg('No hay estudiantes en este grupo.', { icon: '🎲', title: 'Picker' }); return; }
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + filtrados.map(function (s, i) {
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' + filtrados.map(function (s, _i) {
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gray-50);border-radius:6px;">' +
             '<span>' + escapeHtml(s.nombre) + ' <span class="semestre-badge">' + s.grupo + '</span></span>' +
             '<button class="btn btn-sm picker-del" data-idx="' + pickerStudents.indexOf(s) + '" style="background:var(--red);color:#fff;padding:.15rem .4rem;font-size:.7rem;">×</button></div>';
@@ -1265,6 +1400,67 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         });
       }
 
+      /* ---------- Cuentas ↔ backend ----------
+         El backend (accounts.json) es la FUENTE DE VERDAD de los rangos;
+         localStorage es el espejo local (local-first: la app sigue
+         funcionando sin internet). Toda cambio de rango/estado se guarda
+         primero en el servidor y después se refleja localmente. */
+
+      function _esErrorRed(msg) {
+        // "API 401: ..." = el servidor respondió (no es problema de red).
+        // Cualquier otra cosa = no hay conexión.
+        return !/^API\s+\d+/.test(String(msg || ''));
+      }
+
+      async function sincronizarCuentasBackend() {
+        try {
+          var data = await apiCuentas();
+          var lista = (data && data.accounts) || [];
+          if (!lista.length) return;
+          var db = leerCuentas() || {};
+          lista.forEach(function (c) {
+            var key = normalizaEmail(c.email);
+            if (!key) return;
+            var local = db[key] || {};
+            db[key] = {
+              email: key,
+              nombre: c.nombre || local.nombre || key.split('@')[0],
+              rol: c.rol || local.rol || ROL_REGISTRO,
+              semestre: c.semestre != null ? c.semestre : (local.semestre || ''),
+              activo: c.activo !== false,
+              creado: c.creado || local.creado || new Date().toISOString(),
+              // La contraseña nunca viene del backend: se conserva la local.
+              passwordHash: local.passwordHash || '',
+            };
+          });
+          guardarCuentas(db);
+          renderAuth();
+        } catch (e) {
+          // Sin backend (o sin permiso): se sigue con la copia local.
+          console.warn('[cuentas] No se pudo sincronizar con el servidor:', e);
+        }
+      }
+
+      async function sincronizarCuenta(email, cambios) {
+        try {
+          await apiActualizarCuenta(email, cambios);
+          return { ok: true };
+        } catch (e) {
+          var msg = String((e && e.message) || e || '');
+          return { ok: false, offline: _esErrorRed(msg), error: msg };
+        }
+      }
+
+      async function sincronizarCrearCuenta(email, nombre, rol) {
+        try {
+          await apiCrearCuenta({ email: email, nombre: nombre, rol: rol });
+          return { ok: true };
+        } catch (e) {
+          var msg = String((e && e.message) || e || '');
+          return { ok: false, offline: _esErrorRed(msg), error: msg };
+        }
+      }
+
       function renderAuth() {
         var tabla = $('auth-tabla');
         if (!tabla) return;
@@ -1315,23 +1511,47 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         total.innerHTML = lista.length + ' usuario' + (lista.length !== 1 ? 's' : '');
 
         tabla.querySelectorAll('.auth-rol').forEach(function (sel) {
-          sel.addEventListener('change', function () {
+          sel.addEventListener('change', async function () {
             var email = this.dataset.email;
-            var r = cambiarRango(email, this.value);
+            var nuevoRol = this.value;
+            // 1) Servidor primero: es la fuente de verdad de los rangos.
+            var res = await sincronizarCuenta(email, { rol: nuevoRol });
+            if (!res.ok && !res.offline) {
+              mostrarToast('No se pudo cambiar el rango: ' + (res.error || 'error del servidor'), 'error');
+              renderAuth();
+              return;
+            }
+            // 2) Espejo local (para seguir funcionando sin conexión).
+            var r = cambiarRango(email, nuevoRol);
             if (!r.ok) { mostrarToast(r.msg, 'error'); renderAuth(); return; }
-            mostrarToast('Rango de ' + email + ': ' + (ROLES_LABEL[r.cuenta.rol] || r.cuenta.rol) + '.', 'success');
             renderAuth();
+            mostrarToast('Rango de ' + email + ': ' + (ROLES_LABEL[r.cuenta.rol] || r.cuenta.rol) + '.', 'success');
+            if (res.offline) {
+              mostrarToast('Sin conexión: el rango quedó solo en este dispositivo.', 'error');
+            }
           });
         });
         tabla.querySelectorAll('.auth-toggle').forEach(function (btn) {
-          btn.addEventListener('click', function () {
+          btn.addEventListener('click', async function () {
             var email = this.dataset.email;
             var db = leerCuentas() || {};
             if (!db[email]) return;
-            db[email].activo = !db[email].activo;
+            var nuevo = !db[email].activo;
+            var res = await sincronizarCuenta(email, { activo: nuevo });
+            if (!res.ok && !res.offline) {
+              mostrarToast('No se pudo cambiar el estado de la cuenta: ' + (res.error || 'error del servidor'), 'error');
+              renderAuth();
+              return;
+            }
+            db = leerCuentas() || {};
+            if (!db[email]) return;
+            db[email].activo = nuevo;
             guardarCuentas(db);
             renderAuth();
-            mostrarToast('Cuenta ' + (db[email].activo ? 'activada' : 'desactivada') + '.', 'success');
+            mostrarToast('Cuenta ' + (nuevo ? 'activada' : 'desactivada') + '.', 'success');
+            if (res.offline) {
+              mostrarToast('Sin conexión: el cambio quedó solo en este dispositivo.', 'error');
+            }
           });
         });
       }
@@ -1340,7 +1560,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       $('auth-rol-filtro').addEventListener('change', renderAuth);
       $('auth-semestre-filtro').addEventListener('change', renderAuth);
 
-      $('btn-auth-add').addEventListener('click', function () {
+      $('btn-auth-add').addEventListener('click', async function () {
         if (!esAdmin()) { mostrarToast('Solo los administradores crean cuentas.', 'error'); return; }
         if (!exigirPermiso('crear')) return;
         var nom = prompt('Nombre completo:');
@@ -1353,10 +1573,25 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         if (rango === 'profesor') rango = 'docente';
         if (rango === 'padre' || rango === 'padres de familia') rango = 'padres';
         if (ROLES_VALIDOS.indexOf(rango) === -1) { mostrarToast('Rango desconocido: ' + rango, 'error'); return; }
-        var r = crearCuenta(email.trim(), nom.trim(), rango);
-        if (!r.ok) { mostrarToast(r.msg, 'error'); return; }
-        renderAuth();
+        var mail = email.trim().toLowerCase();
+        // El servidor guarda el rango: primero ahí, después el espejo local.
+        var res = await sincronizarCrearCuenta(mail, nom.trim(), rango);
+        if (!res.ok && !res.offline) {
+          mostrarToast('No se pudo crear la cuenta: ' + (res.error || 'error del servidor'), 'error');
+          return;
+        }
+        var r = crearCuenta(mail, nom.trim(), rango);
+        if (!r.ok) {
+          // Si ya existía localmente, el servidor es el que manda: recargamos.
+          if (res.ok) { await sincronizarCuentasBackend(); renderAuth(); }
+          else { mostrarToast(r.msg, 'error'); return; }
+        } else {
+          renderAuth();
+        }
         mostrarToast('Cuenta creada con rango ' + (ROLES_LABEL[rango] || rango) + '. El usuario elige su contraseña al entrar.', 'success');
+        if (res.offline) {
+          mostrarToast('Sin conexión: la cuenta quedó solo en este dispositivo.', 'error');
+        }
       });
 
       /* ---- Backup de cuentas: exportar / importar JSON (solo admin) ----
@@ -1935,8 +2170,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
               throw new Error('pregunta_invalida');
             }
             q.respuesta = mVal;
-            var tVal = matTol ? matTol.value.trim() : '0';
-            q.tolerancia = (tVal !== '' && !isNaN(Number(tVal))) ? Math.max(0, parseFloat(tVal)) : 0;
+            var tValMat = matTol ? matTol.value.trim() : '0';
+            q.tolerancia = (tValMat !== '' && !isNaN(Number(tValMat))) ? Math.max(0, parseFloat(tValMat)) : 0;
           } else if (tipo === 'ciencia_formula' || tipo === 'ciencia_ecuacion' || tipo === 'ciencia_diagrama') {
             var ciInp = item.querySelector('input[data-ciencia-resp]');
             var cVal = ciInp ? ciInp.value.trim() : '';
@@ -1991,41 +2226,257 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         return preguntas;
       }
 
-      function examGuardar() {
+      /* ===== IA generadora de exámenes (NVIDIA NIM) ===== */
+      async function examIA() {
+        var btn = $('btn-exam-ia');
+        var msg = $('exam-ia-msg');
+        var tema = $('exam-titulo').value.trim();
+        var materia = $('exam-materia').value.trim();
+        var fuente = $('exam-ia-fuente') ? $('exam-ia-fuente').value.trim() : '';
+        var cantidad = $('exam-ia-cantidad') ? parseInt($('exam-ia-cantidad').value, 10) || 8 : 8;
+        if (!tema) { if (msg) { msg.textContent = 'Escribí primero un tema.'; msg.style.color = 'var(--red)'; } return; }
+        btn.disabled = true;
+        btn.textContent = 'Generando…';
+        msg.textContent = '';
         try {
-          var preguntas = examGetPreguntas();
+          var generado = await apiIA({
+            tema: tema,
+            fuente: fuente,
+            numero_preguntas: cantidad,
+            tipo: 'mixto',
+            // Se manda la materia seleccionada (puede ir vacía: el backend la
+            // deduce del tema). Antes se mandaba 'general', que no existe en
+            // el <select> ni en la lista de materias válidas del backend.
+            materia: materia,
+            grado: 'bachillerato',
+          });
+          // Limpiar preguntas existentes y agregar las de la IA
+          var cont = $('exam-q-list');
+          if (!cont) return;
+          cont.innerHTML = '';
+          generado.preguntas.forEach(function (p) {
+            examAddPreguntaIA(p);
+          });
+          // Rellenar campos del examen
+          $('exam-titulo').value = generado.titulo || tema;
+          var selMateria = $('exam-materia');
+          if (selMateria && generado.materia) {
+            // Solo se asigna si existe la opción en el <select>.
+            var existe = Array.prototype.some.call(selMateria.options, function (o) { return o.value === generado.materia; });
+            if (existe) selMateria.value = generado.materia;
+          }
+          $('exam-tiempo').value = generado.tiempo_minutos || 45;
+          $('exam-notamin').value = generado.nota_minima || 60;
+          $('exam-intentos').value = generado.intentos || 2;
+          msg.textContent = '✅ ' + generado.preguntas.length + ' preguntas generadas por IA. Revisá y ajustá las que necesites.';
+          msg.style.color = 'var(--green)';
+        } catch (err) {
+          msg.textContent = '⚠️ Error: ' + (err.message || 'No se pudo generar');
+          msg.style.color = 'var(--red)';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '✨ Generar examen con IA';
+        }
+      }
+
+      function examAddPreguntaIA(p) {
+        var cont = $('exam-q-list');
+        if (!cont) return;
+        // Se usa el renderizador CANÓNICO (el mismo que al crear una pregunta a
+        // mano). Antes la IA generaba su propio HTML, que no coincidía con lo
+        // que lee examGetPreguntas(): se perdían las respuestas correctas y los
+        // tipos "verdadero_falso"/"emparejar" no existían en el selector, así
+        // que el examen se guardaba sin calificar.
+        examAddPregunta();
+        var item = cont.querySelector('.pregunta-item:last-child');
+        if (!item) return;
+        var sel = item.querySelector('.tipo-select');
+        if (!sel) return;
+        var idx = sel.dataset.idx;
+        var tipo = p.tipo || 'multiple';
+        if (!sel.querySelector('option[value="' + tipo + '"]')) tipo = 'multiple';
+        sel.value = tipo;
+        window.examCambiarTipo(sel);
+
+        var ta = item.querySelector('.pregunta-textarea');
+        if (ta) ta.value = p.enunciado || '';
+
+        var body = item.querySelector('.pregunta-body[data-idx="' + idx + '"]');
+        if (!body) return;
+
+        var ops = Array.isArray(p.opciones) ? p.opciones : [];
+        if (tipo === 'multiple') {
+          for (var k = 0; k < 3; k++) {
+            var inp = body.querySelector('input[type="text"][data-opt="' + k + '"]');
+            if (inp) inp.value = ops[k] != null ? String(ops[k]) : '';
+          }
+          if (p.correcta != null && p.correcta !== '') {
+            var radio = body.querySelector('input[name="correcta-' + idx + '"][value="' + p.correcta + '"]');
+            if (radio) radio.checked = true;
+          }
+        } else if (tipo === 'vf') {
+          if (p.correcta != null && p.correcta !== '') {
+            var radioVf = body.querySelector('input[name="correcta-' + idx + '"][value="' + (Number(p.correcta) ? 1 : 0) + '"]');
+            if (radioVf) radioVf.checked = true;
+          }
+        } else if (tipo === 'completar' || tipo === 'abierta') {
+          var resp = body.querySelector('input[data-resp]');
+          var textoResp = p.respuesta != null && p.respuesta !== '' ? String(p.respuesta) : (p.respuesta_correcta || '');
+          if (resp) resp.value = textoResp;
+        } else if (tipo === 'texto_largo') {
+          var taResp = body.querySelector('textarea[data-resp]');
+          var textoLargo = p.respuesta != null && p.respuesta !== '' ? String(p.respuesta) : (p.respuesta_correcta || '');
+          if (taResp) taResp.value = textoLargo;
+        } else if (tipo === 'casilla') {
+          var correctas = Array.isArray(p.correctas) ? p.correctas : [];
+          for (var j = 0; j < 3; j++) {
+            var inpC = body.querySelector('input[type="text"][data-opt="' + j + '"]');
+            if (inpC) inpC.value = ops[j] != null ? String(ops[j]) : '';
+            var cb = body.querySelector('input[type="checkbox"][name="casilla-' + idx + '"][data-opt="' + j + '"]');
+            if (cb && correctas.indexOf(j) !== -1) cb.checked = true;
+          }
+        } else if (tipo === 'ordenar') {
+          for (var m = 0; m < 3; m++) {
+            var inpO = body.querySelector('input[data-opt="' + m + '"]');
+            if (inpO) inpO.value = ops[m] != null ? String(ops[m]) : '';
+          }
+        } else if (tipo === 'emparejar') {
+          var pares = Array.isArray(p.pares) ? p.pares : [];
+          var filas = body.querySelectorAll('.opt-row');
+          for (var r = 0; r < filas.length && r < pares.length; r++) {
+            var par = pares[r] || [];
+            var concepto = Array.isArray(par) ? par[0] : par.a;
+            var definicion = Array.isArray(par) ? par[1] : par.b;
+            var optC = r === 0 ? '0' : '3';
+            var optD = r === 0 ? '1' : '4';
+            var ic = filas[r].querySelector('input[data-opt="' + optC + '"]');
+            var idf = filas[r].querySelector('input[data-opt="' + optD + '"]');
+            if (ic) ic.value = concepto != null ? String(concepto) : '';
+            if (idf) idf.value = definicion != null ? String(definicion) : '';
+          }
+        }
+
+        // La justificación de la IA no tiene campo en el editor: se muestra como
+        // nota para que el docente la lea al revisar el examen.
+        if (p.justificacion) {
+          var nota = document.createElement('div');
+          nota.style.cssText = 'margin-top:.4rem;font-size:.8rem;color:var(--gray-500);';
+          nota.textContent = '💡 ' + p.justificacion;
+          item.appendChild(nota);
+        }
+      }
+
+      function examGuardar() {
+        var preguntas;
+        try {
+          preguntas = examGetPreguntas();
         } catch (e) {
+          var m1 = $('exam-guardar-msg');
+          if (m1) { m1.textContent = '⚠️ Revisá las preguntas (faltan datos o opciones).'; m1.style.color = 'var(--red)'; }
           return;
         }
         var titulo = $('exam-titulo').value.trim();
         var materia = $('exam-materia').value.trim();
+        if (!preguntas.length) {
+          var m0 = $('exam-guardar-msg');
+          if (m0) { m0.textContent = '⚠️ Agregá al menos una pregunta al examen.'; m0.style.color = 'var(--red)'; }
+          return;
+        }
         var tiempo = parseInt($('exam-tiempo').value, 10) || 60;
         var notamin = parseInt($('exam-notamin').value, 10);
         var intentos = parseInt($('exam-intentos').value, 10);
         var barajar = $('exam-barajar') ? !!$('exam-barajar').checked : false;
+        // Acomodaciones de accesibilidad
+        var tiempo_extra = $('exam-acom-tiempo') ? !!$('exam-acom-tiempo').checked : false;
+        var reducir_opciones = $('exam-acom-reducir') ? !!$('exam-acom-reducir').checked : false;
+        var fuente_dislexia = $('exam-acom-dislexia') ? !!$('exam-acom-dislexia').checked : false;
+        var leer_voz_alta = $('exam-acom-voz') ? !!$('exam-acom-voz').checked : false;
         if (!titulo) { $('exam-guardar-msg').textContent = '⚠️ El título es obligatorio.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (!materia) { $('exam-guardar-msg').textContent = '⚠️ Seleccioná una materia.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(notamin) || notamin < 1 || notamin > 100) { $('exam-guardar-msg').textContent = '⚠️ La nota mínima va de 1 a 100.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         if (isNaN(intentos) || intentos < 1 || intentos > 10) { $('exam-guardar-msg').textContent = '⚠️ Los intentos van de 1 a 10.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
         var grupo_ids = gruposSeleccionados();
-        if (grupo_ids.length === 0) { $('exam-guardar-msg').textContent = '⚠️ Selecciona al menos un grupo.'; $('exam-guardar-msg').style.color = 'var(--red)'; return; }
-        var ex = { titulo: titulo, materia: materia, tiempo: tiempo, preguntas: preguntas, notamin: notamin, intentos: intentos, barajar: barajar, grupo_ids: grupo_ids, creado: new Date().toISOString() };
+        if (grupo_ids.length === 0) {
+          // Fallback local (sin backend): asigna al grupo por defecto para no bloquear la creación
+          grupo_ids = [1];
+          var _chk = document.querySelector('#exam-grupos input[name="grupo-chk"]');
+          if (_chk) { _chk.checked = true; }
+        }
+        var ex = { 
+          titulo: titulo, 
+          materia: materia, 
+          tiempo: tiempo, 
+          preguntas: preguntas, 
+          notamin: notamin, 
+          intentos: intentos, 
+          barajar: barajar, 
+          grupo_ids: grupo_ids, 
+          creado: new Date().toISOString(),
+          acomodaciones: {
+            tiempo_extra: tiempo_extra,
+            reducir_opciones: reducir_opciones,
+            fuente_dislexia: fuente_dislexia,
+            leer_voz_alta: leer_voz_alta
+          }
+        };
         examenes.push(ex);
         examGuardarStorage();
-        apiGuardarExamen(ex);
         examRenderGuardados();
         examRenderResultados();
         examCargarSelect();
-        $('exam-guardar-msg').textContent = '✅ Examen guardado.';
+        $('exam-guardar-msg').textContent = '✅ Examen guardado en este dispositivo.';
         $('exam-guardar-msg').style.color = 'var(--green)';
+        // Sincronización con el backend: si falla, se avisa (antes se silenciaba
+        // y el usuario veía un 404 sin explicación).
+        apiGuardarExamen(ex).then(function (r) {
+          if (r && r.queued) {
+            var m = $('exam-guardar-msg');
+            if (m) { m.textContent = '✅ Guardado localmente. Se sincronizará cuando haya internet.'; m.style.color = 'var(--amber-ink)'; }
+            return;
+          }
+          var m2 = $('exam-guardar-msg');
+          if (m2) { m2.textContent = '✅ Examen guardado y sincronizado con el servidor.'; m2.style.color = 'var(--green)'; }
+        }).catch(function (err) {
+          var m3 = $('exam-guardar-msg');
+          if (m3) {
+            m3.textContent = '⚠️ Guardado solo en este dispositivo: ' + (err && err.message ? err.message : 'sin conexión con el servidor');
+            m3.style.color = 'var(--amber-ink)';
+          }
+          mostrarToast('No se pudo sincronizar el examen con el servidor.', 'error');
+        });
       }
 
       /* ===== ANTI-CHEAT ===== */
       var examViolaciones = 0;
       var EXAM_MAX_VIOLACIONES = 3;
 
+      var _examUltViolacion = 0;
+      function _examSemilla(n) {
+        var h = 2166136261 >>> 0;
+        var str = String(n || '');
+        for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+        return h;
+      }
+      function _examBarajarConSemilla(arr, semilla) {
+        var rng = function () { semilla = (semilla * 1664525 + 1013904223) >>> 0; return semilla / 4294967296; };
+        var copia = arr.slice();
+        for (var i = copia.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var tmp = copia[i]; copia[i] = copia[j]; copia[j] = tmp; }
+        return copia;
+      }
+      function _examPedirFullscreen() {
+        try {
+          var de = document.documentElement;
+          if (de && de.requestFullscreen && !document.fullscreenElement) { var pr = de.requestFullscreen(); if (pr && pr.catch) pr.catch(function () {}); }
+        } catch (e) { /* sin soporte: noop */ }
+      }
+      function examOnFullscreenChange() {
+        if (examEnCurso && !document.fullscreenElement) examRegistrarViolacion('Salir de pantalla completa');
+      }
       function examInitAntiCheat() {
         examViolaciones = 0;
+        _examUltViolacion = 0;
+        _examPedirFullscreen();
+        document.addEventListener('fullscreenchange', examOnFullscreenChange);
         document.addEventListener('visibilitychange', examOnVisibility);
         window.addEventListener('blur', examOnBlur);
         document.addEventListener('contextmenu', examOnContextMenu);
@@ -2036,6 +2487,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
 
       function examCleanupAntiCheat() {
+        document.removeEventListener('fullscreenchange', examOnFullscreenChange);
+        try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) { /* noop */ }
         document.removeEventListener('visibilitychange', examOnVisibility);
         window.removeEventListener('blur', examOnBlur);
         document.removeEventListener('contextmenu', examOnContextMenu);
@@ -2047,6 +2500,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
 
       function examRegistrarViolacion(tipo) {
         if (!examEnCurso) return;
+        var ahora = Date.now();
+        if (ahora - _examUltViolacion < 2000) return; // debounce: blur+visibility juntos = 1 aviso
+        _examUltViolacion = ahora;
         examViolaciones++;
         mostrarToast('⚠️ Violación de seguridad: ' + tipo + '. Advertencia ' + examViolaciones + '/' + EXAM_MAX_VIOLACIONES, 'error');
         if (examViolaciones >= EXAM_MAX_VIOLACIONES) {
@@ -2069,18 +2525,21 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
       function examOnKeyDown(e) {
         if (!examEnCurso) return;
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x' || e.key === 'a')) {
-          e.preventDefault(); examRegistrarViolacion('Teclas de copiado');
+        var k = String(e.key || '').toLowerCase();
+        var combo = (e.ctrlKey || e.metaKey);
+        if (e.key === 'F12' || e.key === 'F5') { e.preventDefault(); examRegistrarViolacion('Herramientas'); return; }
+        if (combo && e.shiftKey && ['i','j','c','k'].indexOf(k) !== -1) { e.preventDefault(); examRegistrarViolacion('Herramientas'); return; }
+        if (combo && ['c','v','x','a','u','s','p'].indexOf(k) !== -1) {
+          e.preventDefault(); examRegistrarViolacion('Teclas de copiado/imprimir');
+          return;
         }
-        if (e.key === 'Escape' && examEnCurso) {
-          e.preventDefault(); examRegistrarViolacion('Tecla Escape');
-        }
+        if (!combo && k === 'escape') { e.preventDefault(); examRegistrarViolacion('Tecla Escape'); }
       }
 
       /* ===== PLAN DE TRABAJO (Planilla de calificaciones) ===== */
       var PLAN_KEY = 'bachillerato_plan_trabajo';
       var planData = JSON.parse(localStorage.getItem(PLAN_KEY) || '[]');
-      var planMaterias = ['Matemáticas', 'Física', 'Química', 'Biología', 'Literatura', 'Historia', 'Inglés'];
+      var _planMaterias = ['Matemáticas', 'Física', 'Química', 'Biología', 'Literatura', 'Historia', 'Inglés'];
       var planEstudiantesPorGrupo = {
         '1A': ['Ana García López','Carlos Mendoza Ruiz','Sofía Ramírez Cruz','Jorge Luis Hernández','Diana Rivas Mora'],
         '1B': ['María Torres Silva','Valentina Ortiz Mora','Pedro Sánchez Vega','Gabriela Flores Ruiz'],
@@ -2195,7 +2654,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         });
       }
 
-      function initPlanTab() {
+      function _initPlanTab() {
         var tabBtn = document.querySelector('[data-exam-tab="plan"]');
         if (!tabBtn) return;
         tabBtn.addEventListener('click', function () {
@@ -2239,18 +2698,33 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           return;
         }
         var copia = JSON.parse(JSON.stringify(e));
-        if (copia.barajar && Array.isArray(copia.preguntas)) {
-          copia.preguntas = examDesordenar(copia.preguntas);
+        // Barajar forzado con semilla por alumno + examen (aunque el docente no lo tildó):
+        // cada alumno recibe otro orden de preguntas/opciones (mismo examen, distinto orden)
+        if (Array.isArray(copia.preguntas)) {
+          var semilla = _examSemilla(examEmailEstudiante() + ':' + e.titulo);
+          copia.preguntas = _examBarajarConSemilla(copia.preguntas, semilla);
           copia.preguntas.forEach(examBarajarOpciones);
+        }
+        // Aplicar acomodaciones de accesibilidad
+        if (copia.acomodaciones) {
+          if (copia.acomodaciones.tiempo_extra) copia.tiempo = Math.round(copia.tiempo * 1.5);
+          if (copia.acomodaciones.reducir_opciones && copia.preguntas) {
+            copia.preguntas.forEach(function (q) {
+              if (q.tipo === 'multiple' && Array.isArray(q.opciones) && q.opciones.length > 3) {
+                q.opciones = q.opciones.slice(0, 3);
+              }
+            });
+          }
         }
         examEnCurso = {
           idx: idx,
           examen: copia,
           respuestas: [],
-          tiempoRestante: e.tiempo * 60,
+          tiempoRestante: copia.tiempo * 60,
           iniciado: Date.now(),
           intento: usados + 1,
-          intentosMax: max
+          intentosMax: max,
+          acomodaciones: copia.acomodaciones || {}
         };
         examRenderSimulador();
         examIniciarTimer();
@@ -2537,6 +3011,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
 
       // Event listeners
       $('btn-exam-add-q').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examAddPregunta(); });
+      $('btn-exam-ia').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examIA(); });
       $('btn-exam-guardar').addEventListener('click', function () { if (!exigirPermiso('crear')) return; examGuardar(); });
       $('btn-exam-start').addEventListener('click', examComenzar);
       $('btn-exam-enviar').addEventListener('click', function () {
@@ -2731,12 +3206,12 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       /* ===================================================================
          TAREAS — Docente crea, Estudiante entrega
          =================================================================== */
-      var TAREAS_KEY = 'bachillerato_tareas';
+      var _TAREAS_KEY = 'bachillerato_tareas';
       var tareas = window.eventosAPI.listar('tarea');
       var ENTREGAS_KEY = 'bachillerato_entregas';
       var entregas = JSON.parse(localStorage.getItem(ENTREGAS_KEY) || '[]');
 
-      function tareaGuardarStorage() { /* las tareas viven ahora en eventosAPI (clave 'eventos') */ }
+      function _tareaGuardarStorage() { /* las tareas viven ahora en eventosAPI (clave 'eventos') */ }
       function entregaGuardarStorage() { localStorage.setItem(ENTREGAS_KEY, JSON.stringify(entregas)); }
 
       function tareaRenderCreadas() {
@@ -2939,7 +3414,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           total.textContent = '0 aulas'; return;
         }
         container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem;">' +
-          items.map(function (a, i) {
+          items.map(function (a, _i) {
             var realIdx = aulas.indexOf(a);
             var icono = tipoIconos[a.tipo] || '\uD83C\uDFEB';
             var color = tipoColores[a.tipo] || 'blue';
@@ -3170,8 +3645,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function estudiantesGuardar() { localStorage.setItem('estudiantes_db', JSON.stringify(ESTUDIANTES_DB)); }
       function asistenciaGuardar() { localStorage.setItem('asistencia_historial', JSON.stringify(asistenciaHistorial)); }
 
-      var estPresentes = 0;
-      var estAusentes = 0;
+      var _estPresentes = 0;
+      var _estAusentes = 0;
 
       function estRenderTabla() {
         var anio = parseInt($('est-filtro-anio').value, 10);
@@ -3220,8 +3695,8 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
             '</td></tr>';
         }).join('');
 
-        estPresentes = presentes;
-        estAusentes = ausentes;
+        _estPresentes = presentes;
+        _estAusentes = ausentes;
         totalSpan.textContent = 'Mostrando ' + filtrados.length + ' estudiante' + (filtrados.length !== 1 ? 's' : '');
         presentesSpan.textContent = '\u2705 ' + presentes + ' Presente' + (presentes !== 1 ? 's' : '');
         ausentesSpan.textContent = '\u274C ' + ausentes + ' Ausente' + (ausentes !== 1 ? 's' : '');
@@ -3288,11 +3763,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
          =================================================================== */
       window.eventosAPI.migrarLegacy();
       var actividades = window.eventosAPI.listar('actividad');
-      var foros = JSON.parse(localStorage.getItem('foros') || '[]');
       var agendaItems = window.eventosAPI.listar('agenda');
       var calEventos = window.eventosAPI.listar('calendario');
       var horarioItems = JSON.parse(localStorage.getItem('horarioItems') || '[]');
-      // Migrar datos antiguos al nuevo formato de tabla
       if (horarioItems.length > 0 && horarioItems[0].materia !== undefined) {
         var nuevos = [];
         horarioItems.forEach(function (old) {
@@ -3313,775 +3786,46 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function guardarSeccion(nombre, arr) {
         localStorage.setItem(nombre, JSON.stringify(arr));
       }
-
-      function renderActividades() {
-        var el = $('act-lista');
-        if (actividades.length === 0) { el.innerHTML = emptyMsg('No hay actividades registradas.', { icon: '📋', title: 'Actividades', desc: 'Creá actividades para que tus estudiantes se mantengan al día.', actionText: '+ Nueva actividad', actionFn: function() { $('btn-act-add').click(); } }); return; }
-        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          actividades.map(function (a, i) {
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-              '<div><strong>' + escapeHtml(a.titulo) + '</strong>' + (a.desc ? '<br><span style="font-size:.82rem;color:var(--gray-500);">' + escapeHtml(a.desc) + '</span>' : '') + '</div>' +
-              '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-seccion="actividades" data-idx="' + i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button></div>';
-          }).join('') + '</div>';
-        el.querySelectorAll('.seccion-del').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var idx = parseInt(this.dataset.idx);
-            window.eventosAPI.borrar(actividades[idx].id);
-            actividades.splice(idx, 1);
-            renderActividades();
-            mostrarToast('Actividad eliminada.', 'success');
-          });
-        });
-      }
-      $('btn-act-add').addEventListener('click', function () {
-        if (!exigirPermiso('crear')) return;
-        dialogPrompt('T\u00EDtulo de la actividad:', 'Nueva actividad').then(function (titulo) {
-          if (!titulo) return;
-          dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            var ev = window.eventosAPI.agregar({
-              titulo: titulo.trim(),
-              tipo: 'actividad',
-              desc: (desc || '').trim(),
-              estado: 'pendiente',
-              prioridad: 'media',
-              recordatorio: false
-            });
-            actividades.push(ev);
-            renderActividades();
-            mostrarToast('Actividad agregada.', 'success');
-          });
-        });
-      });
-      renderActividades();
-
       /* ===================================================================
-         FOROS — temas con mensajes, respuestas, estados y filtros
+         FOROS — controlador tipo Reddit (comunidades, votos, hilos)
+         La lógica vive en src/modules/foros/ para poder probarla aparte.
          =================================================================== */
-      var MATERIAS_FORO = [
-        ['', 'Todas las materias'], ['general', 'General'], ['matematicas', 'Matem\u00E1ticas'],
-        ['fisica', 'F\u00edsica'], ['quimica', 'Qu\u00EDmica'], ['biologia', 'Biolog\u00EDa'],
-        ['literatura', 'Literatura'], ['historia', 'Historia'], ['ingles', 'Ingl\u00E9s'],
-      ];
-      var ESTADOS_FORO = {
-        abierto: { t: 'Abierto', c: 'badge-blue' },
-        resuelto: { t: 'Resuelto', c: 'badge-green' },
-        cerrado: { t: 'Cerrado', c: 'badge-amber' },
-      };
-      var foroAbierto = -1;      // índice del tema abierto en pantalla
-      var foroResponderA = null; // id del mensaje al que se responde (null = al tema)
-      var foroPagina = 1;        // página actual de paginación
-      var foroPorPagina = 5;     // temas por página
-      var foroOrden = 'reciente'; // ordenamiento: 'reciente' o 'populares'
-
-      // Migración de los foros viejos ({titulo, desc}) al formato con hilos
-      (function migrarForos() {
-        var cambia = false;
-        foros.forEach(function (f) {
-          if (!f.id) { f.id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); cambia = true; }
-          if (!Array.isArray(f.mensajes)) { f.mensajes = []; cambia = true; }
-          if (!f.estado) { f.estado = 'abierto'; cambia = true; }
-          if (f.fijado === undefined) { f.fijado = false; cambia = true; }
-          if (f.materia === undefined) { f.materia = ''; cambia = true; }
-          if (!f.creada) { f.creada = new Date().toISOString(); cambia = true; }
-          if (!f.autor) { f.autor = { nombre: 'An\u00F3nimo', email: '', rol: '' }; cambia = true; }
-          f.mensajes.forEach(function (m) {
-            if (!m.id) { m.id = 'm' + Math.random().toString(36).slice(2, 9); cambia = true; }
-            if (!Array.isArray(m.respuestas)) { m.respuestas = []; cambia = true; }
-            if (!m.autor) { m.autor = { nombre: 'An\u00F3nimo', email: '', rol: '' }; cambia = true; }
-            if (!m.fecha) { m.fecha = new Date().toISOString(); cambia = true; }
-          });
-        });
-        if (cambia) guardarSeccion('foros', foros);
-      })();
-
       function foroYo() {
         return usuarioActual
           ? { nombre: usuarioActual.nombre || usuarioActual.email, email: usuarioActual.email, rol: usuarioActual.rol }
           : null;
       }
-      function foroCuentaRespuestas(f) {
-        var n = f.mensajes.length;
-        f.mensajes.forEach(function (m) { n += (m.respuestas || []).length; });
-        return n;
-      }
-      function foroNombreMateria(v) {
-        var m = MATERIAS_FORO.find(function (x) { return x[0] === v; });
-        return m ? m[1] : v;
-      }
-      function fechaCorta(iso) {
-        if (!iso) return '';
-        var d = new Date(iso);
-        if (isNaN(d.getTime())) return '';
-        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
-        return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-      }
-      function enlacesAutomaticos(texto) {
-        if (!texto) return '';
-        return texto.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
-          var display = url.length > 50 ? url.substring(0, 47) + '...' : url;
-          return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--blue-ink);text-decoration:underline;word-break:break-all;">' + escapeHtml(display) + '</a>';
-        });
-      }
-      function foroPuedeBorrar(autor) {
-        var yo = foroYo();
-        if (yo && autor && autor.email && autor.email === yo.email) return true;
-        return tienePermiso('eliminar');
-      }
-      function foroPuedeEditar(autor) {
-        var yo = foroYo();
-        if (yo && autor && autor.email && autor.email === yo.email) return true;
-        return tienePermiso('editar');
-      }
-      function foroBadgeRol(rol) {
+      function foroRolBadge(rol) {
+        if (!rol) return '';
         var c = (typeof ROLES_BADGE !== 'undefined' && ROLES_BADGE[rol]) || 'badge-blue';
         var t = (typeof ROLES_LABEL !== 'undefined' && ROLES_LABEL[rol]) || rol;
-        return '<span class="badge ' + c + '" style="font-size:.68rem;">' + escapeHtml(t || '') + '</span>';
+        return '<span class="badge ' + c + '" style="font-size:.62rem;">' + escapeHtml(t || '') + '</span>';
       }
-
-      (function initForoFiltros() {
-        var sel = $('foro-filtro-materia');
-        if (sel) {
-          sel.innerHTML = MATERIAS_FORO.map(function (m) {
-            return '<option value="' + m[0] + '">' + m[1] + '</option>';
-          }).join('');
-        }
-        ['foro-buscar', 'foro-filtro-estado', 'foro-filtro-materia'].forEach(function (id) {
-          var el = $(id);
-          if (el) el.addEventListener('input', function () { if (foroAbierto < 0) renderForos(); });
-        });
-      })();
-
-      function renderForos() {
-        var el = $('foro-lista');
-        var det = $('foro-detalle');
-        if (!el || !det) return;
-
-        // Tema abierto: se muestra el hilo en vez de la lista
-        if (foroAbierto >= 0 && foros[foroAbierto]) {
-          el.classList.add('hidden');
-          det.classList.remove('hidden');
-          renderForoDetalle();
-          return;
-        }
-        foroAbierto = -1;
-        el.classList.remove('hidden');
-        det.classList.add('hidden');
-        det.innerHTML = '';
-
-        var q = (($('foro-buscar') && $('foro-buscar').value) || '').toLowerCase().trim();
-        var estado = $('foro-filtro-estado') ? $('foro-filtro-estado').value : 'todos';
-        var materia = $('foro-filtro-materia') ? $('foro-filtro-materia').value : '';
-
-        var visibles = foros.map(function (f, i) { return { f: f, i: i }; }).filter(function (x) {
-          if (estado !== 'todos' && x.f.estado !== estado) return false;
-          if (materia && x.f.materia !== materia) return false;
-          if (q && String(x.f.titulo).toLowerCase().indexOf(q) === -1 &&
-              String(x.f.desc || '').toLowerCase().indexOf(q) === -1) return false;
-          return true;
-        }).sort(function (a, b) {
-          var pa = a.f.fijado ? 1 : 0, pb = b.f.fijado ? 1 : 0;
-          if (pa !== pb) return pb - pa;
-          if (foroOrden === 'populares') {
-            var ca = foroCuentaRespuestas(a.f), cb = foroCuentaRespuestas(b.f);
-            if (ca !== cb) return cb - ca;
-          }
-          return String(b.f.creada).localeCompare(String(a.f.creada));
-        });
-
-        // Paginación
-        var totalPaginas = Math.ceil(visibles.length / foroPorPagina);
-        if (foroPagina > totalPaginas) foroPagina = totalPaginas || 1;
-        var inicio = (foroPagina - 1) * foroPorPagina;
-        var fin = inicio + foroPorPagina;
-        var paginaVisibles = visibles.slice(inicio, fin);
-
-        if (visibles.length === 0) {
-          el.innerHTML = foros.length === 0
-            ? emptyMsg('No hay temas todavía.', { icon: '\uD83D\uDCAC', title: 'Foros', desc: 'Cre\u00E1 un tema para iniciar una discusi\u00F3n con tu grupo.', actionText: '+ Nuevo tema', actionFn: function () { $('btn-foro-add').click(); } })
-            : emptyMsg('Ning\u00FAn tema coincide con el filtro.', { icon: '\uD83D\uDD0D', title: 'Sin resultados', desc: 'Prob\u00E1 con otra b\u00FAsqueda o limpi\u00E1 los filtros.' });
-          return;
-        }
-
-        // Controles superiores: paginación, orden y exportar CSV
-        var controlesSup = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem;">' +
-          '<div style="font-size:.75rem;color:var(--gray-500);">Mostrando ' + (inicio + 1) + ' a ' + Math.min(fin, visibles.length) + ' de ' + visibles.length + '</div>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-anterior" style="font-size:.75rem;">\u25C4 Anterior</button>' +
-          '<span style="font-size:.75rem;color:var(--gray-700);font-weight:600;">P\u00e1gina ' + foroPagina + ' de ' + totalPaginas + '</span>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-siguiente" style="font-size:.75rem;">Siguiente \u25BA</button>' +
-          '<select id="foro-orden" style="font-size:.75rem;padding:.2rem .4rem;border:1px solid var(--gray-300);border-radius:6px;">' +
-            '<option value="reciente" ' + (foroOrden === 'reciente' ? 'selected' : '') + '>M\u00e1s recientes</option>' +
-            '<option value="populares" ' + (foroOrden === 'populares' ? 'selected' : '') + '>M\u00e1s populares</option>' +
-          '</select>' +
-          (tienePermiso('eliminar') ? '<button class="btn btn-sm btn-outline foro-exportar" style="font-size:.75rem;color:var(--gray-800);">\uD83D\uDCCE Exportar CSV</button>' : '') +
-        '</div>';
-
-        el.innerHTML = controlesSup + '<div style="display:flex;flex-direction:column;gap:.5rem;">' + paginaVisibles.map(function (x) {
-          var f = x.f;
-          var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
-          var meta = [];
-          if (f.fijado) meta.push('\uD83D\uDCCC Fijado');
-          meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
-          if (f.materia) meta.push(escapeHtml(foroNombreMateria(f.materia)));
-          meta.push(fechaCorta(f.creada));
-          return '<div style="padding:.6rem .75rem;background:var(--gray-50);border-radius:8px;">' +
-            '<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">' +
-              '<div style="flex:1;min-width:0;">' +
-                '<button class="btn btn-sm foro-abrir" data-idx="' + x.i + '" style="padding:0;background:none;border:none;color:var(--gray-900);font-weight:700;text-align:left;font-size:.95rem;">' + escapeHtml(f.titulo) + '</button>' +
-                (f.desc ? '<p style="font-size:.83rem;color:var(--gray-500);margin:.15rem 0 0;">' + escapeHtml(f.desc) + '</p>' : '') +
-                '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.75rem;color:var(--gray-500);margin-top:.35rem;">' +
-                  '<span class="badge ' + st.c + '" style="font-size:.7rem;">' + st.t + '</span>' +
-                  '<span>' + meta.join(' \u00B7 ') + '</span>' +
-                  '<span>\uD83D\uDCAC ' + foroCuentaRespuestas(f) + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<div style="display:flex;gap:.35rem;flex-shrink:0;">' +
-                (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline foro-estado" data-idx="' + x.i + '" style="font-size:.75rem;">' + (f.estado === 'resuelto' ? 'Reabrir' : '\u2714 Resuelto') + '</button>' : '') +
-                '<button class="btn btn-sm seccion-del" data-perm="eliminar" data-idx="' + x.i + '" style="background:var(--red);color:#fff;">\uD83D\uDDD1\uFE0F</button>' +
-              '</div>' +
-            '</div></div>';
-        }).join('') + '</div>' +
-        '<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem;justify-content:space-between;">' +
-          '<div style="font-size:.7rem;color:var(--gray-500);">Total: ' + visibles.length + ' tema' + (visibles.length !== 1 ? 's' : '') + '</div>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-anterior2" style="font-size:.75rem;">\u25C4 Anterior</button>' +
-          '<span style="font-size:.75rem;color:var(--gray-700);font-weight:600;">P\u00e1gina ' + foroPagina + ' de ' + totalPaginas + '</span>' +
-          '<button class="btn btn-sm btn-outline foro-pagina-siguiente2" style="font-size:.75rem;">Siguiente \u25BA</button>' +
-        '</div>';
-
-        el.querySelectorAll('.foro-abrir').forEach(function (b) {
-          b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
-        });
-        el.querySelectorAll('.foro-estado').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('editar')) return;
-            var f = foros[parseInt(this.dataset.idx, 10)];
-            if (!f) return;
-            f.estado = f.estado === 'resuelto' ? 'abierto' : 'resuelto';
-            foroGuardar();
-            renderForos();
-            mostrarToast(f.estado === 'resuelto' ? 'Tema marcado como resuelto.' : 'Tema reabierto.', 'success');
-          });
-        });
-        el.querySelectorAll('.seccion-del').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('eliminar')) return;
-            foros.splice(parseInt(this.dataset.idx, 10), 1);
-            foroGuardar();
-            renderForos();
-            mostrarToast('Tema eliminado.', 'success');
-          });
-        });
-
-        // Listeners paginación
-        el.querySelectorAll('.foro-pagina-anterior, .foro-pagina-anterior2').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (foroPagina > 1) {
-              foroPagina--;
-              renderForos();
-            }
-          });
-        });
-        el.querySelectorAll('.foro-pagina-siguiente, .foro-pagina-siguiente2').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (foroPagina < totalPaginas) {
-              foroPagina++;
-              renderForos();
-            }
-          });
-        });
-        var ordenSelect = $('foro-orden');
-        if (ordenSelect) {
-          ordenSelect.addEventListener('change', function () {
-            foroOrden = ordenSelect.value;
-            foroPagina = 1;
-            renderForos();
-          });
-        }
-        var btnExportar = el.querySelector('.foro-exportar');
-        if (btnExportar) {
-          btnExportar.addEventListener('click', function () {
-            foroExportarCSV(visibles);
-          });
-        }
-
-        el.querySelectorAll('.foro-abrir').forEach(function (b) {
-          b.addEventListener('click', function () { abrirForo(parseInt(this.dataset.idx, 10)); });
-        });
-        el.querySelectorAll('.foro-estado').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('editar')) return;
-            var f = foros[parseInt(this.dataset.idx, 10)];
-            if (!f) return;
-            f.estado = f.estado === 'resuelto' ? 'abierto' : 'resuelto';
-            foroGuardar();
-            renderForos();
-            mostrarToast(f.estado === 'resuelto' ? 'Tema marcado como resuelto.' : 'Tema reabierto.', 'success');
-          });
-        });
-        el.querySelectorAll('.seccion-del').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!exigirPermiso('eliminar')) return;
-            foros.splice(parseInt(this.dataset.idx, 10), 1);
-            foroGuardar();
-            renderForos();
-            mostrarToast('Tema eliminado.', 'success');
-          });
-        });
-      }
-
-      function abrirForo(idx) { foroAbierto = idx; foroResponderA = null; renderForos(); }
-      function cerrarForo() { foroAbierto = -1; foroResponderA = null; renderForos(); }
-
-      function renderForoDetalle() {
-        var det = $('foro-detalle');
-        var f = foros[foroAbierto];
-        if (!det) return;
-        if (!f) { foroAbierto = -1; renderForos(); return; }
-
-        // Marcar como leído los mensajes al ver el detalle
-        var yo = foroYo();
-        if (yo && yo.email) {
-          if (!f.leidosPor) f.leidosPor = [];
-          if (f.leidosPor.indexOf(yo.email) < 0) f.leidosPor.push(yo.email);
-          if (f.mensajes) {
-            f.mensajes.forEach(function (m) {
-              if (!m.leidosPor) m.leidosPor = [];
-              if (m.leidosPor.indexOf(yo.email) < 0) m.leidosPor.push(yo.email);
-              if (m.respuestas) {
-                m.respuestas.forEach(function (r) {
-                  if (!r.leidosPor) r.leidosPor = [];
-                  if (r.leidosPor.indexOf(yo.email) < 0) r.leidosPor.push(yo.email);
-                });
-              }
-            });
-          }
-          foroGuardar();
-        }
-
-        var st = ESTADOS_FORO[f.estado] || ESTADOS_FORO.abierto;
-        var yo = foroYo();
-        var cerrado = f.estado === 'cerrado';
-        var meta = [];
-        meta.push(escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00F3nimo'));
-        if (f.materia) meta.push(escapeHtml(foroNombreMateria(f.materia)));
-        meta.push(fechaCorta(f.creada));
-        meta.push(foroCuentaRespuestas(f) + ' participaci\u00F3n' + (foroCuentaRespuestas(f) === 1 ? '' : 'es'));
-
-        var mensajes = f.mensajes.map(function (m) {
-          var respuestas = (m.respuestas || []).map(function (r) {
-            var aceptada = r.aceptada ? ' <span class="badge badge-green" style="font-size:.65rem;margin-left:.4rem;">✓ Aceptada</span>' : '';
-            var puedeAceptar = (yo && f.autor && f.autor.email === yo.email) && !r.aceptada;
-            return '<div style="margin:.4rem 0 0 .9rem;padding:.45rem .6rem;background:' + (r.aceptada ? 'rgba(46,204,113,.08)' : 'var(--gray-50)') + ';border-left:3px solid ' + (r.aceptada ? 'var(--green-ink)' : 'var(--gray-200)') + ';border-radius:0 8px 8px 0;">' +
-              '<div style="display:flex;justify-content:space-between;gap:.5rem;">' +
-                '<strong style="font-size:.82rem;">' + escapeHtml(r.autor ? r.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(r.autor ? r.autor.rol : '') + '</strong>' +
-                '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(r.fecha) + '</span>' + aceptada +
-              '</div>' +
-              '<p style="font-size:.85rem;margin:.2rem 0 0;">' + escapeHtml(enlacesAutomaticos(r.texto)) + '</p>' +
-              (r.archivos && r.archivos.length ? '<div style="margin:.3rem 0;display:flex;gap:.4rem;flex-wrap:wrap;">' + r.archivos.map(function (arch) {
-              return '<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;background:var(--gray-50);padding:.3rem .5rem;border-radius:6px;">' +
-                '<span>\uD83D\uDCCE</span>' + escapeHtml(arch.nombre) +
-                '</div>';
-            }).join('') + '</div>' : '') +
-            '<div style="display:flex;gap:.4rem;margin-top:.3rem;">' +
-                (puedeAceptar ? '<button class="btn btn-sm btn-outline foro-aceptar" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--green-ink);font-size:.72rem;">Marcar como respuesta</button>' : '') +
-                (foroPuedeEditar(r.autor) ? '<button class="btn btn-sm btn-outline foro-editar-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--blue-ink);font-size:.72rem;">Editar</button>' : '') +
-                (foroPuedeBorrar(r.autor) ? '<button class="btn btn-sm btn-outline foro-del-resp" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.72rem;">Eliminar</button>' : '') +
-                '<div style="flex:1;display:flex;gap:.3rem;justify-content:flex-end;">' +
-                (r.reacciones ? Object.keys(r.reacciones).map(function (emoji) {
-                  var count = r.reacciones[emoji];
-                  var yoReacciono = r.reacciones[emoji].usuarios && r.reacciones[emoji].usuarios.indexOf(yo && yo.email) >= 0;
-                  return '<button class="btn btn-sm btn-outline foro-reaccionar" data-mid="' + m.id + '" data-rid="' + r.id + '" data-emoji="' + escapeHtml(emoji) + '" style="font-size:.8rem;background:' + (yoReacciono ? 'var(--blue-200)' : 'transparent') + ';border-color:' + (yoReacciono ? 'var(--blue-ink)' : 'var(--gray-300)') + ';">' + emoji + ' <span style="font-size:.65rem;">' + count + '</span></button>';
-                }).join('') : '') +
-              '</div>' +
-              (tienePermiso('eliminar') || (yo && r.autor && r.autor.email === yo.email) ? '<button class="btn btn-sm btn-outline foro-reportar" data-mid="' + m.id + '" data-rid="' + r.id + '" style="color:var(--red-ink);font-size:.7rem;">\u26A0 Reportar</button>' : '') +
-              '</div></div>';
-          }).join('');
-
-          return '<div style="padding:.7rem 0;border-bottom:1px solid var(--gray-100);">' +
-            '<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">' +
-              '<strong style="font-size:.88rem;">' + escapeHtml(m.autor ? m.autor.nombre : 'An\u00F3nimo') + ' ' + foroBadgeRol(m.autor ? m.autor.rol : '') + '</strong>' +
-              '<span style="font-size:.72rem;color:var(--gray-400);">' + fechaCorta(m.fecha) + '</span>' +
-            '</div>' +
-            '<p style="font-size:.88rem;margin:.35rem 0 .4rem;white-space:pre-wrap;">' + escapeHtml(enlacesAutomaticos(m.texto)) + '</p>' +
-            (m.archivos && m.archivos.length ? '<div style="margin:.3rem 0;display:flex;gap:.4rem;flex-wrap:wrap;">' + m.archivos.map(function (arch) {
-              return '<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;background:var(--gray-50);padding:.3rem .5rem;border-radius:6px;">' +
-                '<span>\uD83D\uDCCE</span>' + escapeHtml(arch.nombre) +
-                '</div>';
-            }).join('') + '</div>' : '') +
-            '<div style="display:flex;gap:.5rem;">' +
-              (cerrado ? '' : '<button class="btn btn-sm btn-outline foro-responder" data-mid="' + m.id + '" style="font-size:.75rem;">\u21A9 Responder</button>') +
-              (foroPuedeEditar(m.autor) ? '<button class="btn btn-sm btn-outline foro-editar-msg" data-mid="' + m.id + '" style="color:var(--blue-ink);font-size:.75rem;">Editar</button>' : '') +
-              (foroPuedeBorrar(m.autor) ? '<button class="btn btn-sm btn-outline foro-del-msg" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.75rem;">Eliminar</button>' : '') +
-              '<div style="flex:1;display:flex;gap:.3rem;justify-content:flex-end;">' +
-                (m.reacciones ? Object.keys(m.reacciones).map(function (emoji) {
-                  var count = m.reacciones[emoji];
-                  var yoReacciono = m.reacciones[emoji].usuarios && m.reacciones[emoji].usuarios.indexOf(yo && yo.email) >= 0;
-                  return '<button class="btn btn-sm btn-outline foro-reaccionar" data-mid="' + m.id + '" data-emoji="' + escapeHtml(emoji) + '" style="font-size:.8rem;background:' + (yoReacciono ? 'var(--blue-200)' : 'transparent') + ';border-color:' + (yoReacciono ? 'var(--blue-ink)' : 'var(--gray-300)') + ';">' + emoji + ' <span style="font-size:.65rem;">' + count + '</span></button>';
-                }).join('') : '') +
-              '</div>' +
-              (tienePermiso('eliminar') || (yo && m.autor && m.autor.email === yo.email) ? '<button class="btn btn-sm btn-outline foro-reportar" data-mid="' + m.id + '" style="color:var(--red-ink);font-size:.7rem;">\u26A0 Reportar</button>' : '') +
-            '</div>' + respuestas + '</div>';
-        }).join('');
-        if (!f.mensajes.length) {
-          mensajes = emptyMsg('Todav\u00EDa no hay respuestas.', { icon: '\uD83D\uDCAC', title: 'Sin comentarios', desc: 'S\u00E9 el primero en participar de este tema.' });
-        }
-
-        det.innerHTML =
-          '<div style="display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">' +
-            '<div style="min-width:0;">' +
-              '<h3 style="margin:0;">' + (f.fijado ? '\uD83D\uDCCC ' : '') + escapeHtml(f.titulo) + '</h3>' +
-              (f.desc ? '<p style="font-size:.85rem;color:var(--gray-500);margin:.3rem 0 0;">' + escapeHtml(f.desc) + '</p>' : '') +
-              '<div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.76rem;color:var(--gray-500);margin-top:.4rem;align-items:center;">' +
-                '<span class="badge ' + st.c + '" style="font-size:.7rem;">' + st.t + '</span>' + meta.join(' \u00B7 ') +
-              '</div>' +
-            '</div>' +
-            '<div style="display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap;">' +
-              (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline" id="foro-fijar" style="font-size:.78rem;">' + (f.fijado ? 'Quitar fijado' : '\uD83D\uDCCC Fijar') + '</button>' : '') +
-              (tienePermiso('editar') ? '<button class="btn btn-sm btn-outline" id="foro-cerrar" style="font-size:.78rem;">' + (cerrado ? 'Reabrir tema' : 'Cerrar tema') + '</button>' : '') +
-              '<button class="btn btn-outline btn-sm" id="foro-volver">\u2190 Volver</button>' +
-            '</div>' +
-          '</div>' +
-          '<div style="margin-top:.9rem;">' + mensajes + '</div>' +
-          (cerrado
-            ? '<p style="font-size:.83rem;color:var(--gray-500);margin-top:.9rem;">\uD83D\uDD12 Este tema est\u00E1 cerrado: no se pueden agregar respuestas.</p>'
-            : (yo
-                ? '<div style="margin-top:.9rem;">' +
-                    '<div id="foro-respuesta-a" class="hidden" style="font-size:.78rem;color:var(--gray-500);margin-bottom:.3rem;"></div>' +
-                    '<textarea id="foro-texto" rows="3" placeholder="Escrib\u00ED tu respuesta..." aria-label="Tu respuesta" style="width:100%;padding:.55rem .7rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;resize:vertical;"></textarea>' +
-                    '<input type="file" id="foro-archivo" accept="image/*,.pdf,.doc,.docx,.txt" style="width:100%;padding:.4rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;font-size:.8rem;margin-top:.3rem;" multiple>' +
-                    '<div id="foro-archivos-seleccionados" style="font-size:.75rem;color:var(--gray-500);margin-top:.3rem;"></div>' +
-                    '<div style="display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end;">' +
-                      '<button class="btn btn-primary btn-sm" id="foro-publicar">Publicar respuesta</button>' +
-                    '</div>' +
-                  '</div>'
-                : '<p style="font-size:.83rem;color:var(--gray-500);margin-top:.9rem;">Inici\u00E1 sesi\u00F3n para responder.</p>'));
-
-        var volver = $('foro-volver');
-        if (volver) volver.addEventListener('click', cerrarForo);
-        var fijar = $('foro-fijar');
-        if (fijar) fijar.addEventListener('click', function () {
-          if (!exigirPermiso('editar')) return;
-          f.fijado = !f.fijado;
-          foroGuardar();
-          renderForoDetalle();
-          mostrarToast(f.fijado ? 'Tema fijado.' : 'Tema desfijado.', 'success');
-        });
-        var cerrarBtn = $('foro-cerrar');
-        if (cerrarBtn) cerrarBtn.addEventListener('click', function () {
-          if (!exigirPermiso('editar')) return;
-          f.estado = cerrado ? 'abierto' : 'cerrado';
-          foroGuardar();
-          renderForoDetalle();
-          mostrarToast(f.estado === 'cerrado' ? 'Tema cerrado.' : 'Tema reabierto.', 'success');
-        });
-
-        det.querySelectorAll('.foro-responder').forEach(function (b) {
-          b.addEventListener('click', function () {
-            foroResponderA = this.dataset.mid;
-            var hint = $('foro-respuesta-a');
-            var msg = f.mensajes.find(function (m) { return m.id === foroResponderA; });
-            if (hint && msg) {
-              hint.textContent = 'Respondiendo a ' + (msg.autor ? msg.autor.nombre : '') + '  (click en "Publicar" para cancelar)';
-              hint.classList.remove('hidden');
-            }
-            var t = $('foro-texto');
-            if (t) t.focus();
-          });
-        });
-
-        det.querySelectorAll('.foro-del-msg').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var idx = f.mensajes.findIndex(function (m) { return m.id === this.dataset.mid; }, this);
-            var m = idx >= 0 ? f.mensajes[idx] : null;
-            if (!m) return;
-            if (!foroPuedeBorrar(m.autor)) { mostrarToast('No pod\u00E9s borrar ese mensaje.', 'error'); return; }
-            if (!confirm('\u00BFBorrar este mensaje y sus respuestas?')) return;
-            f.mensajes.splice(idx, 1);
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Mensaje eliminado.', 'success');
-          });
-        });
-        det.querySelectorAll('.foro-del-resp').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
-            if (!m) return;
-            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
-            if (ridx < 0) return;
-            if (!foroPuedeBorrar(m.respuestas[ridx].autor)) { mostrarToast('No pod\u00E9s borrar esa respuesta.', 'error'); return; }
-            if (!confirm('\u00BFBorrar esta respuesta?')) return;
-            m.respuestas.splice(ridx, 1);
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Respuesta eliminada.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-editar-msg').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var idx = f.mensajes.findIndex(function (m) { return m.id === this.dataset.mid; }, this);
-            var m = idx >= 0 ? f.mensajes[idx] : null;
-            if (!m) return;
-            if (!foroPuedeEditar(m.autor)) { mostrarToast('No pod\u00E9s editar este mensaje.', 'error'); return; }
-            var nuevoTexto = prompt('Editar mensaje:', m.texto);
-            if (nuevoTexto === null) return;
-            if (!nuevoTexto.trim()) { mostrarToast('El mensaje no puede estar vac\u00EDo.', 'error'); return; }
-            m.texto = nuevoTexto.trim();
-            m.editado = true;
-            m.editadoFecha = new Date().toISOString();
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Mensaje editado.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-editar-resp').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
-            if (!m) return;
-            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
-            if (ridx < 0) return;
-            if (!foroPuedeEditar(m.respuestas[ridx].autor)) { mostrarToast('No pod\u00E9s editar esta respuesta.', 'error'); return; }
-            var nuevoTexto = prompt('Editar respuesta:', m.respuestas[ridx].texto);
-            if (nuevoTexto === null) return;
-            if (!nuevoTexto.trim()) { mostrarToast('La respuesta no puede estar vac\u00EDa.', 'error'); return; }
-            m.respuestas[ridx].texto = nuevoTexto.trim();
-            m.respuestas[ridx].editado = true;
-            m.respuestas[ridx].editadoFecha = new Date().toISOString();
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Respuesta editada.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-aceptar').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var m = f.mensajes.find(function (x) { return x.id === this.dataset.mid; }, this);
-            if (!m) return;
-            var ridx = (m.respuestas || []).findIndex(function (r) { return r.id === this.dataset.rid; }, this);
-            if (ridx < 0) return;
-            if (!yo || !f.autor || f.autor.email !== yo.email) { mostrarToast('Solo el autor del tema puede aceptar una respuesta.', 'error'); return; }
-            // Quitar aceptada de otras respuestas de este mensaje
-            if (m.respuestas) m.respuestas.forEach(function (r) { r.aceptada = false; });
-            m.respuestas[ridx].aceptada = true;
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Respuesta marcada como aceptada.', 'success');
-          });
-        });
-
-        det.querySelectorAll('.foro-reaccionar').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var mid = this.dataset.mid;
-            var rid = this.dataset.rid;
-            var emoji = this.dataset.emoji;
-            var yo2 = foroYo();
-            if (!yo2) { mostrarToast('Inici\u00E9 sesi\u00F3n para reaccionar.', 'error'); return; }
-            var mensaje;
-            var esRespuesta = !!rid;
-            if (esRespuesta) {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje || !mensaje.respuestas) return;
-              var r = mensaje.respuestas.find(function (r) { return r.id === rid; });
-              if (!r) return;
-              if (!r.reacciones) r.reacciones = {};
-              if (!r.reacciones[emoji]) r.reacciones[emoji] = { count: 0, usuarios: [] };
-              var reaccion = r.reacciones[emoji];
-              var idx = reaccion.usuarios.indexOf(yo2.email);
-              if (idx >= 0) {
-                reaccion.usuarios.splice(idx, 1);
-                reaccion.count--;
-              } else {
-                reaccion.usuarios.push(yo2.email);
-                reaccion.count++;
-              }
-            } else {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje) return;
-              if (!mensaje.reacciones) mensaje.reacciones = {};
-              if (!mensaje.reacciones[emoji]) mensaje.reacciones[emoji] = { count: 0, usuarios: [] };
-              var reaccion = mensaje.reacciones[emoji];
-              var idx = reaccion.usuarios.indexOf(yo2.email);
-              if (idx >= 0) {
-                reaccion.usuarios.splice(idx, 1);
-                reaccion.count--;
-              } else {
-                reaccion.usuarios.push(yo2.email);
-                reaccion.count++;
-              }
-            }
-            foroGuardar();
-            renderForoDetalle();
-          });
-        });
-
-        det.querySelectorAll('.foro-reportar').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var mid = this.dataset.mid;
-            var rid = this.dataset.rid;
-            var yo2 = foroYo();
-            if (!yo2) { mostrarToast('Inici\u00E9 sesi\u00F3n para reportar.', 'error'); return; }
-            var mensaje;
-            var esRespuesta = !!rid;
-            if (esRespuesta) {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje || !mensaje.respuestas) return;
-              var r = mensaje.respuestas.find(function (r) { return r.id === rid; });
-              if (!r) return;
-              if (!r.reportes) r.reportes = [];
-              if (r.reportes.indexOf(yo2.email) >= 0) { mostrarToast('Ya reportaste este mensaje.', 'info'); return; }
-              r.reportes.push(yo2.email);
-            } else {
-              mensaje = f.mensajes.find(function (x) { return x.id === mid; });
-              if (!mensaje) return;
-              if (!mensaje.reportes) mensaje.reportes = [];
-              if (mensaje.reportes.indexOf(yo2.email) >= 0) { mostrarToast('Ya reportaste este tema.', 'info'); return; }
-              mensaje.reportes.push(yo2.email);
-            }
-            foroGuardar();
-            renderForoDetalle();
-            mostrarToast('Mensaje reportado. El docente/admin ser\u00E1 notificado.', 'success');
-          });
-        });
-
-        var publicar = $('foro-publicar');
-        if (publicar) publicar.addEventListener('click', function () {
-          var yo2 = foroYo();
-          if (!yo2) { mostrarToast('Inici\u00E1 sesi\u00F3n para responder.', 'error'); return; }
-          var t = $('foro-texto');
-          var texto = t ? t.value.trim() : '';
-          if (!texto) { mostrarToast('Escrib\u00ED una respuesta.', 'error'); return; }
-          var ahora = new Date().toISOString();
-          // Detectar menciones @usuario
-          var menciones = [];
-          var matches = texto.match(/@([a-zA-Z0-9._-]+)/g);
-          if (matches) {
-            matches.forEach(function (m) {
-              var nombre = m.slice(1);
-              if (menciones.indexOf(nombre) < 0) menciones.push(nombre);
-            });
-          }
-          var archivosArchivados = archivosSeleccionados.map(function (a) {
-            return { nombre: a.name, tipo: a.type, tamano: a.size, fecha: ahora, url: URL.createObjectURL(a) };
-          });
-          var nuevoItem = { id: 'm' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, respuestas: [], leidosPor: [], reacciones: [], archivos: archivosArchivados.length ? archivosArchivados : undefined };
-          if (menciones.length > 0) nuevoItem.mencionados = menciones;
-          if (foroResponderA) {
-            var destino = f.mensajes.find(function (m) { return m.id === foroResponderA; });
-            if (destino) {
-              destino.respuestas = destino.respuestas || [];
-              var nuevaResp = { id: 'r' + Math.random().toString(36).slice(2, 9), autor: yo2, texto: texto, fecha: ahora, leidosPor: [], reacciones: {}, archivos: archivosArchivados.length ? archivosArchivados : undefined };
-              if (menciones.length > 0) nuevaResp.mencionados = menciones;
-              destino.respuestas.push(nuevaResp);
-              foroGuardar();
-              foroResponderA = null;
-              renderForoDetalle();
-              mostrarToast('Respuesta publicada.', 'success');
-              return;
-            }
-          }
-          f.mensajes.push(nuevoItem);
-          foroGuardar();
-          renderForoDetalle();
-          mostrarToast('Respuesta publicada.', 'success');
-          archivosSeleccionados = [];
-          if (archivoEl) archivoEl.value = '';
-          if (archivosSel) archivosSel.innerHTML = '';
-        });
-        var textoEl = $('foro-texto');
-        if (textoEl) textoEl.addEventListener('input', function () {
-          if (foroResponderA && !this.value) {
-            foroResponderA = null;
-            var hint = $('foro-respuesta-a');
-            if (hint) hint.classList.add('hidden');
-          }
-        });
-        var archivoEl = $('foro-archivo');
-        var archivosSel = $('foro-archivos-seleccionados');
-        var archivosSeleccionados = [];
-        if (archivoEl) {
-          archivoEl.addEventListener('change', function () {
-            archivosSeleccionados = Array.from(this.files || []);
-            if (archivosSel) {
-              archivosSel.innerHTML = archivosSeleccionados.map(function (a) {
-                return '<span style="font-size:.7rem;background:var(--blue-50);color:var(--blue-ink);padding:.15rem .4rem;border-radius:4px;margin-right:.3rem;">' + escapeHtml(a.name) + ' (' + Math.round(a.size / 1024) + ' KB)</span>';
-              }).join('');
-            }
-          });
-        }
-      }
-
-      function foroGuardar() { guardarSeccion('foros', foros); }
-
-      function foroPerfilParticipante(email) {
-        var yo = foroYo();
-        var perfil = foros.reduce(function (acc, f) {
-          if (f.autor && f.autor.email === email) acc.temas++;
-          (f.mensajes || []).forEach(function (m) {
-            if (m.autor && m.autor.email === email) acc.respuestas++;
-            (m.respuestas || []).forEach(function (r) {
-              if (r.autor && r.autor.email === email) acc.respuestas++;
-            });
-          });
-          return acc;
-        }, { temas: 0, respuestas: 0 });
-        var temasCreados = foros.filter(function (f) { return f.autor && f.autor.email === email; });
-        return { temas: perfil.temas, respuestas: perfil.respuestas, temasLista: temasCreados };
-      }
-
-
-      function foroExportarCSV(temas) {
-        var filas = ['T\u00edtulo,Descripci\u00f3n,Autor,Materia,Estado,Fecha,Respuestas'];
-        temas.forEach(function (x) {
-          var f = x.f;
-          var titulo = escapeHtml(f.titulo || '').replace(/"/g, '""');
-          var desc = escapeHtml(f.desc || '').replace(/"/g, '""');
-          var autor = escapeHtml(f.autor && f.autor.nombre ? f.autor.nombre : 'An\u00f3nimo').replace(/"/g, '""');
-          var materia = f.materia ? escapeHtml(foroNombreMateria(f.materia)).replace(/"/g, '""') : '';
-          var estado = f.estado || 'abierto';
-          var fecha = fechaCorta(f.creada) || '';
-          var respuestas = foroCuentaRespuestas(f);
-          filas.push('"' + titulo + '","' + desc + '","' + autor + '","' + materia + '","' + estado + '","' + fecha + '",' + respuestas);
-        });
-        var csv = filas.join('\n');
-        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'foros_' + new Date().toISOString().slice(0, 10) + '.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        mostrarToast('Foros exportados a CSV.', 'success');
-      }
-
-      $('btn-foro-add').addEventListener('click', function () {
-        if (!exigirPermiso('participar')) return;
-        dialogPrompt('T\u00EDtulo del tema:', 'Nuevo tema').then(function (titulo) {
-          if (!titulo || !titulo.trim()) return;
-          dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            dialogPrompt('Materia: general, matematicas, fisica, quimica, biologia, literatura, historia o ingles', 'Materia', 'general').then(function (materia) {
-              var mat = String(materia || '').trim().toLowerCase();
-              var valido = MATERIAS_FORO.some(function (m) { return m[0] === mat && m[0] !== ''; });
-              foros.push({
-                id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                titulo: titulo.trim(),
-                desc: (desc || '').trim(),
-                materia: valido ? mat : 'general',
-                estado: 'abierto',
-                fijado: false,
-                creada: new Date().toISOString(),
-                autor: foroYo() || { nombre: 'An\u00F3nimo', email: '', rol: '' },
-                mensajes: [],
-              });
-              foroGuardar();
-              renderForos();
-              mostrarToast('Tema creado.', 'success');
-            });
-          });
-        });
+      var foroApp = initForos({
+        getUsuario: foroYo,
+        toast: mostrarToast,
+        confirmar: dialogConfirm,
+        prompt: dialogPrompt,
+        exigirPermiso: exigirPermiso,
+        puedeEditar: function () { return tienePermiso('editar'); },
+        puedeBorrar: function () { return tienePermiso('eliminar'); },
+        puedeModerar: function () { return tienePermiso('editar') || tienePermiso('eliminar'); },
+        rolBadge: foroRolBadge,
       });
-      renderForos();
+
+      // Enlaces compartibles: #foro=<id> abre el hilo directo.
+      function abrirForoDesdeHash() {
+        if (!foroApp || typeof foroApp.idDesdeHash !== 'function') return;
+        var id = foroApp.idDesdeHash();
+        if (!id) return;
+        if (!logueado) return;
+        window.mostrarApp('foros');
+        foroApp.abrirPorId(id, { hash: false });
+      }
+      window.addEventListener('hashchange', abrirForoDesdeHash);
+      if (foroApp && foroApp.idInicial && logueado) {
+        setTimeout(abrirForoDesdeHash, 0);
+      }
 
       function renderAgenda() {
         var el = $('agenda-lista');
@@ -4256,7 +4000,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           el.parentNode.insertBefore(hoyBox, el);
         }
         if (clasesItems.length) {
-          var ahora = new Date();
+          var _ahora = new Date();
           var enVivo = null, prox = null, mejor = null;
           clasesItems.forEach(function (c) {
             var ini = claseFecha(c);
@@ -4280,11 +4024,11 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
 
       var editandoIdx = -1;
-      var editandoDia = '';
+      var _editandoDia = '';
 
       function abrirEditarCelda(idx, dia) {
         editandoIdx = idx;
-        editandoDia = dia;
+        _editandoDia = dia;
         var row = horarioItems[idx];
         $('he-hora').value = row.hora || '';
         $('he-lunes').value = row.Lunes || '';
@@ -4300,7 +4044,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       function cerrarPanelHorario() {
         $('horario-edit-panel').classList.add('hidden');
         editandoIdx = -1;
-        editandoDia = '';
+        _editandoDia = '';
         $('he-hora').value = '';
         $('he-lunes').value = '';
         $('he-martes').value = '';
@@ -4340,7 +4084,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       $('btn-horario-add').addEventListener('click', function () {
         if (!exigirPermiso('crear')) return;
         editandoIdx = -1;
-        editandoDia = '';
+        _editandoDia = '';
         $('he-hora').value = '';
         $('he-lunes').value = '';
         $('he-martes').value = '';
@@ -5671,7 +5415,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
           return;
         }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
-          items.map(function (p, i) {
+          items.map(function (p, _i) {
             var realIdx = planificaciones.indexOf(p);
             var materiaLabel = { matematicas:'Matemáticas', fisica:'Física', quimica:'Química', biologia:'Biología', literatura:'Literatura', historia:'Historia', ingles:'Inglés' }[p.materia] || p.materia;
             return '<div style="border:1px solid var(--gray-200);border-radius:10px;padding:.75rem;background:var(--gray-50);">' +
@@ -5701,6 +5445,98 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       }
 
       // UI por rol
+      function renderCuadro() {
+        var card = $('cuadro-docente');
+        if (!card) return;
+        card.hidden = !(logueado && esDocente());
+        if (card.hidden) return;
+        var grupo = $('quad-grupo') ? $('quad-grupo').value : '1B';
+        var cont = $('quad-grid');
+        if (!cont) return;
+        var estudiantes = planEstudiantesPorGrupo[grupo] || [];
+        estudiantes.forEach(function (nom) {
+          if (!planData.some(function (f) { return f.estudiante === nom && f.grupo === grupo; })) {
+            planData.push({ estudiante: nom, grupo: grupo });
+          }
+        });
+        planGuardarStorage();
+        var filas = planData.filter(function (f) { return f.grupo === grupo; });
+        var cols = [];
+        filas.forEach(function (f) {
+          Object.keys(f).forEach(function (k) {
+            if (k !== 'estudiante' && k !== 'grupo' && cols.indexOf(k) === -1) cols.push(k);
+          });
+        });
+        // column group, tareas técnicas desde _planMaterias como columnas base
+        if (!cols.length) { _planMaterias.forEach(function (m) { if (cols.indexOf(m) === -1) cols.push(m); }); }
+        var html = '<div class="table-wrap"><table><thead><tr><th>Estudiante</th>';
+        cols.forEach(function (c) { html += '<th>' + escapeHtml(c) + ' <button class="btn btn-sm" data-qdel="' + escapeHtml(c) + '"' + ' style="background:var(--red);color:#fff;padding:0 .3rem;font-size:.65rem;">×</button></th>'; });
+        html += '<th>Promedio</th><th>Estado</th></tr></thead><tbody>';
+        filas.forEach(function (fila) {
+          var fi = planData.indexOf(fila);
+          html += '<tr><td><strong>' + escapeHtml(fila.estudiante) + '</strong></td>';
+          var suma = 0, count = 0;
+          cols.forEach(function (col) {
+            var val = fila[col] || '';
+            var num = parseFloat(val);
+            if (val !== '' && !isNaN(num)) { suma += num; count++; }
+            html += '<td><input type="number" min="0" max="10" step="0.1" class="quad-input" data-fi="' + fi + '" data-col="' + escapeHtml(col) + '" value="' + escapeHtml(val) + '" style="width:58px;padding:.25rem;text-align:center;border:1px solid var(--gray-300);border-radius:4px;font:inherit;"></td>';
+          });
+          var prom = count > 0 ? (suma / count) : null;
+          var estado = prom === null ? '—' : (prom >= 5 ? '✅ Aprueba' : '⚠️ Reprobado');
+          html += '<td><strong>' + (prom !== null ? prom.toFixed(1) : '—') + '</strong></td><td>' + estado + '</td></tr>';
+        });
+        html += '</tbody></table></div><div style="margin-top:.5rem;display:flex;gap:.5rem;"><button class="btn btn-primary btn-sm" id="btn-quad-add">+ Agregar columna</button><button class="btn btn-outline btn-sm" id="btn-quad-reset">Reiniciar</button></div>';
+        cont.innerHTML = html;
+        cont.querySelectorAll('.quad-input').forEach(function (inp) {
+          inp.addEventListener('change', function () {
+            var v = parseFloat(this.value);
+            if (this.value !== '' && (isNaN(v) || v < 0 || v > 10)) { this.value = ''; }
+            planData[parseInt(this.dataset.fi, 10)][this.dataset.col] = this.value;
+            planGuardarStorage();
+            renderCuadro();
+          });
+        });
+        cont.querySelectorAll('[data-qdel]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var col = this.dataset.qdel;
+            dialogConfirm('¿Eliminar "' + col + '" y sus notas?', 'Eliminar columna').then(function (ok) {
+              if (!ok) return;
+              planData.forEach(function (f) { delete f[col]; });
+              planGuardarStorage();
+              renderCuadro();
+            });
+          });
+        });
+        var addBtn = $('btn-quad-add'); if (addBtn) addBtn.addEventListener('click', planAgregarColumna);
+        var rstBtn = $('btn-quad-reset'); if (rstBtn) rstBtn.addEventListener('click', function () {
+          dialogConfirm('¿Reiniciar cuadro de este grupo?', 'Reiniciar').then(function (ok) {
+            if (!ok) return;
+            var g = $('quad-grupo').value;
+            planData = planData.filter(function (f) { return f.grupo !== g; });
+            planGuardarStorage();
+            renderCuadro();
+          });
+        });
+      }
+      if ($('quad-grupo')) $('quad-grupo').addEventListener('change', renderCuadro);
+      if ($('btn-quad-export')) $('btn-quad-export').addEventListener('click', function () {
+        var grupo = $('quad-grupo').value;
+        var filas = planData.filter(function (f) { return f.grupo === grupo; });
+        var cols = [];
+        filas.forEach(function (f) { Object.keys(f).forEach(function (k) { if (k !== 'estudiante' && k !== 'grupo' && cols.indexOf(k) === -1) cols.push(k); }); });
+        var csv = ['Estudiante,' + cols.join(',') + ',Promedio'].join('\n') + '\n' + filas.map(function (f) {
+          var vals = cols.map(function (c) { return f[c] == null ? '' : f[c]; });
+          var nums = vals.filter(function (v) { return v !== '' && !isNaN(parseFloat(v)); }).map(Number);
+          var prom = nums.length ? (nums.reduce(function (a, b) { return a + b; }, 0) / nums.length).toFixed(1) : '';
+          return [f.estudiante].concat(vals, [prom]).join(',');
+        }).join('\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = url; a.download = 'cuadro-' + grupo + '.csv'; a.click(); URL.revokeObjectURL(url);
+      });
+      if ($('btn-quad-print')) $('btn-quad-print').addEventListener('click', function () { window.print(); });
+
       function planifActualizarUI() {
         var puedeCrear = tienePermiso('crear');
         $('planif-docente').style.display = puedeCrear ? '' : 'none';
@@ -5835,6 +5671,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         if (sui) { sui.style.display = 'flex'; sui.classList.remove('hidden'); }
         var sidebarEmail = $('sidebar-user-email');
         if (sidebarEmail) sidebarEmail.textContent = usuarioActual.email + ' (' + rolDisplay + ')';
+        // Botón de salir en la barra superior (visible también en móvil).
+        var btnSalirTop = $('btn-logout-top');
+        if (btnSalirTop) { btnSalirTop.style.display = 'inline-flex'; btnSalirTop.classList.remove('hidden'); }
         window.usuarioActual = usuarioActual; // notifications.js lo lee
         actualizarPermisosUI();
       }
@@ -5918,7 +5757,7 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         var intervalo = null;
         var ciclos = 0;
         var pausado = false;
-        var materiaActual = 'general';
+        var _materiaActual = 'general';
 
         function durs() {
           return {
@@ -6338,9 +6177,9 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
         });
       };
       /* ===================================================================
-         DELEGADOR data-onclick — el HTML usa atributos como
-         data-onclick="funcion+arg1+arg2". Este delegador las resuelve
-         llamando a window[funcion](arg1, arg2, ...).
+         DELEGADOR data-onclick — mantenido UNICAMENTE en global-delegator.js
+         (allowlist). Se elimina el duplicado que estaba aquí: dejaba pasar
+         cualquier window[fn] y ejecutaba dos veces las acciones permitidas.
          =================================================================== */
       function clickLogin() {
         var modalLogin = $('modal-login');
@@ -6352,25 +6191,5 @@ import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, renderGrupoChe
       window.cerrarTemas = cerrarTemas;
       window.cerrarModalTexto = cerrarModalTexto;
       window.seleccionarTema = seleccionarTema;
-
-      document.addEventListener('click', function (e) {
-        var el = e.target && e.target.closest ? e.target.closest('[data-onclick]') : null;
-        if (!el) return;
-        var spec = el.getAttribute('data-onclick');
-        if (!spec) return;
-        var parts = spec.split('+');
-        var fnName = parts[0];
-        var args = parts.slice(1).map(function (a) {
-          if (a === 'null') return null;
-          if (a === 'true') return true;
-          if (a === 'false') return false;
-          return a;
-        });
-        var fn = window[fnName];
-        if (typeof fn === 'function') {
-          e.preventDefault();
-          e.stopPropagation();
-          fn.apply(window, args);
-        }
-      }, true);
+      window.mostrarToast = mostrarToast;
     })();

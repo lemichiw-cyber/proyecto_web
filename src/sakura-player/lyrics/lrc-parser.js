@@ -12,7 +12,7 @@
    Devuelve un array de { time, text, words } ordenado por tiempo.
    =================================================================== */
 
-const TAG_RE = /\[(\d{2}):(\d{2})\.(\d{2,3})\]([^\n]*)/g;
+const _TAG_RE = /\[(\d{2}):(\d{2})\.(\d{2,3})\]([^\n]*)/g;
 const TAG_SINGLE_RE = /^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)$/;
 
 /**
@@ -67,7 +67,7 @@ export function parseLrc(lrc) {
     // Extraer etiquetas de palabra dentro del texto: <00:12.34>palabra<00:12.56>
     const wordRegex = /<(\d{2}):(\d{2})\.(\d{2,3})>([^<]*)/g;
     const words = [];
-    let textWithoutWords = tags[0].text;
+    let __textWithoutWords = tags[0].text;
     let wm;
     while ((wm = wordRegex.exec(tags[0].text)) !== null) {
       const wStart = tagToSeconds(wm[1], wm[2], wm[3]);
@@ -76,7 +76,7 @@ export function parseLrc(lrc) {
     }
     if (words.length > 0) {
       // Quitar las etiquetas de palabra del texto visible
-      textWithoutWords = tags[0].text.replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim();
+      _textWithoutWords = tags[0].text.replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim();
       // Asignar endTime a cada palabra (startTime de la siguiente, o time del tag + 0.3s)
       for (let i = 0; i < words.length; i++) {
         const next = words[i + 1];

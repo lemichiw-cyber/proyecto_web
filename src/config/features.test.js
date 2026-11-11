@@ -12,14 +12,14 @@ describe('features.js — Feature flags', () => {
   });
 
   it('Personal features are enabled (true)', () => {
-    const personal = ['ACTIVIDADES', 'AGENDA', 'CALENDARIO', 'HORARIO', 'CLASES', 'TAREAS', 'ESTUDIO', 'SAKURA_PLAYER', 'RESPALDOS', 'CONFIGURACION', 'EXAMENES', 'PICKER', 'DIGITAL'];
+    const personal = ['ACTIVIDADES', 'AGENDA', 'CALENDARIO', 'HORARIO', 'CLASES', 'TAREAS', 'ESTUDIO', 'SAKURA_PLAYER', 'RESPALDOS', 'CONFIGURACION', 'EXAMENES', 'PICKER', 'DIGITAL', 'FOROS', 'PLANIFICACION'];
     personal.forEach(f => {
       expect(FEATURES[f]).toBe(true);
     });
   });
 
   it('Multiusuario features are disabled (false) by default', () => {
-    const multiusuario = ['FOROS', 'MENSAJES', 'GRUPALES', 'PROTEGIDO', 'AULAS', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
+    const multiusuario = ['MENSAJES', 'GRUPALES', 'PROTEGIDO', 'AULAS', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
     multiusuario.forEach(f => {
       expect(FEATURES[f]).toBe(false);
     });
@@ -33,7 +33,8 @@ describe('features.js — Feature flags', () => {
   });
 
   it('isEnabled returns false for multiusuario features', () => {
-    expect(isEnabled('FOROS')).toBe(false);
+    expect(isEnabled('FOROS')).toBe(true);
+    expect(isEnabled('PLANIFICACION')).toBe(true);
     expect(isEnabled('AULAS')).toBe(false);
     expect(isEnabled('ROLES_DOCENTE')).toBe(false);
     expect(isEnabled('ASISTENCIA_DOCENTE')).toBe(false);
@@ -77,7 +78,8 @@ describe('features.js — Feature flags', () => {
       // The isEnabled function only checks FEATURES object, not user role
     expect(isEnabled('AULAS')).toBe(false);
     expect(isEnabled('ROLES_DOCENTE')).toBe(false);
-    expect(isEnabled('FOROS')).toBe(false);
+    expect(isEnabled('FOROS')).toBe(true);
+    expect(isEnabled('PLANIFICACION')).toBe(true);
   });
 });
 
@@ -86,6 +88,6 @@ describe('features.js — Role independence', () => {
     // Feature flags are compile-time constants, independent of runtime role
     expect(FEATURES.AULAS).toBe(false);
     expect(FEATURES.ROLES_DOCENTE).toBe(false);
-    expect(FEATURES.FOROS).toBe(false);
+    expect(FEATURES.FOROS).toBe(true);
   });
 });

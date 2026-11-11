@@ -61,6 +61,10 @@ def _activaciones(rows):
 
     def _query_fake(sql: str, params: tuple = (), fetch: str = "all", commit: bool = False):
         nonlocal contador
+        if "estudiantes" in sql.lower() and "grupo_id" in sql.lower():
+            return None
+        if "actividades_grupo" in sql.lower():
+            return []
         sql_up = sql.strip().upper()
         if "RETURNING" in sql_up:
             contador += 1

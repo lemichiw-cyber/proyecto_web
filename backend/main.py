@@ -10,6 +10,7 @@ Ejecución:
 from __future__ import annotations
 
 import os
+import pathlib
 import shutil
 import sys
 
@@ -19,20 +20,30 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import accounts, admin, albums, artists, actividades, auth, debug, library, lyrics, matricula, playlists, push, search, songs, tareas_examenes, translate
+# El .env debe cargarse ANTES de importar los routers: varios módulos leen
+# variables al importarse (NVIDIA_API_KEY en api.ia, flags de cookie, etc.).
+# Si se cargara después, la clave se leía como "" y la IA devolvía 503.
+load_dotenv()
+
+from api import accounts, admin, albums, artists, actividades, auth, debug, library, lyrics, matricula, moderacion, playlists, push, search, songs, tareas_examenes, translate, ia
 from api.deps import get_service
 
-load_dotenv()
+# P2: Sentry opcional (sin dependencia obligatoria; si SENTRY_DSN existe y está instalado)
+try:
+    import sentry_sdk  # type: ignore
+    _dsn = os.getenv("SENTRY_DSN", "").strip()
+    if _dsn:
+        sentry_sdk.init(dsn=_dsn, environment=os.getenv("SAKURA_ENV", "production"), traces_sample_rate=0.1)
+except Exception:
+    pass
 
 _HOST = os.getenv("SAKURA_HOST", "127.0.0.1")
 # PORT es la convención de Render/Heroku; SAKURA_PORT manda si existe.
 _PORT = int(os.getenv("SAKURA_PORT") or os.getenv("PORT") or "8000")
 
-# Orígenes permitidos. El frontend puede servirse de muchas formas
-# (`vite` 5173, `vite preview` 4173, `serve`/`start` en el puerto que
-# sea o GitHub Pages), así que además de la lista explícita se permite
-# cualquier puerto local: si no, el navegador bloquea la petición y el
-# reproductor muestra "Backend apagado o sin conexión".
+# Orígenes permitidos.
+# En producción (SAKURA_ENV=production, por defecto) NO se aceptan origins localhost.
+# En dev (SAKURA_ENV=dev o SAKURA_ALLOW_LOCAL_CORS=1) sí, para vite dev server.
 _CORS_DEFAULT = ",".join([
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -44,9 +55,11 @@ _CORS_DEFAULT = ",".join([
     "https://proyecto-web-2-bygl.onrender.com",
 ])
 _CORS = [o.strip() for o in os.getenv("SAKURA_CORS_ORIGINS", _CORS_DEFAULT).split(",") if o.strip()]
+_ENV = os.getenv("SAKURA_ENV", "production").strip().lower()
+_ALLOW_LOCAL = _ENV == "dev" or os.getenv("SAKURA_ALLOW_LOCAL_CORS", "").strip().lower() in {"1", "true", "yes", "on"}
 
-# Cualquier localhost/puerto local (dev, preview, serve, …)
-_CORS_LOCAL = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$"
+# Cualquier localhost/puerto local (dev, preview, serve…) — solo en dev
+_CORS_LOCAL = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$" if _ALLOW_LOCAL else r"^$"  # nunca matchea en prod
 
 app = FastAPI(
     title="Sakura Player API",
@@ -54,15 +67,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS personalizado: con credenciales (credentials: 'include' en el
-# frontend) no se puede usar allow_origin_regex ni "*". Reflejamos el
-# Origin de la petición para permitir cualquier puerto local con
-# credenciales, necesario para vite dev server.
+# CORS personalizado con allowlist explícita (prod: sin localhost, sin private-network)
 @app.middleware("http")
 async def cors_middleware(request: Request, call_next):
     import re
     origin = request.headers.get("origin", "")
-    is_local = bool(re.match(r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$", origin))
+    is_local = bool(re.match(r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$", origin)) if _ALLOW_LOCAL else False
     is_explicit = origin in _CORS
 
     if request.method == "OPTIONS":
@@ -70,11 +80,13 @@ async def cors_middleware(request: Request, call_next):
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
             "Access-Control-Max-Age": "86400",
+            "Vary": "Origin",
         }
         if is_local or is_explicit:
             headers["Access-Control-Allow-Origin"] = origin
             headers["Access-Control-Allow-Credentials"] = "true"
-            if request.headers.get("access-control-request-private-network"):
+            # Allow-Private-Network solo en dev explícito (era vía de bypass en prod)
+            if _ALLOW_LOCAL and request.headers.get("access-control-request-private-network"):
                 headers["Access-Control-Allow-Private-Network"] = "true"
         return JSONResponse(status_code=200, content={}, headers=headers)
 
@@ -83,22 +95,28 @@ async def cors_middleware(request: Request, call_next):
     if is_local or is_explicit:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
-        if request.headers.get("access-control-request-private-network"):
+        response.headers["Vary"] = "Origin"
+        if _ALLOW_LOCAL and request.headers.get("access-control-request-private-network"):
             response.headers["Access-Control-Allow-Private-Network"] = "true"
 
     return response
 
-# Headers de seguridad en toda respuesta del backend.
+# Headers de seguridad en toda respuesta del backend (P0: CSP + HSTS).
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    # CSP para la API: solo JSON, sin scripts remotos. En dev se reporta además.
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'self'"
+    if _ENV != "dev":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     return response
 
 # Routers
-if os.getenv("SAKURA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
+if os.getenv("SAKURA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"} and _ENV != "production":
     app.include_router(debug.router)
 app.include_router(search.router)
 app.include_router(songs.router)
@@ -115,6 +133,8 @@ app.include_router(push.router)              # <-- push (suscripciones y envío)
 app.include_router(actividades.router)       # <-- actividades (Postgres/Supabase)
 app.include_router(matricula.router)         # <-- matrícula por grupo
 app.include_router(tareas_examenes.router)   # <-- tareas/exámenes por grupo
+app.include_router(moderacion.router)        # <-- moderación (reportes foros, P2)
+app.include_router(ia.router)                # <-- IA generativa con NVIDIA NIM (P5)
 
 
 @app.get("/", tags=["meta"])
@@ -142,6 +162,9 @@ def health() -> dict:
             "node": bool(shutil.which("node")),
             "python": f"{sys.version_info.major}.{sys.version_info.minor}",
         },
+        "version": "1.0.0-p2",
+        "audit_count": __import__("audit").read_tail(1).__len__() if pathlib.Path(__file__).parent.joinpath("audit.log").exists() else 0,
+        "reportes_pendientes": len([v for v in __import__("json").loads(__import__("pathlib").Path(__file__).parent.joinpath("foro_reportes.json").read_text() or "{}").values() if not v.get("resuelto")]) if __import__("pathlib").Path(__file__).parent.joinpath("foro_reportes.json").exists() else 0,
     }
 
 

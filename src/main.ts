@@ -1,9 +1,22 @@
+// P3: Sentry frontend opcional — solo si el host carga @sentry/browser vía CDN global (window.Sentry).
+// Evita dependencia de npm y no bloquea el bundle (no hay import dinámico que Rollup deba resolver).
+try {
+  const _env: any = (import.meta as any).env || {};
+  const _dsn = typeof _env.VITE_SENTRY_DSN === "string" ? _env.VITE_SENTRY_DSN : "";
+  const _sentry = (window as any).Sentry;
+  if (typeof _dsn === "string" && _dsn && _sentry && typeof _sentry.init === "function") {
+    try { _sentry.init({ dsn: _dsn }); } catch (e) { /* noop */ }
+  }
+} catch (e) { /* noop */ }
+
 import './styles.css';
 import './data.js';
 import './data/eventos.js';
 import './notifications.js';
 import './global-delegator.js';
+import './offline-sync.js';
 import './app.js';
+import { syncBodyLock } from './scroll-lock.js';
 
 /* ------------------------------------------------------------------
    CSP Report-Only: escuchar violations y loggearlas a consola.
@@ -112,3 +125,49 @@ window.addEventListener('appinstalled', () => {
   installPrompt = null;
   installBtn?.classList.add('hidden');
 });
+
+// P3: drenar cola offline al volver online
+try {
+  window.addEventListener('online', async () => {
+    try {
+      const m: any = await import('./offline-sync.js');
+      const apiBase = (import.meta as any).env?.VITE_API_BASE || "";
+      await m.flush?.(async (a: any) => {
+        const r = await fetch(apiBase + (a.path || ""), { method: a.body ? "POST" : "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: a.body ? JSON.stringify(a.body) : undefined });
+        if (!r.ok) throw new Error("sync " + r.status);
+      });
+    } catch (e) { /* noop */ }
+  });
+} catch (e) { /* noop */ }
+// P4-A: Accesibilidad — escala de letra (A-/A+), alto contraste, Esc y resize
+try {
+  const scales = [0.9, 1, 1.15];
+  let idx = Math.max(0, Math.min(scales.length - 1, parseInt(localStorage.getItem("cb-scale") || "1", 10)));
+  const applyScale = () => {
+    const v = scales[idx];
+    document.documentElement.style.fontSize = (16 * v) + "px";
+    try { localStorage.setItem("cb-scale", String(idx)); } catch (e) { /* noop */ }
+  };
+  applyScale();
+  document.getElementById("btn-font-inc")?.addEventListener("click", () => { idx = Math.min(scales.length - 1, idx + 1); applyScale(); });
+  document.getElementById("btn-font-dec")?.addEventListener("click", () => { idx = Math.max(0, idx - 1); applyScale(); });
+  document.getElementById("btn-contrast")?.addEventListener("click", () => {
+    const on = document.body.classList.toggle("alto-contraste");
+    try { localStorage.setItem("cb-contrast", on ? "1" : "0"); } catch (e) { /* noop */ }
+  });
+  try { if (localStorage.getItem("cb-contrast") === "1") document.body.classList.add("alto-contraste"); } catch (e) { /* noop */ }
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      (window as any).closeSidebar?.();
+      document.querySelectorAll(".modal-overlay.open").forEach((m) => { (m as HTMLElement).classList.remove("open"); });
+      // Re-sincroniza el bloqueo de scroll con el DOM (antes se quitaba la
+      // clase a pelo y el estado interno quedaba inconsistente).
+      syncBodyLock();
+    }
+  });
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 1024 && document.getElementById("sidebar")?.classList.contains("open")) {
+      (window as any).closeSidebar?.();
+    }
+  });
+} catch (e) { /* noop */ }

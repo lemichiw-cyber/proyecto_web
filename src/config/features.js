@@ -25,15 +25,16 @@ export const FEATURES = {
   EXAMENES: true,           // app-examenes (bachillerato_examenes)
   PICKER: true,             // app-picker (componente UI)
   DIGITAL: true,            // app-digital (si se usa)
+  PLANIFICACION: true,      // app-planificacion (local, sin backend — planes + cuadro de notas)
 
   // ===== FUNCIONES MULTIUSUARIO (desactivadas por defecto) =====
   // Requieren backend real con autenticación, base de datos, RLS
-  FOROS: false,             // app-foros
+  FOROS: true,             // app-foros
   MENSAJES: false,          // app-mensajes
   GRUPALES: false,          // app-grupales
   PROTEGIDO: false,         // app-protegido (reportes de incidentes)
   AULAS: false,             // app-aulas + aula_inscripciones, aula_tareas, aula_entregas, aula_calificaciones, aula_asistencia
-  ROLES_DOCENTE: false,     // app-planificacion, app-auth (panel admin), app-asistencias
+  ROLES_DOCENTE: false,     // app-auth (panel admin), app-asistencias (requieren backend)
   ASISTENCIA_DOCENTE: false, // app-asistencias
   MATRICULA: false,         // app-matricula (inscripciones, estudiantes_db)
   EXPERIENCIAS: false,      // app-experiencias (si requiere datos de otros)
@@ -87,7 +88,7 @@ export const APP_TO_FEATURE = {
   'protegido': 'PROTEGIDO',
   'tareas': 'TAREAS',
   'aulas': 'AULAS',
-  'planificacion': 'ROLES_DOCENTE',
+  'planificacion': 'PLANIFICACION',
   'matricula': 'MATRICULA',
   'estudio': 'ESTUDIO',
   'sakura-player': 'SAKURA_PLAYER',
