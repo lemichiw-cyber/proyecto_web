@@ -81,6 +81,47 @@ export function setApiBase(url: string | null | undefined): void {
 }
 
 /**
+ * ¿La URL base apunta a esta misma máquina (loopback)?
+ */
+export function esLoopback(url?: string): boolean {
+  try {
+    const base = url === undefined ? getApiBase() : url;
+    if (!base) return false;
+    const u = new URL(base, typeof location !== "undefined" ? location.href : "http://localhost");
+    const host = u.hostname.toLowerCase();
+    return host === "localhost" || host === "::1" || host === "[::1]" || /^127\./.test(host);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Explica un fallo de red cuando la app (servida por https) llama a un
+ * backend local. A partir de 2025 los navegadores (Firefox "Local Network
+ * Access", Chrome "Local network access") piden permiso explícito antes de
+ * dejar que una página pública acceda a 127.0.0.1; si se deniega, el fetch
+ * falla sin más explicación.
+ *
+ * Devuelve "" si el error no es de ese tipo.
+ */
+export function explicaErrorRed(err: unknown, protocolo?: string): string {
+  const msg = String((err as any)?.message || err || "");
+  const esErrorRed =
+    err instanceof TypeError ||
+    /networkerror|failed to fetch|load failed|no se pudo fetch|conexi[oó]n|conexion/i.test(msg);
+  if (!esErrorRed) return "";
+  if (!esLoopback()) return "";
+  const proto = protocolo ?? (typeof location !== "undefined" ? location.protocol : "");
+  if (proto !== "https:") return "";
+  return (
+    "El navegador bloqueó el acceso a la red local (tu backend está en 127.0.0.1). " +
+    "Permití el acceso a la red local para este sitio —icono junto a la URL en la barra— " +
+    "y recargá la página. En Firefox: about:config → network.lna.enabled = false. " +
+    "En Chrome: Configuración → Privacidad y seguridad → Acceso a la red local."
+  );
+}
+
+/**
  * Comprueba que el backend responda. Devuelve { ok, status, detalle }.
  * Nunca lanza: la UI solo necesita saber si reached.
  */

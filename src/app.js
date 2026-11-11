@@ -30,7 +30,7 @@ import {
 } from "./app-accounts";
 
 import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta } from "./api-client";
-import { getApiBase, setApiBase, apiBaseBuild, testApiBase } from "./api-base";
+import { getApiBase, setApiBase, apiBaseBuild, testApiBase, explicaErrorRed } from "./api-base";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
@@ -667,7 +667,10 @@ import { initForos } from "./modules/foros/foro-app.js";
             _estado('Probando...', null);
             testApiBase(url).then(function (r) {
               if (r.ok) _estado('El backend respondió correctamente (HTTP ' + r.status + ')', true);
-              else _estado('No responde: ' + (r.detalle || ('HTTP ' + r.status)), false);
+              else {
+                var ayuda = explicaErrorRed({ message: r.detalle });
+                _estado(ayuda || ('No responde: ' + (r.detalle || ('HTTP ' + r.status))), false);
+              }
             });
           });
         }
@@ -852,6 +855,13 @@ import { initForos } from "./modules/foros/foro-app.js";
           // administrador o la cuenta semilla admin): se pide crearla.
           if (esPasswordPendiente(err)) {
             abrirDefinirContrasena(email);
+            return;
+          }
+          var ayuda = explicaErrorRed(err);
+          if (ayuda) {
+            $('login-error').textContent = ayuda;
+            $('login-error').hidden = false;
+            mostrarToast('Acceso a la red local bloqueado por el navegador.', 'error');
             return;
           }
           $('login-error').textContent = (msg.indexOf('429') !== -1 || msg.indexOf('Demasiados') !== -1) ? 'Demasiados intentos. Esperá 5 minutos.' : (msg.indexOf('Credenciales') !== -1 ? 'Credenciales inválidas.' : msg);

@@ -96,3 +96,39 @@ describe('api-base — URL del backend', () => {
     expect(EXCLUDED_KEYS.has('cherrybombApiBase')).toBe(true);
   });
 });
+
+describe('api-base — diagnóstico de red local', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('detecta URLs de loopback', async () => {
+    const { esLoopback } = await cargar();
+    expect(esLoopback('http://127.0.0.1:8000')).toBe(true);
+    expect(esLoopback('http://localhost:8000')).toBe(true);
+    expect(esLoopback('http://127.0.0.5:8000')).toBe(true);
+    expect(esLoopback('https://sakura-backend-indb.onrender.com')).toBe(false);
+    expect(esLoopback('')).toBe(false);
+  });
+
+  it('explica el bloqueo de "acceso a la red local" en páginas https', async () => {
+    const { explicaErrorRed } = await cargar('http://127.0.0.1:8000');
+    const msg = explicaErrorRed(new TypeError('NetworkError when attempting to fetch resource.'), 'https:');
+    expect(msg).toContain('red local');
+    expect(msg).toContain('network.lna.enabled');
+    // En una página http (servida desde la laptop) no hace falta permiso.
+    expect(explicaErrorRed(new TypeError('NetworkError'), 'http:')).toBe('');
+  });
+
+  it('no se mete si el error no es de red', async () => {
+    const { explicaErrorRed } = await cargar('http://127.0.0.1:8000');
+    expect(explicaErrorRed(new Error('Credenciales inválidas.'))).toBe('');
+  });
+
+  it('no se mete si el backend no es local', async () => {
+    const { explicaErrorRed } = await cargar('https://backend.ejemplo.test');
+    expect(explicaErrorRed(new TypeError('Failed to fetch'))).toBe('');
+  });
+});
