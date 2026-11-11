@@ -311,16 +311,26 @@ async function _apiJson<T>(method: string, path: string, body?: any): Promise<T>
 export function apiCuentas(): Promise<{ count: number; accounts: CuentaBackend[] }> {
   // El backend devuelve {count, accounts:{email: {...}}} (un mapa); se
   // normaliza a lista para que el caller no tenga que saber la forma.
+  // OJO: la CLAVE del mapa es el email. Hay cuentas (p.ej. la semilla admin)
+  // cuyo valor NO trae el campo `email` dentro: si se pierde la clave, esas
+  // cuentas desaparecen de la lista.
   return _apiJson<{ count?: number; accounts: CuentaBackend[] | Record<string, CuentaBackend> }>(
     "GET",
     "/api/accounts/",
   ).then((r) => {
     const raw: any = r && r.accounts;
-    const lista: CuentaBackend[] = Array.isArray(raw)
-      ? raw
-      : raw && typeof raw === "object"
-        ? Object.keys(raw).map((k) => raw[k])
-        : [];
+    let lista: CuentaBackend[];
+    if (Array.isArray(raw)) {
+      lista = raw;
+    } else if (raw && typeof raw === "object") {
+      lista = Object.keys(raw).map((k) => {
+        const v = (raw[k] || {}) as CuentaBackend;
+        // Se conserva el email de la clave si el valor no lo trae.
+        return v.email ? v : ({ ...v, email: k } as CuentaBackend);
+      });
+    } else {
+      lista = [];
+    }
     return { count: typeof r?.count === "number" ? r.count : lista.length, accounts: lista };
   });
 }

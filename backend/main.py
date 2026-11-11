@@ -102,7 +102,15 @@ async def cors_middleware(request: Request, call_next):
     if request.method == "OPTIONS":
         headers = {
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+            # OJO: la lista debe incluir TODAS las cabeceras que manda el
+            # frontend. Si falta una, el preflight falla y el navegador NO
+            # envía la petición real (se queda sólo en el OPTIONS).
+            # `X-User-Email` la usa el frontend para los endpoints que aún
+            # identifican al usuario por cabecera (matrícula, actividades,
+            # tareas/exámenes).
+            "Access-Control-Allow-Headers": (
+                "Content-Type, Authorization, X-Requested-With, X-User-Email, Accept"
+            ),
             "Access-Control-Max-Age": "86400",
             "Vary": "Origin",
         }
