@@ -19,7 +19,7 @@ describe('features.js — Feature flags', () => {
   });
 
   it('Multiusuario features are disabled (false) by default', () => {
-    const multiusuario = ['MENSAJES', 'GRUPALES', 'AULAS', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
+    const multiusuario = ['MENSAJES', 'GRUPALES', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
     multiusuario.forEach(f => {
       expect(FEATURES[f]).toBe(false);
     });
@@ -32,6 +32,13 @@ describe('features.js — Feature flags', () => {
     expect(isEnabled('PROTEGIDO')).toBe(true);
   });
 
+  it('AULAS está habilitada: ya hay backend de aulas virtuales', () => {
+    // Aulas Virtuales pasó a usar el backend real (/api/aulas): el docente
+    // crea el aula y el alumno la ve al entrar con su cuenta.
+    expect(FEATURES.AULAS).toBe(true);
+    expect(isEnabled('AULAS')).toBe(true);
+  });
+
   it('isEnabled returns true for personal features', () => {
     expect(isEnabled('ACTIVIDADES')).toBe(true);
     expect(isEnabled('AGENDA')).toBe(true);
@@ -42,7 +49,6 @@ describe('features.js — Feature flags', () => {
   it('isEnabled returns false for multiusuario features', () => {
     expect(isEnabled('FOROS')).toBe(true);
     expect(isEnabled('PLANIFICACION')).toBe(true);
-    expect(isEnabled('AULAS')).toBe(false);
     expect(isEnabled('ROLES_DOCENTE')).toBe(false);
     expect(isEnabled('ASISTENCIA_DOCENTE')).toBe(false);
   });
@@ -83,7 +89,6 @@ describe('features.js — Feature flags', () => {
   it('Feature flag check does not depend on user role', () => {
     // Simulate admin role - should NOT enable multiusuario features
       // The isEnabled function only checks FEATURES object, not user role
-    expect(isEnabled('AULAS')).toBe(false);
     expect(isEnabled('ROLES_DOCENTE')).toBe(false);
     expect(isEnabled('FOROS')).toBe(true);
     expect(isEnabled('PLANIFICACION')).toBe(true);
@@ -93,7 +98,6 @@ describe('features.js — Feature flags', () => {
 describe('features.js — Role independence', () => {
   it('Changing cherrybombSession.rol to admin does not enable multiusuario features', () => {
     // Feature flags are compile-time constants, independent of runtime role
-    expect(FEATURES.AULAS).toBe(false);
     expect(FEATURES.ROLES_DOCENTE).toBe(false);
     expect(FEATURES.FOROS).toBe(true);
   });

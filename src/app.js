@@ -29,7 +29,7 @@ import {
   cuentasBackend,
 } from "./app-accounts";
 
-import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta, apiIncidentes, apiReportarIncidente, apiBorrarIncidente, apiResolverIncidente } from "./api-client";
+import { apiFetch, apiMiGrupo, apiGuardarTarea, apiGuardarExamen, apiGruposPublicos, renderGrupoCheckboxes, gruposSeleccionados, apiIA, apiAcomodarExamen, apiCuentas, apiCrearCuenta, apiActualizarCuenta, apiIncidentes, apiReportarIncidente, apiBorrarIncidente, apiResolverIncidente, apiAulasEstado, apiAulasGuardar, apiAulasBorrar, apiAulasEstudiantes } from "./api-client";
 import {
   esGestor as esGestorProtegido,
   fusionar as fusionarProtegido,
@@ -41,6 +41,18 @@ import {
   formatearFecha as formatearFechaProtegido,
   etiquetaEstado as etiquetaEstadoProtegido,
 } from "./modules/protegido/protegido-sync.js";
+import {
+  esGestion as esGestionAulas,
+  esEliminar as esEliminarAulas,
+  fusionarEstado as fusionarEstadoAulas,
+  aRemotoAula as aRemotoAula,
+  aRemotoInscripcion as aRemotoInscripcion,
+  aRemotoTarea as aRemotoTarea,
+  aRemotoEntrega as aRemotoEntrega,
+  aRemotoCalificacion as aRemotoCalificacion,
+  aRemotoAsistencia as aRemotoAsistencia,
+  esEntregaMia as esEntregaMia,
+} from "./modules/aulas/aulas-sync.js";
 import { getApiBase, setApiBase, apiBaseDefault, testApiBase, explicaErrorRed } from "./api-base";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
 import {
@@ -753,8 +765,13 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
         if (app === 'auth') { renderAuth(); sincronizarCuentasBackend(); }
         if (app === 'protegido') sincronizarProtegido();
-        if (app === 'aulas' && window.CherryBombNotifications) {
-          window.CherryBombNotifications.showPermissionBanner();
+        if (app === 'aulas') {
+          // Baja lo que hay en el servidor (y sube lo pendiente del
+          // dispositivo): sin red, la vista sigue con lo local.
+          sincronizarAulas();
+          if (window.CherryBombNotifications) {
+            window.CherryBombNotifications.showPermissionBanner();
+          }
         }
         if (app === 'configuracion') {
           var dest = $('theme-options-section');
@@ -1061,6 +1078,9 @@ import { initForos } from "./modules/foros/foro-app.js";
         // Con la sesión nueva ya se pueden subir los reportes que quedaron
         // guardados en el dispositivo (y ver los del servidor).
         sincronizarProtegido();
+        // Lo mismo con Aulas Virtuales: las aulas y tareas que se crearon
+        // sin conexión suben solas al entrar con la sesión.
+        sincronizarAulas();
       }
 
       /* ===== CIERRE DE SESIÓN =====
@@ -1087,6 +1107,10 @@ import { initForos } from "./modules/foros/foro-app.js";
         // sesión se borran de la memoria (no quedan en pantalla).
         protegidoRemotos = [];
         renderProtegido();
+        // Con Aulas pasa igual: lo que vino del servidor (tareas, entregas,
+        // calificaciones de otros) se borra al cerrar sesión. Lo que el
+        // usuario creó sin conexión se conserva para subirlo después.
+        aulasLimpiarRemotos();
         mostrarApp('inicio');
         mostrarToast('Sesión cerrada.', 'success');
       }
@@ -3591,6 +3615,9 @@ import { initForos } from "./modules/foros/foro-app.js";
       var editingAulaId = null;
       function aulasGuardarStorage() {
         localStorage.setItem('aulas', JSON.stringify(aulas));
+        // Si hay sesión, lo que se editó acá sube al servidor (en segundo
+        // plano: la interfaz no espera a la red).
+        aulasSubirPendientes();
         // Sync a Supabase en background (no bloquea UI)
         if (window.DB && window.sb && window.sbReady && window.sbReady()) {
           // Para aulas, usamos upsert por owner_id
@@ -3717,6 +3744,8 @@ import { initForos } from "./modules/foros/foro-app.js";
               var deletedId = a.id;
               aulas.splice(idx, 1);
               aulasGuardarStorage();
+              // El borrado también se ejecuta en el servidor.
+              aulasBorrarRemoto('aulas', deletedId);
               if (window.sb && window.sbReady && window.sbReady()) {
                 window.sb.from('aulas').delete().eq('id', deletedId).catch(function(e) { console.warn('Delete aula SB:', e); });
               }
@@ -3778,6 +3807,8 @@ import { initForos } from "./modules/foros/foro-app.js";
                 aulas[ai].especialidad = especialidad;
                 aulas[ai].anio = anio;
                 aulas[ai].seccion = seccion;
+                // Editado: hay que volverlo a subir al servidor.
+                aulasInvalidar(aulas[ai]);
                 break;
               }
             }
@@ -4944,6 +4975,7 @@ import { initForos } from "./modules/foros/foro-app.js";
       var aulaInscripciones = JSON.parse(localStorage.getItem('aula_inscripciones') || '[]');
       function inscripcionesGuardar() {
         localStorage.setItem('aula_inscripciones', JSON.stringify(aulaInscripciones));
+        aulasSubirPendientes();
         if (window.sb && window.sbReady && window.sbReady()) {
           window.sb.from('aula_inscripciones').upsert(aulaInscripciones.map(function(i) {
             return { aula_id: i.aulaId, estudiante_id: i.estudianteId ? String(i.estudianteId) : null, estado: i.estado || 'aprobado', fecha: i.fecha };
@@ -4962,10 +4994,20 @@ import { initForos } from "./modules/foros/foro-app.js";
             return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + ' (' + count + '/' + a.capacidad + ')</option>';
           }).join('');
         if (curAula) aulaSel.value = curAula;
-        estSel.innerHTML = '<option value="">-- Seleccionar estudiante --</option>' +
-          ESTUDIANTES_DB.map(function (e) {
-            return '<option value="' + e.id + '">' + escapeHtml(e.nombre) + ' (' + e.anio + '.° ' + e.seccion + ')</option>';
-          }).join('');
+        // Si el backend trajo las cuentas reales, se inscribe a esas (son
+        // las que pueden ver el aula al entrar con su cuenta). Si no hay
+        // red, se usa la lista local de estudiantes.
+        if (aulaEstudiantes.length > 0) {
+          estSel.innerHTML = '<option value="">-- Seleccionar estudiante --</option>' +
+            aulaEstudiantes.map(function (e) {
+              return '<option value="' + escapeHtml(e.email) + '">' + escapeHtml(e.nombre) + ' (' + escapeHtml(e.email) + ')</option>';
+            }).join('');
+        } else {
+          estSel.innerHTML = '<option value="">-- Seleccionar estudiante --</option>' +
+            ESTUDIANTES_DB.map(function (e) {
+              return '<option value="' + e.id + '">' + escapeHtml(e.nombre) + ' (' + e.anio + '.° ' + e.seccion + ')</option>';
+            }).join('');
+        }
         renderInscLista();
       }
 
@@ -4979,17 +5021,22 @@ import { initForos } from "./modules/foros/foro-app.js";
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.4rem;">' +
           inscritos.map(function (insc) {
             var est = ESTUDIANTES_DB.find(function (e) { return e.id === insc.estudianteId; });
-            var name = est ? escapeHtml(est.nombre) : '(desconocido)';
+            // Si el alumno viene del backend (tiene cuenta), su nombre ya
+            // viene guardado en la inscripción.
+            var name = escapeHtml(est ? est.nombre : (insc.estudiante || '(desconocido)'));
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<span>' + name + '</span>' +
-              '<button class="btn btn-sm btn-outline insc-remover" data-perm="eliminar" data-est="' + insc.estudianteId + '" data-aula="' + aulaId + '" style="color:var(--red-ink);font-size:.78rem;">\u274C Quitar</button></div>';
+              '<button class="btn btn-sm btn-outline insc-remover" data-perm="eliminar" data-id="' + escapeHtml(insc.id || '') + '" data-est="' + escapeHtml(insc.estudianteId === undefined || insc.estudianteId === null ? '' : insc.estudianteId) + '" data-aula="' + aulaId + '" style="color:var(--red-ink);font-size:.78rem;">\u274C Quitar</button></div>';
           }).join('') + '</div>';
         el.querySelectorAll('.insc-remover').forEach(function (btn) {
           btn.addEventListener('click', function () {
-            var eid = parseInt(this.dataset.est, 10);
+            var eid = this.dataset.est;
             var aid = parseInt(this.dataset.aula, 10);
-            aulaInscripciones = aulaInscripciones.filter(function (i) { return !(i.aulaId === aid && i.estudianteId === eid); });
+            var quitadas = aulaInscripciones.filter(function (i) { return i.aulaId === aid && String(i.estudianteId) === String(eid); });
+            aulaInscripciones = aulaInscripciones.filter(function (i) { return !(i.aulaId === aid && String(i.estudianteId) === String(eid)); });
             inscripcionesGuardar();
+            // También se quita del servidor.
+            quitadas.forEach(function (i) { aulasBorrarRemoto('inscripciones', i.id); });
             renderInscripcion();
             mostrarToast('Estudiante removido del aula.', 'success');
           });
@@ -5000,15 +5047,31 @@ import { initForos } from "./modules/foros/foro-app.js";
         $('btn-insc-agregar').addEventListener('click', function () {
           if (!exigirPermiso('crear')) return;
           var aulaId = parseInt($('insc-aula').value, 10);
-          var estId = parseInt($('insc-estudiante').value, 10);
-          if (!aulaId || !estId) { mostrarToast('Selecciona un aula y un estudiante.', 'error'); return; }
+          var selEst = $('insc-estudiante').value;
+          if (!aulaId || !selEst) { mostrarToast('Selecciona un aula y un estudiante.', 'error'); return; }
           var aula = aulas.find(function (a) { return a.id === aulaId; });
           if (!aula) return;
+          // El valor es el email si el alumno tiene cuenta en el sistema;
+          // si no (lista local), es el id numérico del alumno simulado.
+          var esCuenta = selEst.indexOf('@') !== -1;
+          var estId = esCuenta ? selEst : parseInt(selEst, 10);
+          if (!esCuenta && !estId) { mostrarToast('Selecciona un aula y un estudiante.', 'error'); return; }
+          var estCuenta = esCuenta ? aulaEstudiantes.find(function (x) { return x.email === selEst; }) : null;
+          var estLocal = esCuenta ? null : ESTUDIANTES_DB.find(function (e) { return e.id === estId; });
           var inscritos = aulaInscripciones.filter(function (i) { return i.aulaId === aulaId; });
           if (inscritos.length >= aula.capacidad) { mostrarToast('El aula ha alcanzado su capacidad m\u00E1xima (' + aula.capacidad + ').', 'error'); return; }
-          var yaInscrito = aulaInscripciones.some(function (i) { return i.aulaId === aulaId && i.estudianteId === estId; });
+          var yaInscrito = aulaInscripciones.some(function (i) { return i.aulaId === aulaId && String(i.estudianteId) === String(estId); });
           if (yaInscrito) { mostrarToast('Este estudiante ya est\u00E1 inscrito en esta aula.', 'error'); return; }
-          aulaInscripciones.push({ aulaId: aulaId, estudianteId: estId, fecha: new Date().toISOString() });
+          var nombreEst = estCuenta ? estCuenta.nombre : (estLocal ? estLocal.nombre : '');
+          aulaInscripciones.push({
+            id: 'ins-' + aulaId + '-' + estId,
+            aulaId: aulaId,
+            estudianteId: estId,
+            estudianteEmail: esCuenta ? estCuenta.email : '',
+            estudiante: nombreEst,
+            estado: 'aprobado',
+            fecha: new Date().toISOString()
+          });
           inscripcionesGuardar();
           renderInscripcion();
           mostrarToast('Estudiante inscrito correctamente.', 'success');
@@ -5026,6 +5089,7 @@ import { initForos } from "./modules/foros/foro-app.js";
 
       function aulaTareaGuardar() {
         localStorage.setItem(AULA_TAREAS_KEY, JSON.stringify(aulaTareas));
+        aulasSubirPendientes();
         if (window.sb && window.sbReady && window.sbReady()) {
           window.sb.from('aula_tareas').upsert(aulaTareas.map(function(t) {
             return { id: t.id, aula_id: t.aulaId, titulo: t.titulo, descripcion: t.descripcion, materia: t.materia, grupo: t.grupo, fecha_limite: t.fechaLimite, owner_id: t.ownerId };
@@ -5034,6 +5098,7 @@ import { initForos } from "./modules/foros/foro-app.js";
       }
       function aulaEntregaGuardar() {
         localStorage.setItem(AULA_ENTREGAS_KEY, JSON.stringify(aulaEntregas));
+        aulasSubirPendientes();
         if (window.sb && window.sbReady && window.sbReady()) {
           window.sb.from('aula_entregas').upsert(aulaEntregas.map(function(e) {
             return { id: e.id, tarea_id: e.tareaIdx, estudiante_id: e.estudianteId ? String(e.estudianteId) : null, respuesta: e.respuesta, archivo_url: e.archivoUrl, archivo_nombre: e.archivoNombre, fecha: e.fecha };
@@ -5098,12 +5163,19 @@ import { initForos } from "./modules/foros/foro-app.js";
               var t = aulaTareas[idx];
               dialogConfirm('\u00BFEliminar la tarea "' + (t ? t.titulo : '') + '" permanentemente?', 'Eliminar tarea').then(function (ok) {
                 if (!ok) return;
+                var tareaId = t ? t.id : null;
+                var entregasBorrar = aulaEntregas.filter(function (e) { return e.tareaIdx === idx; });
+                var califsBorrar = aulaCalificaciones.filter(function (c) { return c.tareaIdx === idx; });
                 aulaTareas.splice(idx, 1);
                 aulaEntregas = aulaEntregas.filter(function (e) { return e.tareaIdx !== idx; });
                 aulaCalificaciones = aulaCalificaciones.filter(function (c) { return c.tareaIdx !== idx; });
                 aulaTareaGuardar();
                 aulaEntregaGuardar();
                 aulaCalifGuardar();
+                // También se borra en el servidor.
+                aulasBorrarRemoto('tareas', tareaId);
+                entregasBorrar.forEach(function (e) { aulasBorrarRemoto('entregas', e.id); });
+                califsBorrar.forEach(function (c) { aulasBorrarRemoto('calificaciones', c.id); });
                 renderAulaTareas();
                 mostrarToast('Tarea eliminada.', 'success');
               });
@@ -5118,9 +5190,13 @@ import { initForos } from "./modules/foros/foro-app.js";
         }
 
         // Vista estudiante
+        var miEmail = usuarioActual ? String(usuarioActual.email || '').toLowerCase() : '';
         var pendientesEl = $('aula-tarea-pendientes-lista');
         var pendientes = aulaTareas.filter(function (t, i) {
-          return !aulaEntregas.some(function (e) { return e.tareaIdx === i; });
+          // Pendiente = no hay una entrega MIYA de esa tarea.
+          return !aulaEntregas.some(function (e) {
+            return e.tareaIdx === i && esEntregaMia(e, miEmail);
+          });
         });
         if (pendientes.length === 0) {
           pendientesEl.innerHTML = emptyMsg('No hay tareas pendientes.', { icon: '✅', title: '¡Todo al día!', desc: 'Completaste todas las tareas del aula.' });
@@ -5146,7 +5222,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         var entregadasEl = $('aula-tarea-entregadas-lista');
         var misEntregas = aulaEntregas.filter(function (e) {
           var t = aulaTareas[e.tareaIdx];
-          return t;
+          return t && esEntregaMia(e, miEmail);
         });
         if (misEntregas.length === 0) {
           entregadasEl.innerHTML = emptyMsg('Aún no has entregado tareas.', { icon: '📦', title: 'Entregas', desc: 'Tus entregas del aula aparecerán aquí.' });
@@ -5258,13 +5334,18 @@ import { initForos } from "./modules/foros/foro-app.js";
           mostrarToast('Escribe una respuesta o adjunta un archivo.', 'error');
           return;
         }
+        var tarea = aulaTareas[entregaIdx];
         var entrega = {
+          id: 'ent-' + Date.now() + '-' + entregaIdx,
           tareaIdx: entregaIdx,
+          tareaId: tarea ? tarea.id : null,
           respuesta: respuesta,
           archivo: entregaArchivoData,
           archivoNombre: entregaArchivoNombre,
           fecha: new Date().toISOString().slice(0, 10),
-          estudiante: usuarioActual ? usuarioActual.nombre || usuarioActual.email : 'Yo'
+          estudiante: usuarioActual ? usuarioActual.nombre || usuarioActual.email : 'Yo',
+          estudianteId: usuarioActual ? usuarioActual.email : '',
+          estudianteEmail: usuarioActual ? usuarioActual.email : ''
         };
         aulaEntregas.push(entrega);
         aulaEntregaGuardar();
@@ -5308,7 +5389,8 @@ import { initForos } from "./modules/foros/foro-app.js";
          =================================================================== */
       var aulaCalificaciones = JSON.parse(localStorage.getItem('aula_calificaciones') || '[]');
       function aulaCalifGuardar() {
-        localStorage.setItem('aula_calificaciones', JSON.stringify(aulaCalificaciones));
+        localStorage.setItem(AULAS_CALIF_KEY, JSON.stringify(aulaCalificaciones));
+        aulasSubirPendientes();
         if (window.sb && window.sbReady && window.sbReady()) {
           window.sb.from('aula_calificaciones').upsert(aulaCalificaciones.map(function(c) {
             return { id: c.id, entrega_id: c.entregaId, nota: c.nota, retroalimentacion: c.retroalimentacion, calificado_por: c.calificadoPor };
@@ -5365,8 +5447,17 @@ import { initForos } from "./modules/foros/foro-app.js";
               aulaCalificaciones[existIdx].nota = notaNum;
               aulaCalificaciones[existIdx].retroealimentacion = retroVal;
               aulaCalificaciones[existIdx].fechaCalificacion = new Date().toISOString();
+              // Cambió: hay que volverlo a subir al servidor.
+              aulasInvalidar(aulaCalificaciones[existIdx]);
             } else {
-              aulaCalificaciones.push({ entregaIdx: eidx, tareaIdx: aulaEntregas[eidx] ? aulaEntregas[eidx].tareaIdx : -1, nota: notaNum, retroealimentacion: retroVal, fechaCalificacion: new Date().toISOString() });
+              aulaCalificaciones.push({
+                id: 'cal-' + Date.now() + '-' + eidx,
+                entregaIdx: eidx,
+                tareaIdx: aulaEntregas[eidx] ? aulaEntregas[eidx].tareaIdx : -1,
+                nota: notaNum,
+                retroealimentacion: retroVal,
+                fechaCalificacion: new Date().toISOString()
+              });
             }
           }
         });
@@ -5393,7 +5484,245 @@ import { initForos } from "./modules/foros/foro-app.js";
 
       function asistNorm(s) { return String(s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
 
-      function asistGuardarStorage() { localStorage.setItem(AULA_ASIST_KEY, JSON.stringify(aulaAsistencias)); }
+      function asistGuardarStorage() { localStorage.setItem(AULA_ASIST_KEY, JSON.stringify(aulaAsistencias)); aulasSubirPendientes(); }
+
+      /* ===================================================================
+         AULAS — SINCRONIZACIÓN CON EL SERVIDOR (local-first)
+
+         La sección se armó sólo con localStorage: el docente creaba un
+         aula en su teléfono y el alumno nunca la veía. Ahora hay backend
+         real (`backend/api/aulas.py`) y esta parte mezcla las dos fuentes:
+
+           * servidor   → la verdad (lo ve el docente y sus alumnos),
+           * dispositivo → espejo local (la app sigue funcionando sin red).
+
+         El flujo es siempre el mismo:
+           1) borrar en el servidor lo que se borró acá (quedó pendiente),
+           2) subir lo que todavía no está arriba,
+           3) bajar el estado del servidor,
+           4) mezclar (servidor manda; lo local no subido se conserva).
+
+         Los ids: en la interfaz son números (Date.now()) y en el servidor
+         son textos; el módulo `aulas-sync.js` traduce en los dos sentidos.
+         Las entregas y calificaciones se relacionan por ÍNDICE en la
+         interfaz y por id en el servidor: también se traduce ahí.
+         =================================================================== */
+      var AULAS_CALIF_KEY = 'aula_calificaciones';
+      var AULAS_PENDIENTES_KEY = 'aulas_pendientes_borrar';
+      var aulasPendientesBorrar = JSON.parse(localStorage.getItem(AULAS_PENDIENTES_KEY) || '[]');
+      var aulasSincronizando = false;
+      var aulasSubiendo = false;
+      var aulaEstudiantes = [];   // cuentas reales (email + nombre) del backend
+
+      function _aulasGuardarPendientes() {
+        localStorage.setItem(AULAS_PENDIENTES_KEY, JSON.stringify(aulasPendientesBorrar));
+      }
+
+      /** Marca un elemento local como pendiente de subir. */
+      function aulasInvalidar(item) {
+        if (item && typeof item === 'object') {
+          item.remoto = false;
+          delete item.errorSync;
+        }
+      }
+
+      /** Guarda las seis colecciones en el dispositivo. */
+      function aulasGuardarTodo() {
+        localStorage.setItem('aulas', JSON.stringify(aulas));
+        localStorage.setItem('aula_inscripciones', JSON.stringify(aulaInscripciones));
+        localStorage.setItem(AULA_TAREAS_KEY, JSON.stringify(aulaTareas));
+        localStorage.setItem(AULA_ENTREGAS_KEY, JSON.stringify(aulaEntregas));
+        localStorage.setItem(AULAS_CALIF_KEY, JSON.stringify(aulaCalificaciones));
+        localStorage.setItem(AULA_ASIST_KEY, JSON.stringify(aulaAsistencias));
+      }
+
+      /** Todos los elementos necesitan id (es la clave de la sincronización). */
+      function _aulasNormalizar() {
+        var cambiados = 0;
+        function fix(lista, prefijo) {
+          (lista || []).forEach(function (x, i) {
+            if (!x || typeof x !== 'object') return;
+            if (!x.id) { x.id = prefijo + '-' + Date.now() + '-' + i; cambiados++; }
+          });
+        }
+        fix(aulas, 'aula');
+        fix(aulaInscripciones, 'ins');
+        fix(aulaTareas, 'tar');
+        fix(aulaEntregas, 'ent');
+        fix(aulaCalificaciones, 'cal');
+        fix(aulaAsistencias, 'asi');
+        if (cambiados) aulasGuardarTodo();
+      }
+
+      /** Las seis colecciones con su traducción al formato del servidor. */
+      function _aulasColecciones() {
+        return [
+          { col: 'aulas', items: aulas, remoto: aRemotoAula, soloGestion: true },
+          { col: 'inscripciones', items: aulaInscripciones, remoto: aRemotoInscripcion, soloGestion: true },
+          { col: 'tareas', items: aulaTareas, remoto: aRemotoTarea, soloGestion: true },
+          { col: 'entregas', items: aulaEntregas, remoto: function (x) { return aRemotoEntrega(x, aulaTareas); }, soloGestion: false },
+          { col: 'calificaciones', items: aulaCalificaciones, remoto: function (x) { return aRemotoCalificacion(x, aulaEntregas, aulaTareas); }, soloGestion: true },
+          { col: 'asistencia', items: aulaAsistencias, remoto: aRemotoAsistencia, soloGestion: true },
+        ];
+      }
+
+      /** Sube al servidor lo que todavía no está arriba. */
+      async function aulasSubirPendientes() {
+        if (!logueado || !usuarioActual) return;
+        if (aulasSubiendo) return;
+        aulasSubiendo = true;
+        var gestion = esGestionAulas(usuarioActual.rol);
+        var subidos = 0;
+        try {
+          var cols = _aulasColecciones();
+          for (var c = 0; c < cols.length; c++) {
+            var cfg = cols[c];
+            // El estudiante sólo entrega tareas: el resto lo gestiona el
+            // personal docente (el backend también lo rechaza).
+            if (cfg.soloGestion && !gestion) continue;
+            for (var i = 0; i < cfg.items.length; i++) {
+              var item = cfg.items[i];
+              if (!item || item.remoto || item.errorSync) continue;
+              try {
+                await apiAulasGuardar(cfg.col, cfg.remoto(item));
+                item.remoto = true;
+                delete item.errorSync;
+                subidos++;
+              } catch (e) {
+                var msg = String((e && e.message) || e || '');
+                if (_esErrorRed(msg)) break; // sin red: se reintenta más tarde
+                // El servidor lo rechazó (permiso o dato inválido): no se
+                // insiste en loop, pero el elemento queda a la vista.
+                item.errorSync = msg.slice(0, 120);
+                break;
+              }
+            }
+          }
+          if (subidos) aulasGuardarTodo();
+        } finally {
+          aulasSubiendo = false;
+        }
+      }
+
+      /** Ejecuta en el servidor los borrados que quedaron pendientes. */
+      async function _aulasBorrarPendientes() {
+        if (!logueado || !usuarioActual) return;
+        while (aulasPendientesBorrar.length) {
+          var p = aulasPendientesBorrar[0];
+          try {
+            await apiAulasBorrar(p.coleccion, p.id);
+          } catch (e) {
+            var msg = String((e && e.message) || e || '');
+            if (msg.indexOf('API 404') !== -1 || msg.indexOf('API 403') !== -1) {
+              // Ya no estaba (o el rango no puede): se descarta igual.
+            } else if (_esErrorRed(msg)) {
+              break; // sin red: se reintenta en la próxima sincronización
+            } else {
+              break;
+            }
+          }
+          aulasPendientesBorrar.shift();
+          _aulasGuardarPendientes();
+        }
+      }
+
+      /** Anota un borrado para que se ejecute en el servidor. */
+      function aulasBorrarRemoto(coleccion, id) {
+        if (id === null || id === undefined || id === '') return;
+        // Defensa extra: sólo dirección (y admin) borran aulas, tareas,
+        // calificaciones o asistencias. El alumno sí puede borrar su
+        // propia entrega.
+        if (coleccion !== 'entregas' && !esEliminarAulas(usuarioActual ? usuarioActual.rol : '')) return;
+        var idStr = String(id);
+        aulasPendientesBorrar = aulasPendientesBorrar.filter(function (p) {
+          return !(p.coleccion === coleccion && p.id === idStr);
+        });
+        aulasPendientesBorrar.push({ coleccion: coleccion, id: idStr });
+        _aulasGuardarPendientes();
+        _aulasBorrarPendientes();
+      }
+
+      /** Cuentas con rango estudiante (para inscribirlas en un aula). */
+      async function aulasCargarEstudiantes() {
+        if (!logueado || !usuarioActual) return;
+        if (!esGestionAulas(usuarioActual.rol)) return;
+        if (aulaEstudiantes.length) return;
+        try {
+          var r = await apiAulasEstudiantes();
+          aulaEstudiantes = (r && r.estudiantes) ? r.estudiantes : [];
+        } catch (e) { /* sin red: se sigue con la lista local */ }
+      }
+
+      /** Pinta todas las vistas de Aulas (tras sincronizar o al cambiar algo). */
+      function renderAulas() {
+        if (!isEnabled('AULAS')) return;
+        if ($('aulas-grid')) aulasRenderGrid();
+        if ($('insc-aula')) renderInscripcion();
+        if ($('aula-tarea-aula')) renderAulaTareas();
+        if ($('aula-asist-aula')) renderAulaAsistencia();
+        if ($('sala-aula-select')) renderSala();
+        if ($('libreta-aula')) renderLibreta();
+      }
+
+      /**
+       * Al cerrar sesión se borra lo que vino del servidor: son datos de
+       * otras personas (tareas, entregas, notas). Lo que el usuario creó
+       * sin conexión se conserva, para subirlo al entrar de nuevo.
+       */
+      function aulasLimpiarRemotos() {
+        function limpia(lista) {
+          return (lista || []).filter(function (x) { return x && !x.remoto; });
+        }
+        aulas = limpia(aulas);
+        aulaInscripciones = limpia(aulaInscripciones);
+        aulaTareas = limpia(aulaTareas);
+        aulaEntregas = limpia(aulaEntregas);
+        aulaCalificaciones = limpia(aulaCalificaciones);
+        aulaAsistencias = limpia(aulaAsistencias);
+        aulaEstudiantes = [];
+        aulasGuardarTodo();
+        renderAulas();
+      }
+
+      /**
+       * Sincronización completa: borra, sube, baja y mezcla.
+       * Si no hay red, no se rompe nada: la app sigue con lo del dispositivo.
+       */
+      async function sincronizarAulas() {
+        if (!isEnabled('AULAS')) return;
+        if (aulasSincronizando) return;
+        if (!logueado || !usuarioActual) { renderAulas(); return; }
+        aulasSincronizando = true;
+        try {
+          _aulasNormalizar();
+          await _aulasBorrarPendientes();
+          await aulasSubirPendientes();
+          await aulasCargarEstudiantes();
+          var remoto = await apiAulasEstado();
+          var local = {
+            aulas: aulas,
+            inscripciones: aulaInscripciones,
+            tareas: aulaTareas,
+            entregas: aulaEntregas,
+            calificaciones: aulaCalificaciones,
+            asistencia: aulaAsistencias,
+          };
+          var f = fusionarEstadoAulas(local, remoto);
+          aulas = f.aulas;
+          aulaInscripciones = f.inscripciones;
+          aulaTareas = f.tareas;
+          aulaEntregas = f.entregas;
+          aulaCalificaciones = f.calificaciones;
+          aulaAsistencias = f.asistencia;
+          aulasGuardarTodo();
+          renderAulas();
+        } catch (e) {
+          console.warn('[Aulas] No se pudo sincronizar:', e);
+          renderAulas();
+        } finally {
+          aulasSincronizando = false;
+        }
+      }
 
       function asistHoyISO() {
         var d = new Date();
@@ -5434,7 +5763,10 @@ import { initForos } from "./modules/foros/foro-app.js";
         aulaInscripciones.forEach(function (i) {
           if (i.aulaId !== aulaId) return;
           var est = ESTUDIANTES_DB.find(function (e) { return e.id === i.estudianteId; });
+          // Si el alumno tiene cuenta en el sistema, su nombre viene en la
+          // inscripción (no está en la lista local de estudiantes).
           if (est) add(est.nombre, est.id);
+          else add(i.estudiante || '', i.estudianteId === undefined ? null : i.estudianteId);
         });
         aulaTareas.forEach(function (t, ti) {
           if (t.aulaId !== aulaId) return;
@@ -5585,7 +5917,7 @@ import { initForos } from "./modules/foros/foro-app.js";
           var estado = asistTemporal[k] || (previo ? previo.estado : 'presente');
           return { nombre: n.nombre, estudianteId: n.id, estado: estado };
         });
-        var reg = { aulaId: aulaId, fecha: fecha, registros: registros, guardado: new Date().toISOString() };
+        var reg = { id: 'asi-' + aulaId + '-' + fecha, aulaId: aulaId, fecha: fecha, registros: registros, guardado: new Date().toISOString() };
         if (idx >= 0) aulaAsistencias[idx] = reg; else aulaAsistencias.push(reg);
         Object.keys(asistTemporal).forEach(function (k) {
           if (k.indexOf(aulaId + '|' + fecha + '|') === 0) delete asistTemporal[k];
@@ -5724,6 +6056,7 @@ import { initForos } from "./modules/foros/foro-app.js";
          =================================================================== */
       var salaChannel = null;
       var salaChatMensajes = [];
+      var salaListenerPuesto = false;
       var salaNombre = usuarioActual ? (usuarioActual.nombre || usuarioActual.email || 'Anon') : 'Anon';
 
       function renderSala() {
@@ -5733,9 +6066,14 @@ import { initForos } from "./modules/foros/foro-app.js";
         sel.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
           aulas.map(function (a) { return '<option value="' + a.id + '">' + escapeHtml(a.nombre) + '</option>'; }).join('');
         if (cur) sel.value = cur;
-        sel.addEventListener('change', function () {
-          salaConnect(parseInt(this.value, 10));
-        }, { once: true });
+        // El listener se pone una sola vez: si se re-pinta el select, no
+        // se acumulan manejadores (cada cambio conectaría la sala dos veces).
+        if (!salaListenerPuesto) {
+          salaListenerPuesto = true;
+          sel.addEventListener('change', function () {
+            salaConnect(parseInt(this.value, 10));
+          });
+        }
       }
 
       function salaConnect(aulaId) {
