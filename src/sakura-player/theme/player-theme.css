@@ -54,7 +54,7 @@
   transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
 }
 
-/* ---------- Layout principal ---------- */
+/* ---------- Layout principal (barra lateral + barra superior) ---------- */
 .sp-layout {
   display: flex;
   flex-direction: row;
@@ -62,39 +62,64 @@
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  background: var(--player-bg);
 }
 
-.sp-layout > .sp-main {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
+/* ---------- Barra lateral: paneles redondeados ---------- */
 .sp-nav {
-  width: 260px;
+  width: 264px;
   flex: none;
-  padding: 1.5rem 1rem;
-  border-right: 1px solid var(--player-border);
-  background: var(--player-bg-secondary);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: .5rem;
+  padding: .5rem;
+  background: var(--player-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sp-side-panel {
+  background: var(--player-bg-secondary);
+  border-radius: 8px;
+  padding: .65rem .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.sp-side-library {
+  flex: 1;
+  min-height: 0;
+}
+
+.sp-side-heading {
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--player-text-secondary);
+  padding: .15rem .5rem .4rem;
+}
+
+.sp-side-foot {
+  margin-top: auto;
+  padding-top: .6rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  align-items: flex-start;
 }
 
 .sp-nav-brand {
   display: flex;
   align-items: center;
   gap: .6rem;
-  padding-bottom: .8rem;
-  border-bottom: 1px solid var(--player-border);
-  margin-bottom: .6rem;
+  padding: .15rem .5rem .75rem;
 }
 
 .sp-nav-logo {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .sp-nav-title {
@@ -105,26 +130,26 @@
 }
 
 .sp-nav-sub {
-  font-size: .65rem;
+  font-size: .62rem;
   color: var(--player-text-secondary);
-  letter-spacing: .02em;
+  letter-spacing: .04em;
   text-transform: uppercase;
 }
 
 .sp-nav-links {
   display: flex;
   flex-direction: column;
-  gap: .15rem;
+  gap: .1rem;
 }
 
 .sp-nav .sp-btn {
   justify-content: flex-start;
   width: 100%;
   text-align: left;
-  padding: .6rem .9rem;
-  border-radius: 8px;
+  padding: .55rem .6rem;
+  border-radius: 6px;
   font-size: .85rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--player-text-secondary);
   background: transparent;
   border: none;
@@ -137,9 +162,11 @@
 
 .sp-nav .sp-btn.sp-btn-active {
   background: var(--player-bg-card);
+  color: var(--player-text);
+}
+
+.sp-nav .sp-btn.sp-btn-active .sp-nav-icon {
   color: var(--player-primary);
-  border-left: 3px solid var(--player-primary);
-  padding-left: .6rem;
 }
 
 .sp-nav-icon {
@@ -147,57 +174,209 @@
   align-items: center;
   justify-content: center;
   width: 18px;
+  flex: none;
   margin-right: .6rem;
 }
 
 .sp-nav-offline {
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--player-border);
+  width: 100%;
 }
 
 .sp-nav-offline:empty {
   display: none;
 }
 
+/* Con la barra inferior visible, el layout se acorta para que la
+   barra no tape los últimos botones de la barra lateral. */
+body.sp-mini-open .sp-layout {
+  height: calc(100vh - 74px);
+}
+
+/* ---------- Zona principal: barra superior + contenido ---------- */
 .sp-main {
   flex: 1;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-height: 0;
+  background: var(--player-bg);
 }
 
-.sp-visualizer-wrap {
-  height: 100px;
+.sp-topbar {
   flex: none;
-  border-radius: 10px;
-  border: 1px solid var(--player-border);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 0 .9rem;
+  background: var(--player-bg);
+}
+
+.sp-topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex: none;
+}
+
+.sp-round-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--player-bg-card);
+  color: var(--player-text);
+  cursor: pointer;
+  transition: background-color .15s ease, transform .15s ease, opacity .15s ease;
+}
+
+.sp-round-btn:hover:not(:disabled) {
+  background: var(--player-border);
+}
+
+.sp-round-btn:active:not(:disabled) {
+  transform: scale(.94);
+}
+
+.sp-round-btn:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.sp-chevron-back {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
+
+.sp-search-pill {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex: 0 1 400px;
+  margin: 0 auto;
+  padding: .42rem .95rem;
+  border-radius: 999px;
   background: var(--player-bg-secondary);
+  border: 1px solid transparent;
+  color: var(--player-text-secondary);
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.sp-search-pill:focus-within {
+  background: var(--player-bg-card);
+  border-color: var(--player-border-hover);
+}
+
+.sp-search-ico {
+  display: inline-flex;
+  flex: none;
+}
+
+.sp-top-search {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--player-text);
+  font-size: .85rem;
+  font-family: inherit;
+}
+
+.sp-top-search::placeholder {
+  color: var(--player-text-secondary);
+}
+
+.sp-top-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.sp-topbar-right {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Contenido con esquina superior izquierda redondeada y gradiente
+   que arranca en el tono de panel y se funde con el fondo. */
+.sp-stage {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--player-bg-secondary) 0%, var(--player-bg) 300px);
+  border-radius: 10px 0 0 0;
   overflow: hidden;
 }
 
-.sp-visualizer-fallback {
+/* Visualizador: franja sutil de ~60px sobre el contenido */
+.sp-visualizer-wrap {
+  position: relative;
+  height: 60px;
+  flex: none;
+  margin: .55rem .8rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--player-bg-card);
+  border: 1px solid var(--player-border);
+  opacity: .8;
+}
+
+.sp-visualizer-wrap canvas {
+  display: block;
+  width: 100%;
   height: 100%;
+}
+
+.sp-visualizer-fallback {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--player-text-secondary);
-  font-size: .75rem;
+  font-size: .72rem;
+}
+
+.sp-visualizer-fallback:empty {
+  display: none;
+}
+
+/* En reposo muestra una pista sutil; al reproducir se oculta y
+   dibuja el canvas. El panel nunca queda como un cuadro vacío. */
+.sp-viz-idle {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--player-text-secondary);
+  opacity: .75;
+}
+
+#sakura-player-root.sp-playing .sp-visualizer-fallback {
+  display: none;
 }
 
 .sp-content {
   flex: 1;
   min-height: 0;
-  height: 100%;
-  padding: 1rem;
+  padding: 1rem 1.15rem 1.75rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
-  background: var(--player-bg);
+  background: transparent;
 }
 
 /* ---------- Vista Reproductor (Now Playing) ---------- */
@@ -268,27 +447,31 @@
   margin-top: .5rem;
 }
 
-.sp-now-play {
-  width: 52px;
-  height: 52px;
+/* Play circular grande con el acento del tema activo */
+.sp-btn.sp-now-play {
+  width: 54px;
+  height: 54px;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid var(--player-border);
-  background: var(--player-bg-secondary);
-  color: var(--player-text);
-  font-size: 1.1rem;
+  border: none;
+  background: var(--player-primary);
+  color: #08040c;
+  font-size: 1.15rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: transform .15s ease, filter .15s ease;
 }
 
-.sp-now-play:hover {
-  border-color: var(--player-border-hover);
-  background: var(--player-bg-card);
+.sp-btn.sp-now-play:hover {
+  background: var(--player-primary);
+  border: none;
+  color: #08040c;
+  filter: brightness(1.08);
 }
 
-.sp-now-play:active {
+.sp-btn.sp-now-play:active {
   transform: scale(.96);
 }
 
@@ -306,48 +489,89 @@
   margin-top: .25rem;
 }
 
-/* ---------- Mini reproductor ---------- */
+/* ---------- Barra inferior (now playing, estilo Spotify) ---------- */
 .sp-mini {
-  padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom));
+  padding: .5rem .9rem calc(.5rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--player-border);
   background: var(--player-bg-secondary);
-  display: flex;
-  align-items: center;
-  gap: .75rem;
+  display: block;
   flex: none;
 }
 
+/* Tres zonas: info | controles + progreso | cola/volumen */
 .sp-mini-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) minmax(0, 1fr);
   align-items: center;
   gap: .75rem;
-  flex: 1;
   min-width: 0;
 }
 
-.sp-mini-progress {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--player-progress-bg);
-  border-radius: 1px;
-  overflow: hidden;
+.sp-mini-left {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-width: 0;
+  padding: .15rem .35rem;
+  margin-left: -.35rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color .15s ease;
 }
 
-.sp-mini-progress-fill {
-  height: 100%;
-  background: var(--player-progress);
-  width: 0%;
-  border-radius: 1px;
+.sp-mini-left:hover {
+  background: var(--player-bg-card);
+}
+
+.sp-mini-left:focus-visible {
+  outline: 2px solid var(--player-border-focus);
+  outline-offset: 2px;
+}
+
+.sp-mini-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+  min-width: 0;
+}
+
+.sp-mini-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .15rem;
+  min-width: 0;
+}
+
+.sp-mini-seek {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+  max-width: 560px;
+  min-width: 0;
+}
+
+.sp-mini-time {
+  flex: none;
+  min-width: 34px;
+  text-align: center;
+  font-size: .68rem;
+  color: var(--player-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-mini-progress {
+  flex: 1;
+  min-width: 0;
 }
 
 .sp-mini-cover {
   width: 40px;
   height: 40px;
   flex: none;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--player-border);
   background: var(--player-bg);
   overflow: hidden;
@@ -382,44 +606,41 @@
 .sp-mini-controls {
   display: flex;
   align-items: center;
-  gap: .25rem;
+  gap: .3rem;
   flex: none;
 }
 
-.sp-mini-play {
-  width: 36px;
-  height: 36px;
+/* Play circular con el acento del tema activo (icono oscuro, como
+   el verde de Spotify: pasa el contraste AA de los tokens). */
+.sp-btn.sp-mini-play {
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border-radius: 50%;
-  border: 1px solid var(--player-border);
-  background: var(--player-bg-secondary);
-  color: var(--player-text);
+  border: none;
+  background: var(--player-primary);
+  color: #08040c;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: .9rem;
+  transition: transform .15s ease, filter .15s ease;
 }
 
-.sp-mini-play:hover {
-  border-color: var(--player-border-hover);
-  background: var(--player-bg-card);
+.sp-btn.sp-mini-play:hover {
+  background: var(--player-primary);
+  border: none;
+  color: #08040c;
+  transform: scale(1.07);
 }
 
-.sp-mini-time-wrap {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  flex: none;
-  font-size: .7rem;
-  color: var(--player-text-secondary);
-  min-width: 60px;
+.sp-btn.sp-mini-play:active {
+  transform: scale(.97);
 }
 
-.sp-mini-volume {
-  display: flex;
-  align-items: center;
-  gap: .2rem;
-  flex: none;
+.sp-mini-right .sp-slider {
+  width: 88px;
 }
 
 /* ---------- Componentes base ---------- */
@@ -445,8 +666,8 @@
   align-items: center;
   justify-content: center;
   gap: .4rem;
-  padding: .55rem .9rem;
-  border-radius: 10px;
+  padding: .55rem .95rem;
+  border-radius: 999px;
   border: 1px solid var(--player-border);
   background: var(--player-bg-secondary);
   color: var(--player-text);
@@ -534,17 +755,18 @@
 .sp-card {
   background: var(--player-bg-card);
   border: 1px solid var(--player-border);
-  border-radius: 12px;
+  border-radius: 8px;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
 .sp-card:hover {
   border-color: var(--player-border-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
 }
 
 .sp-cover {
-  border-radius: 10px;
+  border-radius: 6px;
   border: 1px solid var(--player-border);
   background: var(--player-bg-secondary);
   overflow: hidden;
@@ -1104,15 +1326,98 @@ body.sp-lyrics-open {
   color: var(--player-error);
 }
 
-/* ---------- Mobile ---------- */
-@media (max-width: 560px) {
+/* ---------- Pantallas angostas: barra lateral tipo riel ---------- */
+@media (max-width: 760px) {
   .sp-nav {
-    width: 220px;
-    padding: 1rem .75rem;
+    width: 62px;
+    padding: .5rem .35rem;
+    gap: .4rem;
   }
 
+  .sp-side-panel {
+    padding: .5rem .3rem;
+  }
+
+  .sp-nav-brand {
+    justify-content: center;
+    padding: .15rem 0 .6rem;
+  }
+
+  .sp-nav-brandtext,
+  .sp-nav-title,
+  .sp-nav-sub,
+  .sp-side-heading,
+  .sp-nav-label {
+    display: none;
+  }
+
+  .sp-nav .sp-btn {
+    justify-content: center;
+    padding: .6rem .2rem;
+  }
+
+  .sp-nav-icon {
+    margin-right: 0;
+    width: 20px;
+  }
+
+  .sp-side-foot {
+    align-items: center;
+  }
+
+  .sp-backend-badge {
+    display: none;
+  }
+
+  /* El aviso de sin conexión flota sobre la barra inferior */
+  .sp-nav-offline {
+    position: fixed;
+    left: 70px;
+    right: 8px;
+    bottom: 92px;
+    z-index: 390;
+  }
+
+  .sp-topbar {
+    height: 52px;
+    padding: 0 .6rem;
+    gap: .5rem;
+  }
+
+  .sp-search-pill {
+    flex: 1 1 auto;
+    margin: 0;
+    padding: .38rem .75rem;
+  }
+
+  .sp-stage {
+    border-radius: 8px 0 0 0;
+  }
+
+  .sp-visualizer-wrap {
+    height: 52px;
+    margin: .5rem .6rem 0;
+  }
+
+  .sp-mini-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+    gap: .4rem;
+  }
+
+  .sp-mini-right .sp-slider,
+  .sp-mini-time {
+    display: none;
+  }
+
+  .sp-mini-seek {
+    gap: 0;
+  }
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 560px) {
   .sp-content {
-    padding: 1rem;
+    padding: .85rem;
     gap: 1rem;
   }
 
