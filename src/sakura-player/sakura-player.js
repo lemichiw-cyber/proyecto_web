@@ -27,16 +27,19 @@ import { MiniPlayer } from './components/mini-player.js';
 import { LyricsView } from './lyrics/lyrics-view.js';
 import { icon, toast, emptyState, promptDialog, escapeHtml } from './components/ui.js';
 
+/* Secciones del reproductor, agrupadas como en Spotify:
+   un panel principal (Inicio/Buscar/Reproductor) y el panel
+   "Tu biblioteca" con el resto. El orden acá es el orden del DOM. */
 const VIEWS = [
-  { id: 'player', label: 'Reproductor', icon: 'note' },
-  { id: 'lyrics', label: 'Letras', icon: 'lyrics' },
-  { id: 'search', label: 'Buscar', icon: 'search' },
-  { id: 'library', label: 'Biblioteca', icon: 'home' },
-  { id: 'playlists', label: 'Playlists', icon: 'list' },
-  { id: 'queue', label: 'Cola', icon: 'queue' },
-  { id: 'mixer', label: 'Mezclador', icon: 'sliders' },
-  { id: 'upload', label: 'Local', icon: 'upload' },
-  { id: 'settings', label: 'Ajustes', icon: 'settings' },
+  { id: 'library', label: 'Inicio', icon: 'home', group: 'main' },
+  { id: 'search', label: 'Buscar', icon: 'search', group: 'main' },
+  { id: 'player', label: 'Reproductor', icon: 'note', group: 'main' },
+  { id: 'lyrics', label: 'Letras', icon: 'lyrics', group: 'library' },
+  { id: 'playlists', label: 'Playlists', icon: 'list', group: 'library' },
+  { id: 'queue', label: 'Cola', icon: 'queue', group: 'library' },
+  { id: 'mixer', label: 'Mezclador', icon: 'sliders', group: 'library' },
+  { id: 'upload', label: 'Local', icon: 'upload', group: 'library' },
+  { id: 'settings', label: 'Ajustes', icon: 'settings', group: 'library' },
 ];
 
 const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -54,6 +57,11 @@ class SakuraPlayer {
     this._currentView = null;
     this._detailSeq = 0;
     this._themeSubscribed = false;
+
+    // Historial de vistas para las flechas de la barra superior
+    this._hist = [];
+    this._histIdx = -1;
+    this._navLock = false;
 
     // Handlers guardados como propiedades para poder desregistrarlos:
     // sin esto, cada remontaje duplicaba los listeners globales.
@@ -190,42 +198,143 @@ class SakuraPlayer {
   }
 
   _shell() {
+    const navBtn = (v) =>
+      '<button class="sp-btn sp-nav-btn" type="button" data-view="' + v.id + '" title="' + v.label + '" aria-label="' + v.label + '">' +
+        '<span class="sp-nav-icon" aria-hidden="true">' + icon(v.icon) + '</span>' +
+        '<span class="sp-nav-label">' + v.label + '</span></button>';
+    const grupo = (g) => VIEWS.filter((v) => v.group === g).map(navBtn).join('');
+
     return '<div id="sp-layout" class="sp-layout">' +
-      '<nav class="sp-panel sp-nav" id="sp-nav" aria-label="Secciones del reproductor">' +
-        '<div class="sp-nav-brand">' +
-          '<span class="sp-nav-logo" aria-hidden="true">🌸</span>' +
-          '<div><div class="sp-nav-title">Sakura Player</div>' +
-          '<div class="sp-nav-sub">Catálogo + Local</div></div>' +
+      /* ---- Barra lateral: dos paneles redondeados ---- */
+      '<nav class="sp-nav" id="sp-nav" aria-label="Secciones del reproductor">' +
+        '<div class="sp-side-panel sp-side-main">' +
+          '<div class="sp-nav-brand">' +
+            '<span class="sp-nav-logo" aria-hidden="true">🌸</span>' +
+            '<div class="sp-nav-brandtext"><div class="sp-nav-title">Sakura Player</div>' +
+            '<div class="sp-nav-sub">Catálogo + Local</div></div>' +
+          '</div>' +
+          '<div class="sp-nav-links">' + grupo('main') + '</div>' +
         '</div>' +
-        '<div class="sp-nav-links">' +
-          VIEWS.map((v) => '<button class="sp-btn" type="button" data-view="' + v.id + '" title="' + v.label + '" aria-label="' + v.label + '">' +
-            '<span class="sp-nav-icon" aria-hidden="true">' + icon(v.icon) + '</span>' +
-            '<span class="sp-nav-label">' + v.label + '</span></button>').join('') +
+        '<div class="sp-side-panel sp-side-library">' +
+          '<div class="sp-side-heading">Tu biblioteca</div>' +
+          '<div class="sp-nav-links">' + grupo('library') + '</div>' +
+          '<div class="sp-side-foot">' +
+            '<div id="sp-offline-slot" class="sp-nav-offline"></div>' +
+          '</div>' +
         '</div>' +
-        '<div id="sp-backend-badge" class="sp-backend-badge disconnected" title="Backend de YouTube Music">● Backend</div>' +
-        '<div id="sp-offline-slot" class="sp-nav-offline"></div>' +
       '</nav>' +
+      /* ---- Zona principal: barra superior + contenido ---- */
       '<div class="sp-main">' +
-        '<div class="sp-panel sp-visualizer-wrap" id="sp-visualizer-wrap" aria-hidden="true">' +
-          '<canvas id="sp-visualizer-canvas"></canvas>' +
-          '<div id="sp-visualizer-fallback" class="sp-visualizer-fallback"></div>' +
+        '<header class="sp-topbar">' +
+          '<div class="sp-topbar-nav">' +
+            '<button class="sp-round-btn" id="sp-back" type="button" title="Atrás" aria-label="Volver a la vista anterior" disabled>' +
+              '<span class="sp-chevron-back" aria-hidden="true">' + icon('chevron') + '</span></button>' +
+            '<button class="sp-round-btn" id="sp-forward" type="button" title="Adelante" aria-label="Ir a la vista siguiente" disabled>' +
+              icon('chevron') + '</button>' +
+          '</div>' +
+          '<div class="sp-search-pill">' +
+            '<span class="sp-search-ico" aria-hidden="true">' + icon('search') + '</span>' +
+            '<input id="sp-top-search" class="sp-top-search" type="search" autocomplete="off" ' +
+              'placeholder="¿Qué querés escuchar?" aria-label="Buscar en el reproductor">' +
+          '</div>' +
+          '<div class="sp-topbar-right">' +
+            '<div id="sp-backend-badge" class="sp-backend-badge disconnected" title="Backend de YouTube Music">● Backend</div>' +
+          '</div>' +
+        '</header>' +
+        '<div class="sp-stage">' +
+          '<div class="sp-visualizer-wrap" id="sp-visualizer-wrap" aria-hidden="true">' +
+            '<canvas id="sp-visualizer-canvas"></canvas>' +
+            '<div id="sp-visualizer-fallback" class="sp-visualizer-fallback">' +
+              '<span class="sp-viz-idle">' + icon('eq') + ' Visualizador de audio</span>' +
+            '</div>' +
+          '</div>' +
+          '<div id="sp-view-content" class="sp-content"></div>' +
         '</div>' +
-        '<div id="sp-view-content" class="sp-panel sp-content"></div>' +
       '</div>' +
     '</div>';
   }
 
   _bindShell() {
+    // Navegación por la barra lateral (sigue exigiendo #sp-nav [data-view])
     this.root.querySelector('#sp-nav').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-view]');
       if (!btn) return;
-      this.view = btn.dataset.view;
-      this._renderView();
+      this.go(btn.dataset.view);
     });
+
+    // Flechas atrás/adelante (historial de vistas)
+    this.root.querySelector('#sp-back').addEventListener('click', () => this._histGo(-1));
+    this.root.querySelector('#sp-forward').addEventListener('click', () => this._histGo(1));
+
+    // Buscador de la barra superior: cambia a la vista Buscar y escribe
+    // en su input (la vista dispara su propia búsqueda con ese valor).
+    const top = this.root.querySelector('#sp-top-search');
+    top.addEventListener('input', (e) => {
+      const q = e.target.value;
+      if (this.view !== 'search') this.go('search');
+      const input = this.root.querySelector('#sp-search-input');
+      if (input && input.value !== q) {
+        input.value = q;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    top.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const input = this.root.querySelector('#sp-search-input');
+      if (!input) return;
+      input.focus();
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    // ...y al revés: lo que se escribe en la vista Buscar se refleja arriba
+    this.root.querySelector('#sp-view-content').addEventListener('input', (e) => {
+      if (e.target && e.target.id === 'sp-search-input' && top.value !== e.target.value) {
+        top.value = e.target.value;
+      }
+    });
+    this._updHistBtns();
+  }
+
+  /* Navega a una vista (la re-renderiza aunque sea la actual: así los
+     botones "Volver" de las vistas de detalle regresan a la lista). */
+  go(view) {
+    this.view = view;
+    this._renderView();
+  }
+
+  _pushHist() {
+    if (this._navLock) return;
+    if (this._hist[this._histIdx] === this.view) return;
+    this._hist = this._hist.slice(0, this._histIdx + 1);
+    this._hist.push(this.view);
+    if (this._hist.length > 40) this._hist.shift();
+    this._histIdx = this._hist.length - 1;
+    this._updHistBtns();
+  }
+
+  _histGo(delta) {
+    const i = this._histIdx + delta;
+    if (i < 0 || i >= this._hist.length) return;
+    this._histIdx = i;
+    this._navLock = true;
+    this.view = this._hist[i];
+    this._renderView();
+    this._navLock = false;
+    // _pushHist salta mientras hay lock: hay que refrescar las flechas a mano
+    this._updHistBtns();
+  }
+
+  _updHistBtns() {
+    if (!this.root) return;
+    const back = this.root.querySelector('#sp-back');
+    const fwd = this.root.querySelector('#sp-forward');
+    if (back) back.disabled = this._histIdx <= 0;
+    if (fwd) fwd.disabled = this._histIdx >= this._hist.length - 1;
   }
 
   _renderView() {
     const content = this.root.querySelector('#sp-view-content');
+    this._pushHist();
     // Destruye SIEMPRE la vista saliente: sus listeners de player seguían
     // actuando sobre DOM desconectado y su TypeError abortaba emit()
     // (cola y reproductor dejaban de reaccionar a cambios de pista).

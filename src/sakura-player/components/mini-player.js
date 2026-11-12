@@ -27,25 +27,36 @@ export class MiniPlayer {
       'background:var(--player-bg-secondary);border-top:1px solid var(--player-border);' +
       'box-shadow:0 -6px 30px rgba(0,0,0,.4);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);';
     el.innerHTML =
-      '<div class="sp-progress sp-mini-progress" id="sp-mini-progress" aria-hidden="true">' +
-        '<div class="sp-progress-fill" id="sp-mini-fill" style="width:0%;"></div></div>' +
       '<div class="sp-mini-inner">' +
-        '<div id="sp-mini-cover" class="sp-cover sp-mini-cover"></div>' +
-        '<div class="sp-mini-meta">' +
-          '<div id="sp-mini-title" class="sp-mini-title"></div>' +
-          '<div id="sp-mini-artist" class="sp-mini-artist"></div>' +
+        /* Zona izquierda: portada + metadatos (abre la vista Reproductor) */
+        '<div class="sp-mini-left" id="sp-mini-left" role="button" tabindex="0" ' +
+          'title="Abrir el reproductor" aria-label="Abrir la vista del reproductor">' +
+          '<div id="sp-mini-cover" class="sp-cover sp-mini-cover"></div>' +
+          '<div class="sp-mini-meta">' +
+            '<div id="sp-mini-title" class="sp-mini-title"></div>' +
+            '<div id="sp-mini-artist" class="sp-mini-artist"></div>' +
+          '</div>' +
         '</div>' +
-        '<div class="sp-mini-controls">' +
-          '<button class="sp-btn sp-btn-icon" id="sp-mini-prev" title="Anterior" aria-label="Canción anterior">' + icon('prev') + '</button>' +
-          '<button class="sp-btn sp-btn-icon sp-mini-play" id="sp-mini-play" title="Reproducir/Pausa" aria-label="Reproducir o pausar">' + icon('play') + '</button>' +
-          '<button class="sp-btn sp-btn-icon" id="sp-mini-next" title="Siguiente" aria-label="Canción siguiente">' + icon('next') + '</button>' +
+        /* Zona central: controles + barra de progreso con tiempos */
+        '<div class="sp-mini-center">' +
+          '<div class="sp-mini-controls">' +
+            '<button class="sp-btn sp-btn-icon" id="sp-mini-prev" title="Anterior" aria-label="Canción anterior">' + icon('prev') + '</button>' +
+            '<button class="sp-btn sp-btn-icon sp-mini-play" id="sp-mini-play" title="Reproducir/Pausa" aria-label="Reproducir o pausar">' + icon('play') + '</button>' +
+            '<button class="sp-btn sp-btn-icon" id="sp-mini-next" title="Siguiente" aria-label="Canción siguiente">' + icon('next') + '</button>' +
+          '</div>' +
+          '<div class="sp-mini-seek">' +
+            '<span class="sp-mini-time" id="sp-mini-time-cur">0:00</span>' +
+            '<div class="sp-progress sp-mini-progress" id="sp-mini-progress" role="slider" tabindex="0" ' +
+              'aria-label="Progreso de la canción" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">' +
+              '<div class="sp-progress-fill" id="sp-mini-fill" style="width:0%;"></div></div>' +
+            '<span class="sp-mini-time" id="sp-mini-time">0:00</span>' +
+          '</div>' +
         '</div>' +
-        '<div class="sp-mini-time-wrap">' +
-          '<span id="sp-mini-time">0:00 / 0:00</span>' +
-        '</div>' +
-        '<div class="sp-mini-volume">' +
+        /* Zona derecha: cola, silencio y volumen */
+        '<div class="sp-mini-right">' +
+          '<button class="sp-btn sp-btn-icon" id="sp-mini-queue" title="Cola" aria-label="Ver la cola">' + icon('queue') + '</button>' +
           '<button class="sp-btn sp-btn-icon" id="sp-mini-mute" title="Silencio" aria-label="Silenciar">' + icon('volume') + '</button>' +
-          '<input type="range" class="sp-slider" id="sp-mini-vol" min="0" max="100" value="80" aria-label="Volumen">' +
+          '<input type="range" class="sp-slider sp-mini-vol" id="sp-mini-vol" min="0" max="100" value="80" aria-label="Volumen">' +
         '</div>' +
       '</div>';
     document.body.appendChild(el);
@@ -54,6 +65,21 @@ export class MiniPlayer {
     this.progressEl = el.querySelector('#sp-mini-progress');
     this.fillEl = el.querySelector('#sp-mini-fill');
     this.timeEl = el.querySelector('#sp-mini-time');
+    this.curEl = el.querySelector('#sp-mini-time-cur');
+
+    const abrirReproductor = () => {
+      const sp = window.getSakuraPlayer ? window.getSakuraPlayer() : null;
+      if (sp) sp.go('player');
+    };
+    const left = el.querySelector('#sp-mini-left');
+    left.addEventListener('click', abrirReproductor);
+    left.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirReproductor(); }
+    });
+    el.querySelector('#sp-mini-queue').addEventListener('click', () => {
+      const sp = window.getSakuraPlayer ? window.getSakuraPlayer() : null;
+      if (sp) sp.go('queue');
+    });
 
     el.querySelector('#sp-mini-play').addEventListener('click', () => player.toggle());
     el.querySelector('#sp-mini-next').addEventListener('click', () => player.next());
@@ -75,6 +101,11 @@ export class MiniPlayer {
     this.progressEl.addEventListener('pointermove', (e) => { if (this._dragging) seek(e); });
     this.progressEl.addEventListener('pointerup', () => { this._dragging = false; });
     this.progressEl.addEventListener('pointercancel', () => { this._dragging = false; });
+    // Barra de progreso enfocable: flechas para adelantar/retroceder
+    this.progressEl.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); player.seek(player.currentTime() + 5); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); player.seek(player.currentTime() - 5); }
+    });
 
     player.on('trackchange', () => this._renderTrack());
     player.on('time', (s) => this._renderTime(s));
@@ -116,8 +147,13 @@ export class MiniPlayer {
     if (!this._dragging) {
       const pct = s.duration ? (s.currentTime / s.duration) * 100 : 0;
       this.fillEl.style.width = pct + '%';
+      this.progressEl.setAttribute('aria-valuenow', String(Math.round(pct)));
     }
-    this.timeEl.textContent = formatTime(s.currentTime) + ' / ' + formatTime(s.duration);
+    const cur = formatTime(s.currentTime);
+    if (this.curEl) this.curEl.textContent = cur;
+    this.timeEl.textContent = formatTime(s.duration);
+    // Compatibilidad: el elemento sigue exponiendo ambos tiempos
+    this.timeEl.setAttribute('aria-label', 'Duración ' + formatTime(s.duration));
   }
 
   setVolumeUI(v, muted) {
