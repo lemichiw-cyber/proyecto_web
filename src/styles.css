@@ -625,9 +625,58 @@
     @keyframes modalSlideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text); padding: .25rem; line-height: 1; border-radius: var(--radius-sm); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: .15s; }
     .modal-close:hover { background: var(--gray-100); color: var(--gray-700); }
-    .modal-dialog-icon { font-size: 2.5rem; margin-bottom: .5rem; }
-    .modal-dialog-title { font-size: 1.05rem; font-weight: 700; margin-bottom: .25rem; }
-    .modal-dialog-msg { font-size: .85rem; color: var(--gray-500); line-height: 1.5; }
+
+    /* ===== DIÁLOGOS (Material moderno) =====
+       Un solo aspecto para alert / confirm / prompt. El tono se define con
+       data-tone en la tarjeta y cambia el color del ícono y del botón
+       principal. El ícono se pinta con `mask` (no con <img>) para que
+       herede el color del tema, también en modo oscuro. */
+    .modal-dialog { max-width: 400px; padding: 0; text-align: center; overflow: hidden; animation: dialogPop .22s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes dialogPop { from { transform: scale(.94) translateY(8px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .modal-dialog { animation: none; } .modal-overlay.open { animation: none; } }
+
+    /* Tonos */
+    .modal-dialog[data-tone="info"]    { --dlg-bg: var(--primary-light); --dlg-ink: var(--primary); --dlg-btn: var(--primary-gradient); --dlg-shadow: rgba(35,94,224,.28); }
+    .modal-dialog[data-tone="warn"]    { --dlg-bg: var(--amber-light);   --dlg-ink: var(--amber-ink);   --dlg-btn: linear-gradient(135deg,#f59e0b,#d97706); --dlg-shadow: rgba(245,158,11,.3); }
+    .modal-dialog[data-tone="danger"]  { --dlg-bg: var(--red-light);     --dlg-ink: var(--red-ink);     --dlg-btn: linear-gradient(135deg,#ef4444,#dc2626); --dlg-shadow: rgba(239,68,68,.3); }
+    .modal-dialog[data-tone="success"] { --dlg-bg: var(--green-light);   --dlg-ink: var(--green-ink);   --dlg-btn: linear-gradient(135deg,#10b981,#059669); --dlg-shadow: rgba(16,185,129,.3); }
+    .modal-dialog[data-tone="help"]    { --dlg-bg: var(--purple-light);  --dlg-ink: var(--purple-ink);  --dlg-btn: linear-gradient(135deg,#8b5cf6,#7c3aed); --dlg-shadow: rgba(139,92,246,.3); }
+
+    /* Ícono: círculo de color + ícono del tema */
+    .modal-dialog-badge { width: 60px; height: 60px; margin: 1.6rem auto 0; border-radius: 50%; background: var(--dlg-bg); display: flex; align-items: center; justify-content: center; }
+    .modal-dialog-icon { width: 28px; height: 28px; background-color: var(--dlg-ink); -webkit-mask: var(--dlg-icon) no-repeat center / contain; mask: var(--dlg-icon) no-repeat center / contain; }
+
+    /* Texto */
+    .modal-dialog-head { padding: 0 1.5rem; }
+    .modal-dialog-title { font-size: 1.15rem; font-weight: 700; color: var(--text); margin: .85rem 0 0; line-height: 1.3; }
+    .modal-dialog-title:empty { display: none; }
+    .modal-dialog-msg { font-size: .9rem; color: var(--text-secondary); line-height: 1.55; margin: .4rem 0 0; }
+    .modal-dialog-msg:empty { display: none; }
+
+    /* Campo de texto con etiqueta flotante */
+    #dialog-input-wrap { padding: 0 1.5rem; }
+    .dialog-field { position: relative; margin-top: 1.15rem; }
+    .dialog-field input { width: 100%; padding: 1.25rem .85rem .45rem; border: 1.5px solid var(--border); border-radius: 12px; background: var(--gray-50); font: inherit; font-size: .92rem; color: var(--text); transition: border-color .16s, box-shadow .16s, background .16s; -webkit-appearance: none; appearance: none; }
+    .dialog-field input::placeholder { color: transparent; }
+    .dialog-field input:focus { outline: none; border-color: var(--primary); background: var(--bg-card); box-shadow: 0 0 0 3.5px var(--primary-light); }
+    .dialog-field-label { position: absolute; left: .9rem; top: .95rem; font-size: .92rem; color: var(--text-secondary); pointer-events: none; transition: top .16s ease, font-size .16s ease, color .16s ease; }
+    .dialog-field input:focus ~ .dialog-field-label,
+    .dialog-field input:not(:placeholder-shown) ~ .dialog-field-label { top: .35rem; font-size: .68rem; font-weight: 700; color: var(--primary); letter-spacing: .02em; }
+    .dialog-field-hint { font-size: .76rem; color: var(--text-secondary); margin: .45rem .15rem 0; text-align: left; line-height: 1.4; }
+    .dialog-field-hint:empty { display: none; }
+
+    /* Botones */
+    .dialog-actions { display: flex; justify-content: flex-end; gap: .5rem; padding: 1.35rem 1.5rem 1.5rem; }
+    .dialog-btn { border: none; border-radius: var(--radius-full); padding: .62rem 1.35rem; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; transition: transform .12s ease, background .16s ease, box-shadow .16s ease, opacity .16s ease; }
+    .dialog-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .dialog-btn-ghost { background: transparent; color: var(--text-secondary); }
+    .dialog-btn-ghost:hover { background: var(--gray-100); color: var(--text); }
+    .dialog-btn-primary { background: var(--dlg-btn); color: var(--on-primary); box-shadow: 0 4px 14px var(--dlg-shadow); }
+    .dialog-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--dlg-shadow); filter: brightness(1.04); }
+    .dialog-btn:active { transform: translateY(0); }
+    .modal-dialog[data-tone="warn"] .dialog-btn-primary,
+    .modal-dialog[data-tone="danger"] .dialog-btn-primary,
+    .modal-dialog[data-tone="success"] .dialog-btn-primary { color: #fff; }
 
     /* ===== HERO ===== */
     .hero-section { background: linear-gradient(135deg,#1e3a5f,#2563eb,#1d4ed8); color: #fff; padding: 3rem 1rem 2.5rem; text-align: center; position:relative; overflow:hidden; }
