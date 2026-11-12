@@ -587,14 +587,26 @@ unicode: "eaf8"
     </div>
   </div>
 
-  <!-- ===== CUSTOM DIALOG ===== -->
-  <div class="modal-overlay" id="modal-dialog" role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:380px;text-align:center;">
-      <div class="modal-dialog-content" id="dialog-content"></div>
-      <div id="dialog-input-wrap" class="hidden" style="margin:.75rem 0;">
-        <input type="text" id="dialog-input" placeholder="Escribe aquí..." style="width:100%;padding:.65rem .75rem;border:1px solid var(--gray-300);border-radius:10px;font:inherit;font-size:.9rem;">
+  <!-- ===== CUSTOM DIALOG (Material moderno) =====
+       Un solo motor para alert / confirm / prompt: el tono (info, warn,
+       danger, success) cambia el color del ícono y del botón principal. -->
+  <div class="modal-overlay" id="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <div class="modal modal-dialog" id="dialog-card" data-tone="info">
+      <div class="modal-dialog-badge" aria-hidden="true">
+        <span class="modal-dialog-icon" id="dialog-icon"></span>
       </div>
-      <div class="flex-between" id="dialog-buttons" style="justify-content:center;gap:.75rem;margin-top:.25rem;"></div>
+      <div class="modal-dialog-head">
+        <h3 class="modal-dialog-title" id="dialog-title"></h3>
+        <p class="modal-dialog-msg" id="dialog-msg"></p>
+      </div>
+      <div id="dialog-input-wrap" class="hidden">
+        <div class="dialog-field">
+          <input type="text" id="dialog-input" placeholder=" " autocomplete="off" spellcheck="false">
+          <label class="dialog-field-label" id="dialog-input-label" for="dialog-input"></label>
+        </div>
+        <p class="dialog-field-hint" id="dialog-input-hint"></p>
+      </div>
+      <div class="dialog-actions" id="dialog-buttons"></div>
     </div>
   </div>
 

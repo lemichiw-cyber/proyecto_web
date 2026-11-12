@@ -43,6 +43,18 @@ import {
 } from "./modules/protegido/protegido-sync.js";
 import { getApiBase, setApiBase, apiBaseDefault, testApiBase, explicaErrorRed } from "./api-base";
 import { lockBody, unlockBody, syncBodyLock } from "./scroll-lock.js";
+import {
+  TONO_ALERT,
+  TONO_CONFIRM,
+  TONO_PROMPT,
+  definicionTono,
+  descomponerMensaje,
+  etiquetaCampo,
+  esDestructivo,
+  mismoTexto,
+  textoBotonOk,
+  textoBotonCancelar,
+} from "./ui/dialog-ui.js";
 import { initForos } from "./modules/foros/foro-app.js";
 (function () {
       'use strict';
@@ -1117,92 +1129,210 @@ import { initForos } from "./modules/foros/foro-app.js";
         mostrarToast('Contraseña actualizada correctamente. Ya podés iniciar sesión.', 'success');
       }
 
-      function _pedirTextoDialog(titulo, mensaje, placeholder, tipo) {
-        return new Promise(function (resolve) {
-          dialogOverlay.classList.add('open');
-          $('dialog-content').innerHTML =
-            '<div class="modal-dialog-icon">✉️</div>' +
-            '<div class="modal-dialog-title">' + escapeHtml(titulo) + '</div>' +
-            '<div class="modal-dialog-msg" style="margin-bottom:.75rem;">' + escapeHtml(mensaje) + '</div>';
-          const inputWrap = $('dialog-input-wrap');
-          const inputEl = $('dialog-input');
-          inputWrap.classList.remove('hidden');
-          inputEl.type = tipo || 'text';
-          inputEl.placeholder = placeholder || '';
-          inputEl.value = '';
-          inputEl.disabled = false;
-          $('dialog-buttons').innerHTML =
-            '<button class="btn btn-outline" id="dialog-cancel-btn">Cancelar</button>' +
-            '<button class="btn btn-primary" id="dialog-ok-btn">Aceptar</button>';
+      /* ===== DIÁLOGOS (Material moderno) =====
+         Un solo motor para los tres tipos de ventana emergente (alert,
+         confirm, prompt): mismo aspecto en toda la app.
 
-          function limpiar() {
+         * El ícono se pinta con `mask` (no con <img>) para que herede el
+           color del tema, también en modo oscuro.
+         * El tono (info / warn / danger / success / help) define el color
+           del ícono y del botón principal; si el texto habla de borrar o
+           eliminar, el tono pasa solo a "peligro".
+         * El campo de texto tiene etiqueta flotante: la etiqueta corta se
+           deduce del mensaje ("Tipo de incidente (ej: ...):" → "Tipo de
+           incidente") y lo que va entre paréntesis queda como ayuda.
+         * El foco vuelve al elemento que abrió la ventana y el listener
+           del teclado se quita SIEMPRE (antes se acumulaba). */
+      var dialogOverlay = $('modal-dialog');
+      var dialogFocoPrevio = null;
+      // Último elemento "pulsado" de verdad. Sirve de respaldo: en algunos
+      // navegadores (o cuando la acción se dispara desde código) el clic no
+      // mueve el foco, así que document.activeElement seguiría siendo <body>
+      // y al cerrar la ventana el foco se perdería.
+      var dialogUltimoClic = null;
+      document.addEventListener('click', function (ev) {
+        var t = ev.target;
+        if (t && t.closest && t.closest('button, a, input, select, textarea, [tabindex]')) {
+          dialogUltimoClic = t.closest('button, a, input, select, textarea, [tabindex]');
+        }
+      }, true);
+
+      function _dialogPintar(opts) {
+        var card = $('dialog-card');
+        if (card) card.setAttribute('data-tone', opts.tone);
+        var iconEl = $('dialog-icon');
+        if (iconEl) iconEl.style.setProperty('--dlg-icon', 'url("' + iconSrc(opts.icono) + '")');
+        var tituloEl = $('dialog-title');
+        if (tituloEl) tituloEl.textContent = opts.titulo || '';
+        var msgEl = $('dialog-msg');
+        if (msgEl) msgEl.textContent = opts.mensaje || '';
+        var wrap = $('dialog-input-wrap');
+        var input = $('dialog-input');
+        var label = $('dialog-input-label');
+        var hint = $('dialog-input-hint');
+        if (opts.campo) {
+          if (wrap) wrap.classList.remove('hidden');
+          if (input) {
+            input.type = opts.tipo || 'text';
+            input.value = opts.valor || '';
+            input.placeholder = ' ';
+            input.disabled = false;
+          }
+          if (label) label.textContent = opts.etiqueta || '';
+          if (hint) hint.textContent = opts.ayuda || '';
+        } else {
+          if (wrap) wrap.classList.add('hidden');
+          if (input) { input.value = ''; input.placeholder = ' '; }
+          if (label) label.textContent = '';
+          if (hint) hint.textContent = '';
+        }
+        // Botones: se crean con el DOM (el texto puede venir del usuario).
+        var cont = $('dialog-buttons');
+        if (!cont) return;
+        cont.innerHTML = '';
+        if (opts.textoCancelar) {
+          var btnNo = document.createElement('button');
+          btnNo.type = 'button';
+          btnNo.id = 'dialog-no-btn';
+          btnNo.className = 'dialog-btn dialog-btn-ghost';
+          btnNo.textContent = opts.textoCancelar;
+          cont.appendChild(btnNo);
+        }
+        var btnOk = document.createElement('button');
+        btnOk.type = 'button';
+        btnOk.id = 'dialog-ok-btn';
+        btnOk.className = 'dialog-btn dialog-btn-primary';
+        btnOk.textContent = opts.textoOk;
+        cont.appendChild(btnOk);
+      }
+
+      function _dialogAbrir(opts) {
+        return new Promise(function (resolve) {
+          var input = $('dialog-input');
+          // Elemento al que hay que devolver el foco al cerrar:
+          // el que tenía el foco, o (si no lo había) el último pulsado.
+          var activo = document.activeElement;
+          var ultimo = dialogUltimoClic;
+          // Los botones del propio diálogo no sirven de origen.
+          if (ultimo && ultimo.closest && ultimo.closest('#modal-dialog')) ultimo = null;
+          if (ultimo && !document.contains(ultimo)) ultimo = null;
+          dialogFocoPrevio = (activo && activo !== document.body && activo.focus && document.contains(activo))
+            ? activo
+            : ultimo;
+          _dialogPintar(opts);
+          dialogOverlay.classList.add('open');
+
+          var cerrado = false;
+          function cerrar(valor) {
+            if (cerrado) return;
+            cerrado = true;
             dialogOverlay.classList.remove('open');
-            inputWrap.classList.add('hidden');
             document.removeEventListener('keydown', onKey);
+            // El foco vuelve al elemento que abrió la ventana.
+            try {
+              if (dialogFocoPrevio && dialogFocoPrevio.focus) dialogFocoPrevio.focus();
+            } catch (e) { /* noop */ }
+            resolve(valor);
+          }
+          function aceptar() {
+            if (opts.campo) cerrar(input ? input.value : '');
+            else cerrar(opts.valorOk);
+          }
+          function cancelar() {
+            cerrar(opts.campo ? null : opts.valorCancel);
           }
           function onKey(ev) {
-            if (ev.key === 'Enter') okClick();
-            else if (ev.key === 'Escape') cancelClick();
+            if (ev.key === 'Enter') { ev.preventDefault(); aceptar(); }
+            else if (ev.key === 'Escape') { ev.preventDefault(); cancelar(); }
           }
-          function okClick() {
-            resolve(inputEl.value.trim());
-            limpiar();
-          }
-          function cancelClick() {
-            resolve(null);
-            limpiar();
-          }
-          $('dialog-ok-btn').onclick = okClick;
-          $('dialog-cancel-btn').onclick = cancelClick;
           document.addEventListener('keydown', onKey);
-          // enfocar el input tras un tick
-          setTimeout(function () { try { inputEl.focus(); } catch (e) { /* noop */ } }, 50);
+
+          var btnOk = $('dialog-ok-btn');
+          if (btnOk) btnOk.addEventListener('click', aceptar);
+          var btnNo = $('dialog-no-btn');
+          if (btnNo) btnNo.addEventListener('click', cancelar);
+
+          // Foco: al campo si hay campo; si no, al botón principal.
+          setTimeout(function () {
+            try {
+              if (opts.campo && input) input.focus();
+              else if (btnOk) btnOk.focus();
+            } catch (e) { /* noop */ }
+          }, 60);
         });
       }
 
+      /* Ventana de información. */
+      function dialogAlert(msg, title, opts) {
+        var o = opts || {};
+        var tone = o.tone || TONO_ALERT;
+        return _dialogAbrir({
+          tone: tone,
+          icono: o.icono || definicionTono(tone).icono,
+          titulo: title || '',
+          mensaje: msg || '',
+          textoOk: textoBotonOk(tone, o.textoOk),
+          textoCancelar: '',
+          valorOk: undefined,
+          valorCancel: undefined,
+        });
+      }
 
-      /* ===== CUSTOM DIALOG ===== */
-      var dialogOverlay = $('modal-dialog');
-      function dialogAlert(msg, title) {
-        return new Promise(function (resolve) {
-          dialogOverlay.classList.add('open');
-          $('dialog-content').innerHTML = title ? '<div class="modal-dialog-icon">ℹ️</div><div class="modal-dialog-title">' + escapeHtml(title) + '</div><div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>' : '<div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>';
-          $('dialog-input-wrap').classList.add('hidden');
-          $('dialog-buttons').innerHTML = '<button class="btn btn-primary" id="dialog-ok-btn">Aceptar</button>';
-          function close() { dialogOverlay.classList.remove('open'); resolve(); }
-          $('dialog-ok-btn').addEventListener('click', close);
-          function keyHandler(e) { if (e.key === 'Enter' || e.key === 'Escape') { close(); document.removeEventListener('keydown', keyHandler); } }
-          document.addEventListener('keydown', keyHandler);
+      /* Ventana de confirmación: devuelve true (sí) o false (no). */
+      function dialogConfirm(msg, title, opts) {
+        var o = opts || {};
+        // Si el mensaje habla de borrar/eliminar/reiniciar, el tono pasa a
+        // "peligro" y el botón principal dice "Eliminar".
+        var tone = o.tone || (esDestructivo(msg) ? 'danger' : TONO_CONFIRM);
+        return _dialogAbrir({
+          tone: tone,
+          icono: o.icono || definicionTono(tone).icono,
+          titulo: title || '',
+          mensaje: msg || '',
+          textoOk: textoBotonOk(tone, o.textoOk),
+          textoCancelar: textoBotonCancelar(tone, o.textoCancelar),
+          valorOk: true,
+          valorCancel: false,
         });
       }
-      function dialogConfirm(msg, title) {
-        return new Promise(function (resolve) {
-          dialogOverlay.classList.add('open');
-          $('dialog-content').innerHTML = title ? '<div class="modal-dialog-icon"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoyMHB4O2hlaWdodDoyMHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0zIDEyYTkgOSAwIDEgMCAxOCAwYTkgOSAwIDAgMCAtMTggMCIgLz4KICA8cGF0aCBkPSJNMTIgMTZ2LjAxIiAvPgogIDxwYXRoIGQ9Ik0xMiAxM2EyIDIgMCAwIDAgLjkxNCAtMy43ODJhMS45OCAxLjk4IDAgMCAwIC0yLjQxNCAuNDgzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:20px;height:20px;display:block" alt=""> </div><div class="modal-dialog-title">' + escapeHtml(title) + '</div><div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>' : '<div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>';
-          $('dialog-input-wrap').classList.add('hidden');
-          $('dialog-buttons').innerHTML = '<button class="btn btn-outline" id="dialog-no-btn">Cancelar</button><button class="btn btn-primary" id="dialog-yes-btn">Aceptar</button>';
-          function close(res) { dialogOverlay.classList.remove('open'); resolve(res); }
-          $('dialog-yes-btn').addEventListener('click', function () { close(true); });
-          $('dialog-no-btn').addEventListener('click', function () { close(false); });
-          function keyHandler(e) { if (e.key === 'Enter') { close(true); document.removeEventListener('keydown', keyHandler); } if (e.key === 'Escape') { close(false); document.removeEventListener('keydown', keyHandler); } }
-          document.addEventListener('keydown', keyHandler);
+
+      /* Ventana para pedir un dato: devuelve el texto escrito o null. */
+      function dialogPrompt(msg, title, defaultValue, type, opts) {
+        var o = opts || {};
+        var tone = o.tone || TONO_PROMPT;
+        var partes = descomponerMensaje(msg);
+        var etiqueta = o.etiqueta || etiquetaCampo(msg, title);
+        // Si el título dice lo mismo que la etiqueta, no se repite.
+        var mostrarTitulo = title && !mismoTexto(title, etiqueta) ? title : (o.titulo || '');
+        return _dialogAbrir({
+          tone: tone,
+          icono: o.icono || definicionTono(tone).icono,
+          titulo: mostrarTitulo,
+          mensaje: o.mensaje || '',
+          campo: true,
+          tipo: type || 'text',
+          valor: defaultValue || '',
+          etiqueta: etiqueta,
+          ayuda: o.ayuda !== undefined ? o.ayuda : partes.ayuda,
+          textoOk: textoBotonOk(tone, o.textoOk),
+          textoCancelar: textoBotonCancelar(tone, o.textoCancelar),
+          valorOk: '',
+          valorCancel: null,
         });
       }
-      function dialogPrompt(msg, title, defaultValue, type) {
-        return new Promise(function (resolve) {
-          dialogOverlay.classList.add('open');
-          $('dialog-content').innerHTML = title ? '<div class="modal-dialog-icon"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoyMHB4O2hlaWdodDoyMHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik03IDdoLTFhMiAyIDAgMCAwIC0yIDJ2OWEyIDIgMCAwIDAgMiAyaDlhMiAyIDAgMCAwIDIgLTJ2LTEiIC8+CiAgPHBhdGggZD0iTTIwLjM4NSA2LjU4NWEyLjEgMi4xIDAgMCAwIC0yLjk3IC0yLjk3bC04LjQxNSA4LjM4NXYzaDNsOC4zODUgLTguNDE1IiAvPgogIDxwYXRoIGQ9Ik0xNiA1bDMgMyIgLz4KPC9zdmc+" width="20" height="20" style="width:20px;height:20px;display:block" alt=""> </div><div class="modal-dialog-title">' + escapeHtml(title) + '</div><div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>' : '<div class="modal-dialog-msg">' + escapeHtml(msg) + '</div>';
-          $('dialog-input-wrap').classList.remove('hidden');
-          var input = $('dialog-input');
-          input.type = type || 'text';
-          input.value = defaultValue || '';
-          input.focus();
-          $('dialog-buttons').innerHTML = '<button class="btn btn-outline" id="dialog-cancel-btn">Cancelar</button><button class="btn btn-primary" id="dialog-confirm-btn">Aceptar</button>';
-          function close(val) { dialogOverlay.classList.remove('open'); resolve(val); }
-          $('dialog-confirm-btn').addEventListener('click', function () { close(input.value); });
-          $('dialog-cancel-btn').addEventListener('click', function () { close(null); });
-          function keyHandler(e) { if (e.key === 'Enter') { close(input.value); document.removeEventListener('keydown', keyHandler); } if (e.key === 'Escape') { close(null); document.removeEventListener('keydown', keyHandler); } }
-          document.addEventListener('keydown', keyHandler);
+
+      /* Pedir un texto (recuperación de contraseña).
+         - La ayuda bajo el campo es el `placeholder` si viene, y si no, lo que
+           el mensaje trae entre paréntesis ("... (mín. 6 caracteres)").
+         - Se recorta el texto: el comportamiento anterior era el mismo. */
+      function _pedirTextoDialog(titulo, mensaje, placeholder, tipo) {
+        return dialogPrompt(mensaje, titulo, '', tipo || 'text', {
+          icono: 'key',
+          tono: 'info',
+          etiqueta: titulo,
+          ayuda: placeholder || undefined,
+        }).then(function (v) {
+          return v === null || v === undefined ? null : String(v).trim();
         });
       }
 
@@ -1388,7 +1518,7 @@ import { initForos } from "./modules/foros/foro-app.js";
           }).join('');
           spinning = false;
           setTimeout(function () { progress.style.width = '0%'; }, 800);
-          mostrarToast('<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNnB4O2hlaWdodDoxNnB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTcgNHYxNmwxMyAtOGwtMTMgLTgiIC8+Cjwvc3ZnPg==" width="20" height="20" style="width:16px;height:16px;vertical-align:middle" alt=""> ' + sel.nombre + ' (' + sel.grupo + ')', 'success');
+          mostrarToast('<img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTZweDtoZWlnaHQ6MTZweDt2ZXJ0aWNhbC1hbGlnbjptaWRkbGUiICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik03IDR2MTZsMTMgLThsLTEzIC04IiAvPgo8L3N2Zz4=" width="20" height="20" style="width:16px;height:16px;vertical-align:middle" alt=""> ' + sel.nombre + ' (' + sel.grupo + ')', 'success');
         }, 2500);
       });
 
@@ -1796,7 +1926,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         grid.innerHTML = items.map(function (e) {
           var mc = matColors[e.materia] || 'blue';
           return '<div class="card">' +
-            '<div style="font-size:1.5rem;margin-bottom:.5rem;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoyNHB4O2hlaWdodDoyNHB4O2Rpc3BsYXk6YmxvY2s7bWFyZ2luOjAgYXV0bzsiICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0xMSAxMmExIDEgMCAxIDAgMiAwYTEgMSAwIDEgMCAtMiAwIiAvPgogIDxwYXRoIGQ9Ik03IDEyYTUgNSAwIDEgMCAxMCAwYTUgNSAwIDEgMCAtMTAgMCIgLz4KICA8cGF0aCBkPSJNMyAxMmE5IDkgMCAxIDAgMTggMGE5IDkgMCAxIDAgLTE4IDAiIC8+Cjwvc3ZnPg==" width="20" height="20" style="width:24px;height:24px;display:block;margin:0 auto;" alt=""> </div>' +
+            '<div style="font-size:1.5rem;margin-bottom:.5rem;"><img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MjRweDtoZWlnaHQ6MjRweDtkaXNwbGF5OmJsb2NrO21hcmdpbjowIGF1dG87IiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTEgMTJhMSAxIDAgMSAwIDIgMGExIDEgMCAxIDAgLTIgMCIgLz4KICA8cGF0aCBkPSJNNyAxMmE1IDUgMCAxIDAgMTAgMGE1IDUgMCAxIDAgLTEwIDAiIC8+CiAgPHBhdGggZD0iTTMgMTJhOSA5IDAgMSAwIDE4IDBhOSA5IDAgMSAwIC0xOCAwIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:24px;height:24px;display:block;margin:0 auto;" alt=""> </div>' +
             '<h4 style="font-size:.95rem;">' + escapeHtml(e.titulo) + '</h4>' +
             '<p style="font-size:.82rem;color:var(--gray-500);margin:.3rem 0;">' + escapeHtml(e.desc) + '</p>' +
             '<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem;">' +
@@ -2009,7 +2139,7 @@ import { initForos } from "./modules/foros/foro-app.js";
             var preg = e.preguntas ? e.preguntas.length : 0;
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--gray-50);border-radius:8px;">' +
               '<div><strong style="font-size:.9rem;">' + escapeHtml(e.titulo) + '</strong><br><span style="font-size:.78rem;color:var(--gray-500);">' + preg + ' preg · ' + e.tiempo + ' min · ' + examIntentosMax(e) + ' intentos · mínimo ' + examNotaMin(e) + '%' + (e.barajar ? ' · barajado' : '') + '</span></div>' +
-              '<button class="btn btn-sm btn-outline" data-perm="eliminar" onclick="examEliminar(' + idx + ')"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
+              '<button class="btn btn-sm btn-outline" data-perm="eliminar" onclick="examEliminar(' + idx + ')"><img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTRweDtoZWlnaHQ6MTRweDtkaXNwbGF5OmJsb2NrIiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNNCA3bDE2IDAiIC8+CiAgPHBhdGggZD0iTTEwIDExbDAgNiIgLz4KICA8cGF0aCBkPSJNMTQgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik01IDdsMSAxMmEyIDIgMCAwIDAgMiAyaDhhMiAyIDAgMCAwIDIgLTJsMSAtMTIiIC8+CiAgPHBhdGggZD0iTTkgN3YtM2ExIDEgMCAwIDEgMSAtMWg0YTEgMSAwIDAgMSAxIDF2MyIgLz4KPC9zdmc+" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
           }).join('') + '</div>';
       }
 
@@ -3333,7 +3463,7 @@ import { initForos } from "./modules/foros/foro-app.js";
               '<span style="font-size:.78rem;color:var(--gray-500);">' + escapeHtml(t.desc) + ' · ' +
               '<span class="badge badge-' + mc + '">' + t.materia + '</span> ' +
               '<span class="semestre-badge">' + t.grupo + '</span> · Límite: ' + t.fecha + '</span></div>' +
-              '<button class="btn btn-sm btn-outline tarea-del" data-perm="eliminar" data-idx="' + i + '" style="color:var(--red-ink);"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDdsMTYgMCIgLz4KICA8cGF0aCBkPSJNMTAgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik0xNCAxMWwwIDYiIC8+CiAgPHBhdGggZD0iTTUgN2wxIDEyYTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMiAtMmwxIC0xMiIgLz4KICA8cGF0aCBkPSJNOSA3di0zYTEgMSAwIDAgMSAxIC0xaDRhMSAxIDAgMCAxIDEgMXYzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
+              '<button class="btn btn-sm btn-outline tarea-del" data-perm="eliminar" data-idx="' + i + '" style="color:var(--red-ink);"><img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTRweDtoZWlnaHQ6MTRweDtkaXNwbGF5OmJsb2NrIiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNNCA3bDE2IDAiIC8+CiAgPHBhdGggZD0iTTEwIDExbDAgNiIgLz4KICA8cGF0aCBkPSJNMTQgMTFsMCA2IiAvPgogIDxwYXRoIGQ9Ik01IDdsMSAxMmEyIDIgMCAwIDAgMiAyaDhhMiAyIDAgMCAwIDIgLTJsMSAtMTIiIC8+CiAgPHBhdGggZD0iTTkgN3YtM2ExIDEgMCAwIDEgMSAtMWg0YTEgMSAwIDAgMSAxIDF2MyIgLz4KPC9zdmc+" width="20" height="20" style="width:14px;height:14px;display:block" alt=""> </button></div>';
           }).join('') + '</div>';
 
         container.querySelectorAll('.tarea-del').forEach(function (btn) {
@@ -3371,7 +3501,7 @@ import { initForos } from "./modules/foros/foro-app.js";
               return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem .75rem;background:var(--gray-50);border-radius:8px;">' +
                 '<div><strong style="font-size:.9rem;">' + escapeHtml(t.titulo) + '</strong><br>' +
                 '<span style="font-size:.78rem;color:var(--gray-500);">' + escapeHtml(t.desc) + ' · Límite: ' + t.fecha + '</span></div>' +
-                '<button class="btn btn-primary btn-sm tarea-entregar" data-idx="' + idx + '"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTQgMTd2MmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyIC0ydi0yIiAvPgogIDxwYXRoIGQ9Ik03IDlsNSAtNWw1IDUiIC8+CiAgPHBhdGggZD0iTTEyIDRsMCAxMiIgLz4KPC9zdmc+" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Entregar</button></div>';
+                '<button class="btn btn-primary btn-sm tarea-entregar" data-idx="' + idx + '"><img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTRweDtoZWlnaHQ6MTRweDt2ZXJ0aWNhbC1hbGlnbjptaWRkbGUiICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDE3djJhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMiAtMnYtMiIgLz4KICA8cGF0aCBkPSJNNyA5bDUgLTVsNSA1IiAvPgogIDxwYXRoIGQ9Ik0xMiA0bDAgMTIiIC8+Cjwvc3ZnPg==" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Entregar</button></div>';
             }).join('') + '</div>';
 
           pContainer.querySelectorAll('.tarea-entregar').forEach(function (btn) {
@@ -3401,7 +3531,7 @@ import { initForos } from "./modules/foros/foro-app.js";
               return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem .75rem;background:var(--green-light);border-radius:8px;">' +
                 '<div><strong style="font-size:.9rem;">' + escapeHtml(t.titulo) + '</strong><br>' +
                 '<span style="font-size:.78rem;color:var(--gray-500);">Entregado: ' + e.fecha + '</span></div>' +
-                '<span class="badge badge-green"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxMnB4O2hlaWdodDoxMnB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTUgMTJsNSA1bDEwIC0xMCIgLz4KPC9zdmc+" width="20" height="20" style="width:12px;height:12px;vertical-align:middle" alt=""> Entregado</span></div>';
+                '<span class="badge badge-green"><img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTJweDtoZWlnaHQ6MTJweDt2ZXJ0aWNhbC1hbGlnbjptaWRkbGUiICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik01IDEybDUgNWwxMCAtMTAiIC8+Cjwvc3ZnPg==" width="20" height="20" style="width:12px;height:12px;vertical-align:middle" alt=""> Entregado</span></div>';
             }).join('') + '</div>';
         }
       }
@@ -4090,7 +4220,7 @@ import { initForos } from "./modules/foros/foro-app.js";
             else { display = escapeHtml(contenido).replace(/\n/g, '<br>'); }
             html += '<td class="' + cssClass + '" data-idx="' + idx + '" data-dia="' + dia + '">' + display + '</td>';
           });
-          html += '<td style="padding:0;width:30px;"><button class="btn btn-sm horario-del" data-perm="eliminar" data-idx="' + idx + '" style="background:var(--red);color:#fff;padding:.15rem .35rem;font-size:.65rem;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxMnB4O2hlaWdodDoxMnB4O2Rpc3BsYXk6YmxvY2siICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0zIDEyYTkgOSAwIDEgMCAxOCAwYTkgOSAwIDEgMCAtMTggMCIgLz4KICA8cGF0aCBkPSJNMTAgMTBsNCA0bTAgLTRsLTQgNCIgLz4KPC9zdmc+" width="20" height="20" style="width:12px;height:12px;display:block" alt=""> </button></td>';
+          html += '<td style="padding:0;width:30px;"><button class="btn btn-sm horario-del" data-perm="eliminar" data-idx="' + idx + '" style="background:var(--red);color:#fff;padding:.15rem .35rem;font-size:.65rem;"><img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTJweDtoZWlnaHQ6MTJweDtkaXNwbGF5OmJsb2NrIiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMyAxMmE5IDkgMCAxIDAgMTggMGE5IDkgMCAxIDAgLTE4IDAiIC8+CiAgPHBhdGggZD0iTTEwIDEwbDQgNG0wIC00bC00IDQiIC8+Cjwvc3ZnPg==" width="20" height="20" style="width:12px;height:12px;display:block" alt=""> </button></td>';
           html += '</tr>';
         });
         html += '</tbody></table>';
@@ -4158,7 +4288,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         $('he-miercoles').value = row['Miércoles'] || '';
         $('he-jueves').value = row.Jueves || '';
         $('he-viernes').value = row.Viernes || '';
-        $('horario-edit-title').innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTcgN2gtMWEyIDIgMCAwIDAgLTIgMnY5YTIgMiAwIDAgMCAyIDJoOWEyIDIgMCAwIDAgMiAtMnYtMSIgLz4KICA8cGF0aCBkPSJNMjAuMzg1IDYuNTg1YTIuMSAyLjEgMCAwIDAgLTIuOTcgLTIuOTdsLTguNDE1IDguMzg1djNoM2w4LjM4NSAtOC40MTUiIC8+CiAgPHBhdGggZD0iTTE2IDVsMyAzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Editar celda: ' + dia;
+        $('horario-edit-title').innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTRweDtoZWlnaHQ6MTRweDt2ZXJ0aWNhbC1hbGlnbjptaWRkbGUiICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik03IDdoLTFhMiAyIDAgMCAwIC0yIDJ2OWEyIDIgMCAwIDAgMiAyaDlhMiAyIDAgMCAwIDIgLTJ2LTEiIC8+CiAgPHBhdGggZD0iTTIwLjM4NSA2LjU4NWEyLjEgMi4xIDAgMCAwIC0yLjk3IC0yLjk3bC04LjQxNSA4LjM4NXYzaDNsOC4zODUgLTguNDE1IiAvPgogIDxwYXRoIGQ9Ik0xNiA1bDMgMyIgLz4KPC9zdmc+" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Editar celda: ' + dia;
         $('horario-edit-panel').classList.remove('hidden');
         $('he-guardar').dataset.action = 'edit';
       }
@@ -4213,7 +4343,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         $('he-miercoles').value = '';
         $('he-jueves').value = '';
         $('he-viernes').value = '';
-        $('horario-edit-title').innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHN0eWxlPSJ3aWR0aDoxNHB4O2hlaWdodDoxNHB4O3ZlcnRpY2FsLWFsaWduOm1pZGRsZSIgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTcgN2gtMWEyIDIgMCAwIDAgLTIgMnY5YTIgMiAwIDAgMCAyIDJoOWEyIDIgMCAwIDAgMiAtMnYtMSIgLz4KICA8cGF0aCBkPSJNMjAuMzg1IDYuNTg1YTIuMSAyLjEgMCAwIDAgLTIuOTcgLTIuOTdsLTguNDE1IDguMzg1djNoM2w4LjM4NSAtOC40MTUiIC8+CiAgPHBhdGggZD0iTTE2IDVsMyAzIiAvPgo8L3N2Zz4=" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Nueva fila horaria';
+        $('horario-edit-title').innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyBzdHlsZT0id2lkdGg6MTRweDtoZWlnaHQ6MTRweDt2ZXJ0aWNhbC1hbGlnbjptaWRkbGUiICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik03IDdoLTFhMiAyIDAgMCAwIC0yIDJ2OWEyIDIgMCAwIDAgMiAyaDlhMiAyIDAgMCAwIDIgLTJ2LTEiIC8+CiAgPHBhdGggZD0iTTIwLjM4NSA2LjU4NWEyLjEgMi4xIDAgMCAwIC0yLjk3IC0yLjk3bC04LjQxNSA4LjM4NXYzaDNsOC4zODUgLTguNDE1IiAvPgogIDxwYXRoIGQ9Ik0xNiA1bDMgMyIgLz4KPC9zdmc+" width="20" height="20" style="width:14px;height:14px;vertical-align:middle" alt=""> Nueva fila horaria';
         $('horario-edit-panel').classList.remove('hidden');
       });
       renderHorario();
@@ -4574,12 +4704,16 @@ import { initForos } from "./modules/foros/foro-app.js";
         var el = $('prot-lista');
         if (!el) return;
         // Aviso permanente: ahora los reportes SÍ llegan a una persona.
-        if (!el.querySelector('.protegido-warning')) {
+        // OJO: el aviso es HERMANO de la lista (se inserta en el padre), así
+        // que hay que buscarlo en el padre: si se busca dentro de `el` nunca
+        // se encuentra y se inserta uno nuevo en cada render.
+        var contenedor = el.parentNode;
+        if (contenedor && !contenedor.querySelector('.protegido-warning')) {
           var warning = document.createElement('div');
           warning.className = 'protegido-warning';
           warning.style.cssText = 'margin-bottom:1rem;padding:.75rem;background:var(--red-50);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:.875rem;';
           warning.innerHTML = '<strong>⚠️ Importante:</strong> Los reportes se envían al servidor del colegio y el personal docente los ve y los atiende. Si no tenés conexión, el reporte queda guardado en este dispositivo y se envía solo al volver la red. En una emergencia, llama al 911.';
-          el.parentNode.insertBefore(warning, el);
+          contenedor.insertBefore(warning, el);
         }
         var items = fusionarProtegido(protegidoItems, protegidoRemotos);
         if (!items.length) {
