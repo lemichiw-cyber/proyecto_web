@@ -33,7 +33,7 @@ export const FEATURES = {
   MENSAJES: false,          // app-mensajes
   GRUPALES: false,          // app-grupales
   PROTEGIDO: true,          // app-protegido (reportes de incidentes: backend /api/protegido)
-  AULAS: false,             // app-aulas + aula_inscripciones, aula_tareas, aula_entregas, aula_calificaciones, aula_asistencia
+  AULAS: true,              // app-aulas + aula_inscripciones, aula_tareas, aula_entregas, aula_calificaciones, aula_asistencia (backend /api/aulas)
   ROLES_DOCENTE: false,     // app-auth (panel admin), app-asistencias (requieren backend)
   ASISTENCIA_DOCENTE: false, // app-asistencias
   MATRICULA: false,         // app-matricula (inscripciones, estudiantes_db)

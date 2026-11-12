@@ -396,3 +396,52 @@ export function apiResolverIncidente(id: string): Promise<{ ok: boolean; inciden
   return _apiJson("POST", "/api/protegido/incidentes/" + encodeURIComponent(id) + "/resolver");
 }
 
+/* ===================================================================
+   Aulas Virtuales — espacios de clase compartidos entre personas.
+   Las seis colecciones viajan en una sola respuesta ("estado") para
+   no castigar la red con seis pedidos por cada sincronización.
+   =================================================================== */
+
+export type ColeccionAulas =
+  | "aulas"
+  | "inscripciones"
+  | "tareas"
+  | "entregas"
+  | "calificaciones"
+  | "asistencia";
+
+export interface EstadoAulas {
+  ok: boolean;
+  aulas: any[];
+  inscripciones: any[];
+  tareas: any[];
+  entregas: any[];
+  calificaciones: any[];
+  asistencia: any[];
+}
+
+export function apiAulasEstado(): Promise<EstadoAulas> {
+  return _apiJson<EstadoAulas>("GET", "/api/aulas/estado");
+}
+
+/** Cuentas con rango estudiante (sólo el personal que gestiona aulas). */
+export function apiAulasEstudiantes(): Promise<{
+  ok: boolean;
+  count: number;
+  estudiantes: { id: string; email: string; nombre: string }[];
+}> {
+  return _apiJson("GET", "/api/aulas/estudiantes");
+}
+
+/** Guarda (crea o actualiza) un elemento. El id lo genera el cliente. */
+export function apiAulasGuardar(
+  coleccion: ColeccionAulas,
+  item: Record<string, unknown>,
+): Promise<{ ok: boolean; id: string; item?: any }> {
+  return _apiJson("POST", "/api/aulas/" + encodeURIComponent(coleccion), item);
+}
+
+export function apiAulasBorrar(coleccion: ColeccionAulas, id: string): Promise<{ ok: boolean }> {
+  return _apiJson("DELETE", "/api/aulas/" + encodeURIComponent(coleccion) + "/" + encodeURIComponent(id));
+}
+

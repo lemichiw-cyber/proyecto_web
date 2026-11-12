@@ -12,5 +12,7 @@ oauth.json
 *.json.key
 sessions.json
 accounts.json
+aulas.json
+protegido_incidentes.json
 audit.log
 *.log
