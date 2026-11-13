@@ -235,6 +235,24 @@
       --bg: #eaf7ff; --bg-card: rgba(255,255,255,.74); --bg-sidebar: rgba(255,255,255,.85); --bg-header: rgba(255,255,255,.62);
       --text: #0c3c53; --text-secondary: var(--gray-500);
       --border: #cfe9f8; --border-light: #e2f4fe;
+
+      /* --- Cristal líquido ---------------------------------------------
+         Receta compartida por TODAS las cards y ventanas emergentes:
+           --glass-tint  → tinte translúcido con degradado diagonal
+           --glass-spec  → realce especular (la luz, arriba-izquierda)
+           --glass-chroma→ dispersión cromática (abajo-derecha)
+           --glass-rim   → borde de luz (inset) + halo azul
+           --glass-blur  → refracción: desenfoque + saturación del fondo
+         ---------------------------------------------------------------- */
+      --glass-tint: linear-gradient(135deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.48) 38%, rgba(172,228,255,.46) 74%, rgba(255,255,255,.64) 100%);
+      --glass-modal: linear-gradient(135deg, rgba(255,255,255,.985) 0%, rgba(243,252,255,.94) 48%, rgba(214,243,255,.92) 100%);
+      --glass-spec: radial-gradient(115% 85% at 4% -14%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.34) 32%, rgba(255,255,255,0) 60%);
+      --glass-chroma: radial-gradient(105% 75% at 104% 108%, rgba(255,150,225,.20) 0%, rgba(110,215,255,.26) 26%, rgba(255,255,255,0) 56%);
+      --glass-blur: blur(16px) saturate(175%) brightness(1.06);
+      --glass-blur-modal: blur(22px) saturate(180%) brightness(1.04);
+      --glass-rim: inset 0 1px 0 rgba(255,255,255,.95), inset 1px 0 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(112,190,232,.42), inset 0 0 0 1px rgba(255,255,255,.24);
+      --glass-shadow: 0 14px 34px rgba(8,90,140,.16), 0 3px 8px rgba(8,90,140,.08);
+      --glass-shadow-hover: 0 20px 46px rgba(8,90,140,.24), 0 5px 12px rgba(8,90,140,.10);
     }
     [data-theme="dreamcore"] {
       --primary: #5e56a0; --primary-dark: #564d9f; --primary-light: #ece9fd;
@@ -536,6 +554,9 @@
     .badge-pink { background: var(--pink-light); color: var(--pink-ink); }
 
     .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow-sm); position: relative; }
+    /* Variante atenuada (sin estilo en línea: así el tema puede darle el
+       cristal líquido overriding la superficie como a cualquier otra card). */
+    .card-muted { background: var(--gray-50); border-color: var(--gray-200); }
     .card::after { content:''; position:absolute; left:10%; right:10%; top:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent); opacity:.7; }
     .card h3 { font-size: .95rem; margin-bottom: .85rem; display: flex; align-items: center; gap: .5rem; }
 
@@ -776,23 +797,134 @@
       border-bottom: 1px solid rgba(255,255,255,.9);
     }
     [data-theme="frutiger"] .sidebar { border-right: 1px solid rgba(255,255,255,.9); box-shadow: 6px 0 30px rgba(10,90,130,.12); }
-    [data-theme="frutiger"] .card,
-    [data-theme="frutiger"] .stat-card,
-    [data-theme="frutiger"] .vol-pop {
-      background: linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.66) 100%);
-      border: 1px solid rgba(255,255,255,.95);
-      backdrop-filter: blur(14px) saturate(150%);
-      -webkit-backdrop-filter: blur(14px) saturate(150%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 8px 24px rgba(12,100,150,.14);
+    /* ===================================================================
+       FRUTIGER AERO · CRISTAL LÍQUIDO
+       Todas las cards y TODAS las ventanas emergentes (modales, popups,
+       avisos y velos) pasan a ser vidrio: translúcidas, con el fondo
+       refractado, luz especular, borde cromático y sombras suaves.
+
+       La receta vive en variables (--glass-*) para poder ajustarla desde
+       un solo lugar y reutilizarla en cualquier superficie.
+       =================================================================== */
+
+    /* --- Superficies: cards, paneles y fichas --- */
+    [data-theme="frutiger"] :is(.card, .stat-card, .app-card, .fr-panel, .fr-post, .theme-card) {
+      position: relative;
+      background-color: rgba(255,255,255,.48);
+      background-image: var(--glass-spec), var(--glass-chroma), var(--glass-tint);
+      background-size: 150% 130%, 130% 130%, cover;
+      background-position: 0% 0%, 100% 100%, 0 0;
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-color: rgba(255,255,255,.58);
+      box-shadow: var(--glass-rim), var(--glass-shadow);
+      transition: background-position .6s cubic-bezier(.3,.7,.3,1), box-shadow .25s ease, border-color .25s ease, transform .25s ease;
     }
-    /* Los modales se componen sobre el overlay negro (.5): el gradiente debe ser
-       más opaco o --text-secondary cae por debajo de 4.5 (WCAG AA). */
+    /* Al pasar el mouse la luz se desliza: el cristal se mueve */
+    [data-theme="frutiger"] :is(.card, .stat-card, .app-card, .fr-panel, .fr-post, .theme-card):hover {
+      background-position: 28% 0%, 72% 100%, 0 0;
+      border-color: rgba(255,255,255,.88);
+      box-shadow: var(--glass-rim), var(--glass-shadow-hover);
+    }
+    /* La ficha de tema activa se sigue viendo como "seleccionada" */
+    [data-theme="frutiger"] .theme-card {
+      border-color: rgba(255,255,255,.45);
+    }
+    [data-theme="frutiger"] .theme-card.active {
+      border-color: var(--primary);
+      background-image: var(--glass-spec), var(--glass-chroma), linear-gradient(135deg, rgba(255,255,255,.55), rgba(223,244,255,.78));
+      box-shadow: var(--glass-rim), 0 10px 26px rgba(6,90,140,.22);
+    }
+
+    /* --- Ventanas emergentes: modales, popups y avisos ---
+       Los modales se componen sobre el overlay: el tinte va más opaco que
+       en las cards o --text-secondary cae por debajo de 4.5 (WCAG AA). */
     [data-theme="frutiger"] .modal {
-      background: linear-gradient(180deg, rgba(255,255,255,.97) 0%, rgba(255,255,255,.90) 100%);
-      border: 1px solid rgba(255,255,255,.95);
-      backdrop-filter: blur(14px) saturate(150%);
-      -webkit-backdrop-filter: blur(14px) saturate(150%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 8px 24px rgba(12,100,150,.14);
+      position: relative;
+      z-index: 1;
+      background-color: rgba(255,255,255,.72);
+      background-image: var(--glass-spec), var(--glass-chroma), var(--glass-modal);
+      background-size: 130% 120%, 120% 120%, cover;
+      border: 1px solid rgba(255,255,255,.88);
+      backdrop-filter: var(--glass-blur-modal);
+      -webkit-backdrop-filter: var(--glass-blur-modal);
+      box-shadow: var(--glass-rim), 0 26px 64px rgba(6,70,110,.30), 0 8px 20px rgba(6,70,110,.14);
+    }
+    [data-theme="frutiger"] .vol-pop {
+      background-color: rgba(255,255,255,.52);
+      background-image: var(--glass-spec), var(--glass-chroma), var(--glass-tint);
+      background-size: 150% 130%, 130% 130%, cover;
+      border: 1px solid rgba(255,255,255,.72);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      box-shadow: var(--glass-rim), var(--glass-shadow);
+    }
+    [data-theme="frutiger"] .toast {
+      background-color: rgba(8,70,110,.70);
+      background-image: var(--glass-spec), var(--glass-chroma), linear-gradient(135deg, rgba(255,255,255,.24), rgba(255,255,255,.06));
+      border: 1px solid rgba(255,255,255,.42);
+      backdrop-filter: blur(16px) saturate(170%);
+      -webkit-backdrop-filter: blur(16px) saturate(170%);
+      box-shadow: var(--glass-rim), 0 16px 38px rgba(6,60,100,.30);
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(4,40,66,.55);
+    }
+    [data-theme="frutiger"] .toast-success { background-color: rgba(4,120,87,.78); }
+    [data-theme="frutiger"] .toast-error { background-color: rgba(185,28,28,.78); }
+
+    /* --- Velos: el fondo se difumina con tono acuático --- */
+    [data-theme="frutiger"] .modal-overlay {
+      background: radial-gradient(120% 95% at 50% -10%, rgba(10,90,140,.28) 0%, rgba(4,40,66,.52) 68%);
+      backdrop-filter: blur(10px) saturate(135%);
+      -webkit-backdrop-filter: blur(10px) saturate(135%);
+    }
+    /* Luz que se desliza detrás del cristal (queda debajo del contenido) */
+    [data-theme="frutiger"] .modal-overlay::after {
+      content: '';
+      position: absolute;
+      inset: -30%;
+      pointer-events: none;
+      background: linear-gradient(112deg, transparent 38%, rgba(255,255,255,.30) 50%, transparent 62%);
+      background-size: 200% 100%;
+      animation: frutigerGlassSheen 11s ease-in-out infinite;
+    }
+    @keyframes frutigerGlassSheen {
+      0%, 100% { transform: translateX(-18%); opacity: .45; }
+      50% { transform: translateX(18%); opacity: .9; }
+    }
+    [data-theme="frutiger"] .sidebar-overlay {
+      background: radial-gradient(120% 95% at 20% 0%, rgba(10,90,140,.24) 0%, rgba(4,40,66,.48) 70%);
+    }
+
+    /* --- Sakura Player (app embebida): mismo lenguaje de cristal --- */
+    [data-theme="frutiger"] :is(.sp-dialog, .sp-panel, .sp-card) {
+      background-color: var(--player-bg-card);
+      background-image: var(--glass-spec), var(--glass-chroma), linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.02));
+      background-size: 150% 130%, 130% 130%, cover;
+      backdrop-filter: blur(14px) saturate(165%);
+      -webkit-backdrop-filter: blur(14px) saturate(165%);
+      border-color: var(--player-border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18), var(--player-shadow);
+    }
+    [data-theme="frutiger"] .sp-dialog-overlay {
+      background: radial-gradient(120% 95% at 50% 0%, rgba(10,40,70,.45) 0%, rgba(2,10,24,.62) 70%);
+      backdrop-filter: blur(10px) saturate(135%);
+      -webkit-backdrop-filter: blur(10px) saturate(135%);
+    }
+
+    /* --- Rendimiento: gama baja (menos blur, mismo cristal) --- */
+    @media (max-width: 768px) {
+      [data-theme="frutiger"] :is(.card, .stat-card, .app-card, .fr-panel, .fr-post, .theme-card, .modal, .vol-pop, .toast) {
+        backdrop-filter: blur(5px) saturate(140%);
+        -webkit-backdrop-filter: blur(5px) saturate(140%);
+      }
+    }
+    /* Sin soporte de backdrop-filter el cristal se vuelve más opaco */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      [data-theme="frutiger"] :is(.card, .stat-card, .app-card, .fr-panel, .fr-post, .theme-card) {
+        background-color: rgba(255,255,255,.92);
+      }
+      [data-theme="frutiger"] .modal { background-color: rgba(255,255,255,.97); }
     }
     [data-theme="frutiger"] .btn-primary {
       background: linear-gradient(180deg,#37738d 0%, #0873a6 55%, #0972a7 100%);
