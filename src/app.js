@@ -78,7 +78,7 @@ import { initForos } from "./modules/foros/foro-app.js";
       var usuarioActual = savedSession;
       var miGrupoId = null;
       apiMiGrupo().then(function (r) { if (r && r.grupo) miGrupoId = r.grupo.id; });
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','respaldos','auth'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','ide','sakura-player','configuracion','respaldos','auth'];
       var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','ide','auth'];
       function $(id) { return document.getElementById(id); }
 
