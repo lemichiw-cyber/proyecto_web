@@ -3607,9 +3607,9 @@ import { initForos } from "./modules/foros/foro-app.js";
       }
 
       function tareaInit() {
+        renderGrupoCheckboxes('#tarea-grupos');
         $('btn-tarea-crear').addEventListener('click', function () {
           if (!exigirPermiso('crear')) return;
-          renderGrupoCheckboxes('#tarea-grupos');
           var titulo = $('tarea-titulo').value.trim();
           var desc = $('tarea-desc').value.trim();
           var materia = $('tarea-materia').value;
@@ -3628,6 +3628,33 @@ import { initForos } from "./modules/foros/foro-app.js";
             estado: 'pendiente',
             prioridad: 'media',
             recordatorio: false,
+            grupo: grupo_ids.join(','),
+            grupo_ids: grupo_ids
+          });
+          // Agregar referencia al archivo multimedia si existe
+          if (archivo) {
+            var reader = new FileReader();
+            reader.onload = function () {
+              ev.archivo = {
+                nombre: archivo.name,
+                tipo: archivo.type,
+                contenido: reader.result // base64 string
+              };
+              tareas.push(ev);
+              tareaRenderCreadas();
+              apiGuardarTarea(ev);
+              $('tarea-titulo').value = ''; $('tarea-desc').value = $('tarea-archivo').value = '';
+              mostrarToast('Tarea creada con archivo: ' + titulo, 'success');
+            };
+            reader.readAsDataURL(archivo);
+          } else {
+            tareas.push(ev);
+            tareaRenderCreadas();
+            apiGuardarTarea(ev);
+            $('tarea-titulo').value = ''; $('tarea-desc').value = '';
+            mostrarToast('Tarea creada: ' + titulo, 'success');
+          }
+        });
             grupo: grupo_ids.join(','),
             grupo_ids: grupo_ids
           });
