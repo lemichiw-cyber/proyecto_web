@@ -134,7 +134,8 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (isNaN(d.getTime())) return '';
         var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
         return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-      }
+    }
+    window.fechaCorta = fechaCorta;
 
       /* Aplica los datos de la cuenta activa a window.usuarioActual */
       function actualizarUsuarioDesdeCuenta() {
