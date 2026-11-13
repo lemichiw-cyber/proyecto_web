@@ -127,6 +127,15 @@ import { initForos } from "./modules/foros/foro-app.js";
         return Promise.resolve(cuentasBackend);
       }
 
+      /* Formatea una fecha ISO a dd/mm hh:mm */
+      function fechaCorta(iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+
       /* Aplica los datos de la cuenta activa a window.usuarioActual */
       function actualizarUsuarioDesdeCuenta() {
         if (!window.usuarioActual) return;
