@@ -1328,6 +1328,42 @@ body:not([data-perm~="participar"]) [data-perm~="participar"] {
 .text-82-muted { font-size:.82rem; color:var(--gray-500) }
 .text-78 { font-size:.78rem }
 .w-0 { width:0% } .w-auto { width:auto } .w-80px { width:80px }
+
+/* ===== Formulario de exámenes: secciones numeradas ===== */
+.exam-sec { margin-top:1.15rem }
+.exam-sec:first-child { margin-top:.25rem }
+.exam-sec-title { font-size:.72rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-secondary); margin:0 0 .45rem }
+.exam-grid { display:grid; gap:.75rem }
+.exam-grid-datos { grid-template-columns:2fr 1.4fr .6fr }
+.exam-grid-reglas { grid-template-columns:1fr 1fr 1.2fr; align-items:end }
+.exam-grid-ia { grid-template-columns:1fr 110px auto; align-items:end }
+/* Checkbox alineado naturalmente con los inputs que llevan label arriba */
+.chk { display:inline-flex; align-items:center; gap:.45rem; font-weight:400; font-size:.85rem; cursor:pointer; margin:0 }
+.chk input[type="checkbox"] { width:1rem; height:1rem; cursor:pointer }
+.chk--tall { padding-bottom:.65rem; align-self:end }
+/* Caja de acomodaciones (grid 2×2) */
+.exam-acom-box { background:var(--gray-50); border:1px solid var(--border); border-radius:10px; padding:.8rem .9rem .55rem }
+.exam-acom-grid { display:grid; grid-template-columns:1fr 1fr; gap:.3rem .9rem }
+/* Grupos destino */
+.exam-grupos-wrap { background:var(--gray-50); border:1px solid var(--border); border-radius:10px; padding:.8rem .9rem }
+.exam-caption { display:block; font-size:.78rem; font-weight:600; color:var(--text-secondary); margin-bottom:.5rem }
+.exam-grupos-lista { display:flex; flex-wrap:wrap; gap:.45rem; font-size:.8rem }
+/* Caja IA */
+.exam-ia-box { background:var(--gray-50); border:1px solid var(--border); border-radius:10px; padding:.9rem 1rem 1rem }
+.exam-fuente-flex { display:flex; gap:.5rem; align-items:stretch }
+.exam-fuente-flex textarea { flex:1; min-width:0 }
+.exam-pdf-btn { flex:0 0 auto; max-width:170px; font-size:.8rem }
+.exam-cant input { width:100% }
+.exam-ia-msg { display:block; margin-top:.6rem; font-size:.82rem }
+/* Enlaces/botón IA alineados a la base */
+#btn-exam-ia { white-space:nowrap }
+@media (max-width:640px) {
+  .exam-grid-datos, .exam-grid-reglas, .exam-grid-ia { grid-template-columns:1fr }
+  .exam-grid-datos .form-group:last-child, .exam-cant { max-width:180px }
+  .exam-acom-grid { grid-template-columns:1fr }
+  .exam-fuente-flex { flex-direction:column }
+  .exam-pdf-btn { max-width:none }
+}
 .field-pill { padding:.55rem; border:1px solid var(--gray-300); border-radius:10px; font:inherit; font-size:.85rem; flex:1; min-width:140px }
 .grid-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem }
 .row-gap { display:flex; gap:.5rem; flex-wrap:wrap }

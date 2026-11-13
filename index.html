@@ -2524,45 +2524,61 @@ unicode: "ea98"
   <path d="M16 5l3 3" />
 </svg>
  Crear nuevo examen</h3>
-            <div class="form-row">
-              <div class="form-group"><label>Título del examen <strong>*</strong></label><input type="text" id="exam-titulo" placeholder="Ej: Examen de Cálculo Diferencial"></div>
-              <div class="form-group"><label>Materia <strong>*</strong></label><select id="exam-materia" style="width:100%;padding:.55rem;border:1.5px solid var(--gray-300);border-radius:8px;font:inherit;">
-                <option value="">Seleccioná una materia</option>
-                <option value="emprendedurismo">Emprendedurismo</option>
-                <option value="matematica">Matemática</option>
-                <option value="metodos de investigacion">Métodos de Investigación</option>
-                <option value="software">Software</option>
-                <option value="ciencias">Ciencias</option>
-                <option value="ingles">Inglés</option>
-                <option value="ingles tecnico">Inglés Técnico</option>
-              </select></div>
-              <div class="form-group" style="max-width:160px;"><label>Tiempo (minutos) <strong>*</strong></label><input type="number" id="exam-tiempo" min="1" max="180" value="60"></div>
+<div class="exam-sec">
+              <p class="exam-sec-title">1 &middot; Datos del examen</p>
+              <div class="exam-grid exam-grid-datos">
+                <div class="form-group"><label>Título del examen <strong>*</strong></label><input type="text" id="exam-titulo" placeholder="Ej: Examen de Cálculo Diferencial"></div>
+                <div class="form-group"><label>Materia <strong>*</strong></label><select id="exam-materia" class="field-select">
+                  <option value="">Seleccioná una materia</option>
+                  <option value="emprendedurismo">Emprendedurismo</option>
+                  <option value="matematica">Matemática</option>
+                  <option value="metodos de investigacion">Métodos de Investigación</option>
+                  <option value="software">Software</option>
+                  <option value="ciencias">Ciencias</option>
+                  <option value="ingles">Inglés</option>
+                  <option value="ingles tecnico">Inglés Técnico</option>
+                </select></div>
+                <div class="form-group"><label>Tiempo (min) <strong>*</strong></label><input type="number" id="exam-tiempo" min="1" max="180" value="60"></div>
+              </div>
             </div>
-            <div class="form-row" style="margin-top:.25rem;">
-              <div class="form-group maxw-150" ><label>Nota m&iacute;nima (%)</label><input type="number" id="exam-notamin" min="1" max="100" value="60"></div>
-              <div class="form-group maxw-150" ><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
-              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-barajar"> Barajar preguntas</label></div>
-              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-tiempo"> Tiempo extra (+50%)</label></div>
-              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-reducir"> Reducir opciones (3 en vez de 4)</label></div>
-              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-dislexia"> Fuente dislexia</label></div>
-              <div class="form-group" style="flex:0 0 auto;"><label style="font-weight:400;display:flex;gap:.45rem;align-items:center;cursor:pointer;padding-top:1.6rem;"><input type="checkbox" id="exam-acom-voz"> Leer en voz alta</label></div>
+            <div class="exam-sec">
+              <p class="exam-sec-title">2 &middot; Reglas</p>
+              <div class="exam-grid exam-grid-reglas">
+                <div class="form-group"><label>Nota mínima (%)</label><input type="number" id="exam-notamin" min="1" max="100" value="60"></div>
+                <div class="form-group"><label>Intentos permitidos</label><input type="number" id="exam-intentos" min="1" max="10" value="3"></div>
+                <label class="chk chk--tall"><input type="checkbox" id="exam-barajar"> Barajar preguntas</label>
+              </div>
             </div>
-            <div id="exam-grupos-wrap" style="margin-top:.6rem;"><label style="font-weight:600;display:block;font-size:.85rem;margin-bottom:.3rem;">Grupo(s) destino</label><div id="exam-grupos" style="display:flex;flex-wrap:wrap;gap:.4rem;font-size:.78rem;"></div></div>
-            <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
-            <div class="form-row" id="exam-ia-wrap" style="background:var(--gray-50);border:1px solid var(--border);border-radius:8px;padding:.85rem;margin-top:1rem;">
-              <h3 style="font-size:.9rem;margin:0 0 .75rem 0;"><span style="margin-right:.4rem;">🤖</span>Asistente IA (Vercel/NVIDIA)</h3>
-              <div class="form-group"><label>Fuente para la IA (PDF, texto o URL)</label>
-                <div style="display:flex;gap:.5rem;align-items:flex-start;">
-                  <textarea id="exam-ia-fuente" rows="2" placeholder="Ej: Ecuaciones de segundo grado, funciones lineales..." style="flex:1;min-width:0;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></textarea>
-                  <input type="file" id="exam-ia-pdf" accept="application/pdf" style="min-width:120px;padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;">
+            <div class="exam-sec">
+              <p class="exam-sec-title">3 &middot; Acomodaciones (accesibilidad)</p>
+              <div class="exam-acom-box">
+                <div class="exam-acom-grid">
+                  <label class="chk"><input type="checkbox" id="exam-acom-tiempo"> Tiempo extra (+50%)</label>
+                  <label class="chk"><input type="checkbox" id="exam-acom-reducir"> Reducir opciones (3 en vez de 4)</label>
+                  <label class="chk"><input type="checkbox" id="exam-acom-dislexia"> Fuente dislexia</label>
+                  <label class="chk"><input type="checkbox" id="exam-acom-voz"> Leer en voz alta</label>
                 </div>
               </div>
-              <div class="form-group" style="display:flex;gap:.5rem;align-items:flex-end;">
-                <label style="margin:0;font-weight:600;">Cantidad de preguntas:</label>
-                <input type="number" id="exam-ia-cantidad" min="3" max="30" value="8" style="width:90px;padding:.45rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
+            </div>
+            <div class="exam-sec">
+              <p class="exam-sec-title">4 &middot; Destino</p>
+              <div id="exam-grupos-wrap" class="exam-grupos-wrap"><span class="exam-caption">Grupo(s) que recibirán el examen</span><div id="exam-grupos" class="exam-grupos-lista"></div></div>
+            </div>
+            <div class="exam-sec">
+              <p class="exam-sec-title">5 &middot; Asistente IA (Vercel/NVIDIA)</p>
+              <div class="exam-ia-box" id="exam-ia-wrap">
+                <div class="exam-grid exam-grid-ia">
+                  <div class="form-group"><label>Fuente para la IA (PDF, texto o URL)</label>
+                    <div class="exam-fuente-flex">
+                      <textarea id="exam-ia-fuente" rows="2" placeholder="Ej: Ecuaciones de segundo grado, funciones lineales..."></textarea>
+                      <input type="file" id="exam-ia-pdf" accept="application/pdf" class="exam-pdf-btn">
+                    </div>
+                  </div>
+                  <div class="form-group exam-cant"><label>Cant. preguntas</label><input type="number" id="exam-ia-cantidad" min="3" max="30" value="8"></div>
+                  <button class="btn btn-primary" id="btn-exam-ia">✨ Generar examen con IA</button>
+                </div>
+                <span id="exam-ia-msg" class="exam-ia-msg"></span>
               </div>
-              <button class="btn btn-primary" id="btn-exam-ia">✨ Generar examen con IA</button>
-              <span id="exam-ia-msg" style="margin-left:.75rem;font-size:.82rem;"></span>
             </div>
             <div class="flex-between mb-3" >
               <h3 style="font-size:.9rem;margin:0;"><!--
