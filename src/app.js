@@ -3604,6 +3604,7 @@ import { initForos } from "./modules/foros/foro-app.js";
           var desc = $('tarea-desc').value.trim();
           var materia = $('tarea-materia').value;
           var fecha = $('tarea-fecha').value;
+          var archivo = $('tarea-archivo') ? $('tarea-archivo').files[0] : null;
           var grupo_ids = gruposSeleccionados();
           if (!titulo) { mostrarToast('El título es obligatorio.', 'error'); return; }
           if (!fecha) { mostrarToast('Selecciona una fecha límite.', 'error'); return; }
@@ -3620,11 +3621,29 @@ import { initForos } from "./modules/foros/foro-app.js";
             grupo: grupo_ids.join(','),
             grupo_ids: grupo_ids
           });
-          tareas.push(ev);
-          tareaRenderCreadas();
-          apiGuardarTarea(ev);
-          $('tarea-titulo').value = ''; $('tarea-desc').value = '';
-          mostrarToast('Tarea creada: ' + titulo, 'success');
+          // Agregar referencia al archivo multimedia si existe
+          if (archivo) {
+            var reader = new FileReader();
+            reader.onload = function () {
+              ev.archivo = {
+                nombre: archivo.name,
+                tipo: archivo.type,
+                contenido: reader.result // base64 string
+              };
+              tareas.push(ev);
+              tareaRenderCreadas();
+              apiGuardarTarea(ev);
+              $('tarea-titulo').value = ''; $('tarea-desc').value = $('tarea-archivo').value = '';
+              mostrarToast('Tarea creada con archivo: ' + titulo, 'success');
+            };
+            reader.readAsDataURL(archivo);
+          } else {
+            tareas.push(ev);
+            tareaRenderCreadas();
+            apiGuardarTarea(ev);
+            $('tarea-titulo').value = ''; $('tarea-desc').value = '';
+            mostrarToast('Tarea creada: ' + titulo, 'success');
+          }
         });
 
         // Tab switching
