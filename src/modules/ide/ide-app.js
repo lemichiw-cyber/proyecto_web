@@ -52,24 +52,37 @@ async function depurarRemoto(codigo, lenguajeId, breakpoints, maxPasos = 500) {
 
 /** Carga catálogo de lenguajes y rellena <select>. */
 async function cargarLenguajes() {
-  const r = await fetch(apiUrl('/api/ide/lenguajes'), { credentials: 'include' });
-  if (!r.ok) throw new Error('No se pudo cargar lenguajes');
-  const data = await r.json();
   const sel = document.getElementById('ide-lenguaje');
-  sel.innerHTML = '';
-  data.lenguajes.forEach(l => {
-    const opt = document.createElement('option');
-    opt.value = l.id;
-    opt.textContent = l.nombre + (l.disponible ? '' : ' (no disp.)');
-    opt.disabled = !l.disponible;
-    sel.appendChild(opt);
-  });
-  // Restaurar selección guardada
-  if (sel.querySelector(`option[value="${estado.lenguajeActual}"]`)) {
+  const salida = document.getElementById('ide-salida');
+  try {
+    const r = await fetch(apiUrl('/api/ide/lenguajes'), { credentials: 'include' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    sel.innerHTML = '';
+    data.lenguajes.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.nombre + (l.disponible ? '' : ' (no disp.)');
+      opt.disabled = !l.disponible;
+      sel.appendChild(opt);
+    });
+    if (sel.querySelector(`option[value="${estado.lenguajeActual}"]`)) {
+      sel.value = estado.lenguajeActual;
+    } else {
+      sel.selectedIndex = 0;
+      estado.lenguajeActual = sel.value;
+    }
+  } catch (e) {
+    // Fallback local si el backend no está disponible
+    sel.innerHTML = '';
+    ['python','javascript','typescript','java','c','cpp'].forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = id;
+      sel.appendChild(opt);
+    });
     sel.value = estado.lenguajeActual;
-  } else {
-    sel.selectedIndex = 0;
-    estado.lenguajeActual = sel.value;
+    if (salida) salida.textContent = '⚠️ Backend no disponible. Modo demo local: el editor funciona, pero ejecución/depuración requieren backend configurado en Ajustes → Backend.';
   }
 }
 
