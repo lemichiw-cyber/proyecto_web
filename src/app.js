@@ -2516,7 +2516,20 @@ import { initForos } from "./modules/foros/foro-app.js";
         var msg = $('exam-ia-msg');
         var tema = $('exam-titulo').value.trim();
         var materia = $('exam-materia').value.trim();
-        var fuente = $('exam-ia-fuente') ? $('exam-ia-fuente').value.trim() : '';
+        // --- Leer fuente: textarea O archivo PDF ---
+        var pdfFile = $('exam-ia-pdf') ? $('exam-ia-pdf').files[0] : null;
+        var fuente = '';
+        if (pdfFile) {
+          var reader = new FileReader();
+          reader.onload = function () {
+            fuente = 'PDF: ' + pdfFile.name;
+          };
+          reader.readAsText(pdfFile);
+          if (!fuente) fuente = 'PDF subido (' + pdfFile.name + ')';
+        } else {
+          var fuenteText = $('exam-ia-fuente') ? $('exam-ia-fuente').value.trim() : '';
+          fuente = fuenteText;
+        }
         var cantidad = $('exam-ia-cantidad') ? parseInt($('exam-ia-cantidad').value, 10) || 8 : 8;
         if (!tema) { if (msg) { msg.textContent = 'Escribí primero un tema.'; msg.style.color = 'var(--red)'; } return; }
         btn.disabled = true;

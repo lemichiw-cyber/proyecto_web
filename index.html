@@ -2548,7 +2548,12 @@ unicode: "ea98"
             <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
             <div class="form-row" id="exam-ia-wrap" style="background:var(--gray-50);border:1px solid var(--border);border-radius:8px;padding:.85rem;margin-top:1rem;">
               <h3 style="font-size:.9rem;margin:0 0 .75rem 0;"><span style="margin-right:.4rem;">🤖</span>Asistente IA (Vercel/NVIDIA)</h3>
-              <div class="form-group"><label>Fuente para la IA (texto, URL o deja vacío para tema libre)</label><textarea id="exam-ia-fuente" rows="2" placeholder="Ej: Ecuaciones de segundo grado, funciones lineales..." style="width:100%;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></textarea></div>
+              <div class="form-group"><label>Fuente para la IA (PDF, texto o URL)</label>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;">
+                  <textarea id="exam-ia-fuente" rows="2" placeholder="Ej: Ecuaciones de segundo grado, funciones lineales..." style="flex:1;min-width:0;padding:.55rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;"></textarea>
+                  <input type="file" id="exam-ia-pdf" accept="application/pdf" style="min-width:120px;padding:.5rem;border:1px solid var(--gray-300);border-radius:8px;">
+                </div>
+              </div>
               <div class="form-group" style="display:flex;gap:.5rem;align-items:flex-end;">
                 <label style="margin:0;font-weight:600;">Cantidad de preguntas:</label>
                 <input type="number" id="exam-ia-cantidad" min="3" max="30" value="8" style="width:90px;padding:.45rem;border:1px solid var(--gray-300);border-radius:8px;font:inherit;">
