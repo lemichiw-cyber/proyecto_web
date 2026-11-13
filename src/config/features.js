@@ -19,6 +19,7 @@ export const FEATURES = {
   CLASES: true,             // app-clases
   TAREAS: true,             // app-tareas (bachillerato_tareas)
   ESTUDIO: true,            // app-estudio (Pomodoro)
+  IDE: true,                // app-ide (editor de código)
   SAKURA_PLAYER: true,      // app-sakura-player
   RESPALDOS: true,          // app-respaldos
   CONFIGURACION: true,      // app-configuracion
@@ -91,6 +92,7 @@ export const APP_TO_FEATURE = {
   'planificacion': 'PLANIFICACION',
   'matricula': 'MATRICULA',
   'estudio': 'ESTUDIO',
+  'ide': 'IDE',
   'sakura-player': 'SAKURA_PLAYER',
   'configuracion': 'CONFIGURACION',
   'respaldos': 'RESPALDOS',

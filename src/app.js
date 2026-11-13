@@ -79,7 +79,7 @@ import { initForos } from "./modules/foros/foro-app.js";
       var miGrupoId = null;
       apiMiGrupo().then(function (r) { if (r && r.grupo) miGrupoId = r.grupo.id; });
       var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','sakura-player','configuracion','respaldos','auth'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','auth'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','ide','auth'];
       function $(id) { return document.getElementById(id); }
 
       /* ===================================================================
@@ -500,6 +500,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         'planificacion': 'PLANIFICACION',
         'matricula': 'MATRICULA',
         'estudio': 'ESTUDIO',
+        'ide': 'IDE',
         'sakura-player': 'SAKURA_PLAYER',
         'configuracion': 'CONFIGURACION',
         'respaldos': 'RESPALDOS',
@@ -521,6 +522,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
         { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
+        { id:'ide', icon:'code', label:'IDE', desc:'Editor de código con ejecución', color:'#0EA5E9' },
         { id:'sakura-player', icon:'headphones', label:'Sakura Player', desc:'Música con YouTube Music', color:'#FF4FD8' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
         { id:'respaldos', icon:'device-floppy', label:'Respaldos', desc:'Exportar / Importar mis datos', color:'#4ADE80' },
@@ -851,6 +853,19 @@ import { initForos } from "./modules/foros/foro-app.js";
               });
           } else if (window.__sakuraPlayerImport.then) {
             window.__sakuraPlayerImport.then(montarSakura);
+          }
+        }
+        if (app === 'ide') {
+          if (!window.__ideImport) {
+            window.__ideImport = import('./modules/ide/ide-app.js').then(function (mod) {
+              window.__ideApp = mod;
+              mod.init();
+            }).catch(function (e) {
+              console.error('[IDE] Error cargando módulo:', e);
+              mostrarToast('No se pudo cargar el IDE.', 'error');
+            });
+          } else if (window.__ideImport.then) {
+            window.__ideImport.then(function () { if (window.__ideApp && window.__ideApp.init) window.__ideApp.init(); });
           }
         }
       };
