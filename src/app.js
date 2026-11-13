@@ -876,9 +876,33 @@ import { initForos } from "./modules/foros/foro-app.js";
         $('link-olvide-wrap').classList.toggle('hidden', si);
         $('login-title').textContent = si ? 'Crear cuenta' : 'Iniciar sesión';
         $('login-error').hidden = true;
+        $('login-error').textContent = '';
         $('reg-error').hidden = true;
         // el rol elegido vuelve a su valor por defecto al reabrir el formulario
         if (si && $('reg-rol')) $('reg-rol').value = ROL_REGISTRO;
+      }
+
+      /**
+       * Error de red local: el navegador bloqueó el acceso a 127.0.0.1.
+       * Se muestra el texto con la explicación Y un botón que abre la app
+       * local (esa vía es same-origin y no necesita ningún permiso).
+       */
+      function _errorRedLocal(texto) {
+        var box = $('login-error');
+        if (!box) return;
+        box.textContent = texto;
+        box.hidden = false;
+        var base = getApiBase();
+        if (!base) return;
+        var link = document.createElement('a');
+        link.href = base + '/';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.id = 'login-error-local-link';
+        link.textContent = 'Abrir la app local ahora →';
+        link.style.cssText = 'display:inline-block;margin-top:.5rem;font-weight:700;text-decoration:underline;';
+        box.appendChild(document.createElement('br'));
+        box.appendChild(link);
       }
       $('link-registro').addEventListener('click', function (e) { e.preventDefault(); mostrarModoRegistro(true); $('reg-nombre').focus(); });
       $('link-volver-login').addEventListener('click', function (e) { e.preventDefault(); mostrarModoRegistro(false); $('login-email').focus(); });
@@ -906,8 +930,7 @@ import { initForos } from "./modules/foros/foro-app.js";
           }
           var ayuda = explicaErrorRed(err);
           if (ayuda) {
-            $('login-error').textContent = ayuda;
-            $('login-error').hidden = false;
+            _errorRedLocal(ayuda);
             mostrarToast('Acceso a la red local bloqueado por el navegador.', 'error');
             return;
           }
