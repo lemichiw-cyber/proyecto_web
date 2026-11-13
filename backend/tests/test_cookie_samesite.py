@@ -108,3 +108,61 @@ def test_logout_borra_la_cookie():
         set_cookie = out.headers.get("set-cookie", "")
         assert "cherrybomb_session=" in set_cookie
         assert "Max-Age=0" in set_cookie
+
+
+# ----------------------------------------------------------------------
+# Sin SAKURA_COOKIE_SAMESITE el backend decide por petición:
+# same-site → lax (más estricto), cross-site → none + secure.
+# ----------------------------------------------------------------------
+
+
+def test_sin_configuracion_mismo_sitio_usa_lax():
+    os.environ.pop("SAKURA_COOKIE_SAMESITE", None)
+    import api.auth as auth_mod
+    importlib.reload(auth_mod)
+    from main import app
+
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/auth/definir-contrasena",
+            json={"email": "admin@bachillerato.edu", "password": "clave-123"},
+            headers={"Origin": "http://testserver"},
+        )
+        assert r.status_code == 200, r.text
+        set_cookie = r.headers.get("set-cookie", "")
+        assert "SameSite=lax" in set_cookie, set_cookie
+
+
+def test_sin_configuracion_otro_sitio_usa_none_y_secure():
+    """La PWA de GitHub Pages contra el backend local: cross-site."""
+    os.environ.pop("SAKURA_COOKIE_SAMESITE", None)
+    import api.auth as auth_mod
+    importlib.reload(auth_mod)
+    from main import app
+
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/auth/definir-contrasena",
+            json={"email": "admin@bachillerato.edu", "password": "clave-123"},
+            headers={"Origin": "https://lemichiw-cyber.github.io"},
+        )
+        assert r.status_code == 200, r.text
+        set_cookie = r.headers.get("set-cookie", "")
+        assert "SameSite=none" in set_cookie, set_cookie
+        assert "Secure" in set_cookie, set_cookie
+        assert "HttpOnly" in set_cookie, set_cookie
+
+
+def test_configuracion_explicita_manda_sobre_el_origen():
+    """Si el operador fija SAKURA_COOKIE_SAMESITE, se respeta siempre."""
+    auth = _reload_auth("strict")
+    from main import app
+
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/auth/definir-contrasena",
+            json={"email": "admin@bachillerato.edu", "password": "clave-123"},
+            headers={"Origin": "https://otro-sitio.example"},
+        )
+        assert r.status_code == 200, r.text
+        assert "SameSite=strict" in r.headers.get("set-cookie", "")

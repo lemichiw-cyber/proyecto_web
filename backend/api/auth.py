@@ -17,6 +17,7 @@ import secrets
 import time
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Body, Cookie, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
@@ -57,12 +58,41 @@ SESSION_COOKIE_SECURE = os.getenv("SAKURA_COOKIE_SECURE", "1").strip().lower() i
 #             son orígenes "potentially trustworthy", así que la cookie
 #             funciona incluso sobre http.
 #   "strict"           → la cookie nunca sale del sitio que la puso.
+#
+# Si el operador NO fija SAKURA_COOKIE_SAMESITE, el backend decide solo por
+# petición: same-site → "lax" (más estricto) y cross-site (la PWA de
+# GitHub Pages contra el backend local o contra Render) → "none" + "Secure",
+# que es lo único que hace que la sesión sobreviva a una recarga.
 _SAMESITE_VALIDOS = {"lax", "strict", "none"}
-_samesite = os.getenv("SAKURA_COOKIE_SAMESITE", "lax").strip().lower()
-SESSION_COOKIE_SAMESITE = _samesite if _samesite in _SAMESITE_VALIDOS else "lax"
+_samesite_env = os.getenv("SAKURA_COOKIE_SAMESITE", "").strip().lower()
+SESSION_COOKIE_SAMESITE = _samesite_env if _samesite_env in _SAMESITE_VALIDOS else "lax"
 if SESSION_COOKIE_SAMESITE == "none":
     # Los navegadores rechazan SameSite=None sin Secure.
     SESSION_COOKIE_SECURE = True
+
+
+def _cookie_samesite(request) -> tuple[str, bool]:
+    """SameSite y Secure de la cookie para ESTA petición.
+
+    * Si el operador fijó SAKURA_COOKIE_SAMESITE, se respeta siempre.
+    * Si no, se decide solo: si el navegador viene de otro sitio, la cookie
+      tiene que viajar → "none" + Secure; si es el mismo sitio, "lax".
+    """
+    if _samesite_env in _SAMESITE_VALIDOS:
+        return SESSION_COOKIE_SAMESITE, SESSION_COOKIE_SECURE
+    origin = request.headers.get("origin") if request is not None else None
+    if not origin:
+        return SESSION_COOKIE_SAMESITE, SESSION_COOKIE_SECURE
+    host = (request.headers.get("host") or "").lower()
+    try:
+        netloc = urlparse(origin).netloc.lower()
+    except Exception:
+        netloc = ""
+    if netloc and netloc == host:
+        # Mismo sitio: "lax" alcanza y es más estricto.
+        return SESSION_COOKIE_SAMESITE, SESSION_COOKIE_SECURE
+    # Sitio distinto: sin SameSite=None el navegador no manda la cookie.
+    return "none", True
 
 # --- Rate limiting mínimo en memoria (P0: evita brute-force de login) ---
 # No es distribuido: bien para 1 instancia (despliegue único INCOA). Para P1, Redis/DB.
@@ -297,11 +327,12 @@ def definir_contrasena(request: Request, response: Response, payload: DefinirCon
     sessions = _limpiar_expiradas(_load_sessions())
     sessions[token] = {"email": email, "rol": acc.get("rol", "estudiante"), "creado": time.time()}
     _save_sessions(sessions)
+    _samesite, _secure = _cookie_samesite(request)
     response.set_cookie(
         SESSION_COOKIE, token,
         max_age=SESSION_COOKIE_MAX_AGE,
-        httponly=True, samesite=SESSION_COOKIE_SAMESITE,
-        secure=SESSION_COOKIE_SECURE, path="/",
+        httponly=True, samesite=_samesite,
+        secure=_secure, path="/",
     )
     return {
         "ok": True,
@@ -352,11 +383,12 @@ def login(request: Request, response: Response, payload: LoginIn = Body(...)):
     sessions = _limpiar_expiradas(_load_sessions())
     sessions[token] = {"email": email, "rol": acc["rol"], "creado": time.time()}
     _save_sessions(sessions)
+    _samesite, _secure = _cookie_samesite(request)
     response.set_cookie(
         SESSION_COOKIE, token,
         max_age=SESSION_COOKIE_MAX_AGE,
-        httponly=True, samesite=SESSION_COOKIE_SAMESITE,
-        secure=SESSION_COOKIE_SECURE, path="/",
+        httponly=True, samesite=_samesite,
+        secure=_secure, path="/",
     )
     return {
         "ok": True,
@@ -367,7 +399,7 @@ def login(request: Request, response: Response, payload: LoginIn = Body(...)):
 
 
 @router.get("/me")
-def me(response: Response, user: dict = Depends(require_auth), cherrybomb_session: Optional[str] = Cookie(default=None), authorization: Optional[str] = Header(default=None)):
+def me(request: Request, response: Response, user: dict = Depends(require_auth), cherrybomb_session: Optional[str] = Cookie(default=None), authorization: Optional[str] = Header(default=None)):
     token = _extraer_token(authorization) or (cherrybomb_session.strip() if cherrybomb_session else None)
     nuevo_token = token
     if token:
@@ -381,16 +413,17 @@ def me(response: Response, user: dict = Depends(require_auth), cherrybomb_sessio
                 _save_sessions(sessions)
         except Exception:
             nuevo_token = token
+        _samesite, _secure = _cookie_samesite(request)
         response.set_cookie(
             SESSION_COOKIE, nuevo_token,
-            max_age=SESSION_COOKIE_MAX_AGE, httponly=True, samesite=SESSION_COOKIE_SAMESITE,
-            secure=SESSION_COOKIE_SECURE, path="/",
+            max_age=SESSION_COOKIE_MAX_AGE, httponly=True, samesite=_samesite,
+            secure=_secure, path="/",
         )
     return {"ok": True, "email": user["email"], "rol": user["rol"], "token_nuevo": nuevo_token}
 
 
 @router.post("/logout")
-def logout(response: Response, authorization: Optional[str] = Header(default=None), cherrybomb_session: Optional[str] = Cookie(default=None)):
+def logout(request: Request, response: Response, authorization: Optional[str] = Header(default=None), cherrybomb_session: Optional[str] = Cookie(default=None)):
     token = _extraer_token(authorization) or (cherrybomb_session.strip() if cherrybomb_session else None)
     if token:
         sessions = _load_sessions()
@@ -404,8 +437,9 @@ def logout(response: Response, authorization: Optional[str] = Header(default=Non
                 pass
     # Se borra con los mismos atributos con los que se creó (name/domain/path
     # son los que definen el borrado; SameSite/Secure se mantienen por coherencia).
+    _samesite, _secure = _cookie_samesite(request)
     response.delete_cookie(
         SESSION_COOKIE, path="/",
-        secure=SESSION_COOKIE_SECURE, httponly=True, samesite=SESSION_COOKIE_SAMESITE,
+        secure=_secure, httponly=True, samesite=_samesite,
     )
     return {"ok": True}
