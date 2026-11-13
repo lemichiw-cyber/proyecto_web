@@ -52,6 +52,7 @@ export default defineConfig({
       cleanupOutdatedCaches: true,
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf,otf}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // La app es una SPA: cualquier navegación cae en el index precacheado.
         navigateFallback: 'index.html',
         // El service worker se sirve en la raíz del sitio (dist/sw.js), así
