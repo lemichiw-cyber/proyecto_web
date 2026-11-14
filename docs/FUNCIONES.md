@@ -22,22 +22,22 @@
 | **Exámenes (creador/simulador)** | `app-examenes` | ✅ Activa | — |
 | **Picker (fecha/hora)** | `app-picker` | ✅ Activa | — |
 | **Digital (firma/documentos)** | `app-digital` | ✅ Activa | — |
-| **Foros** | `app-foros` | 🔒 Próximamente | Backend real + WebSockets / polling + moderación + RLS en BD |
-| **Mensajes** | `app-mensajes` | 🔒 Próximamente | Backend real + WebSockets / polling + cifrado extremo-a-extremo opcional + RLS |
-| **Actividades grupales** | `app-grupales` | 🔒 Próximamente | Backend real + gestión de grupos + invitaciones + RLS |
+| **Foros** | `app-foros` | ✅ Activa (con backend) | Backend real + moderación de reportes (`/api/moderacion`). Ver detalle en la nota 3. |
+| **Mensajes** | `app-mensajes` | ✅ Activa (con backend) | Backend real: `/api/mensajes/*`. Bandeja, conversación, envío, leído y borrado. Sólo remitente y destinatario ven la conversación; el estudiante escribe al personal del colegio. |
+| **Actividades grupales** | `app-grupales` | ✅ Activa (con backend) | Backend real: `/api/grupales/*`. Grupos con integrantes, chat interno, entregas compartidas e invitaciones. Ven el grupo el dueño, los miembros y el personal docente. |
 | **Colegio Protegido (reportes)** | `app-protegido` | ✅ Activa (con backend) | Backend real: `/api/protegido/incidentes`. Reportar: cualquiera con sesión. Ver: el autor ve los suyos, el personal docente ve todos. Atender: sólo personal docente. **Pendiente**: protocolo de actuación escrito y canal de contacto al adulto responsable (hoy la app no es un canal de emergencia) |
-| **Aulas Virtuales** | `app-aulas` | 🔒 Próximamente | Backend real + BD con RLS + gestión de inscripciones + tareas + calificaciones + asistencia |
-| **Inscripciones a aulas** | (parte de `app-aulas`) | 🔒 Próximamente | Backend real + BD con RLS + aprobación docente/director |
-| **Tareas de aula** | (parte de `app-aulas`) | 🔒 Próximamente | Backend real + BD con RLS + entregas + calificaciones |
-| **Calificaciones de aula** | (parte de `app-aulas`) | 🔒 Próximamente | Backend real + BD con RLS + visibilidad por rol |
-| **Asistencia de aula** | (parte de `app-aulas`) | 🔒 Próximamente | Backend real + BD con RLS + registro docente + visibilidad por rol |
-| **Planificación docente** | `app-planificacion` | 🔒 Próximamente | Backend real + BD con RLS + visibilidad por rol (docente/director) |
-| **Matrícula / Inscripciones** | `app-matricula` | 🔒 Próximamente | Backend real + BD con RLS + gestión de estudiantes + aprobación admin |
-| **Asistencia docente** | `app-asistencias` | 🔒 Próximamente | Backend real + BD con RLS + registro docente + visibilidad director |
-| **Roles docente/director/admin** | `app-auth` (panel) | 🔒 Próximamente | Autenticación real (no editable en consola) + backend + RLS + auditoría |
-| **Experiencias educativas** | `app-experiencias` | 🔒 Próximamente | Backend real + BD con RLS (si requiere datos de otros) |
-| **Portal Padres** | `app-parents` | 🔒 Próximamente | Backend real + BD con RLS + vínculo estudiante-padre verificado + autenticación real |
-| **SABI (alertas/sistema)** | `app-sabi` | 🔒 Próximamente | Backend real + canal de comunicación real (push, email, SMS) |
+| **Aulas Virtuales** | `app-aulas` | ✅ Activa (con backend) | Backend real: `/api/aulas/*`. Aulas, inscripciones, tareas, entregas, calificaciones y asistencia. Persistencia atómica en `SAKURA_DATA_DIR`. |
+| **Inscripciones a aulas** | (parte de `app-aulas`) | ✅ Activa (con backend) | Desde la UI de Aulas Virtuales (inscribir / quitar por aula). |
+| **Tareas de aula** | (parte de `app-aulas`) | ✅ Activa (con backend) | Crear, ver y entregar tareas del aula. |
+| **Calificaciones de aula** | (parte de `app-aulas`) | ✅ Activa (con backend) | Visibles para inscritos, docentes y administración. |
+| **Asistencia de aula** | (parte de `app-aulas`) | ✅ Activa (con backend) | Registro docente + vista del alumno. |
+| **Planificación docente** | `app-planificacion` | 🔒 Próximamente | Backend real + BD con RLS + visibilidad por rol (docente/director). Hoy es 100% local en el dispositivo. |
+| **Matrícula / Inscripciones** | `app-matricula` | 🔒 Próximamente | Backend real: `/api/matricula/*` existe; falta que el frontend deje de depender de la sesión local y use el backend (Fase 2). |
+| **Asistencia docente** | `app-asistencias` | 🔒 Próximamente | Fase 2: flag `ASISTENCIA_DOCENTE`; hoy el panel “Pendientes” del inicio tampoco muestra las entregas por corregir. |
+| **Roles docente/director/admin** | `app-auth` (panel) | 🔒 Próximamente | Fase 2: flag `ROLES_DOCENTE`. El backend (`/api/accounts`, `/api/auth/*`) ya existe; falta que el login/registro y el panel de usuarios usen el backend de punta a punta. |
+| **Experiencias educativas** | `app-experiencias` | 🔒 Próximamente | Backend real + BD con RLS (si requiere datos de otros). |
+| **Portal Padres** | `app-parents` | ✅ Activa (con backend) | Backend real: `/api/padres/*`. Resumen de tareas, notas y asistencia de los hijos vinculados (`hijo_email` / `hijos` en la cuenta). Sólo cuentas con rango `padres`. |
+| **SABI (alertas/sistema)** | `app-sabi` | 🔒 Próximamente | Backend real + canal de comunicación real (push, email, SMS). |
 | **Digital (firma/docs)** | `app-digital` | ✅ Activa | — (si es solo local) |
 
 ---
@@ -48,17 +48,19 @@
 
 2. **Datos locales no se borran**: Al desactivar una función, sus datos en `localStorage` (`foros`, `mensajesItems`, `gruposItems`, `protegidoItems`, `aulas`, `aula_*`, `estudiantes_db`, `asistencia_historial`, `bachillerato_plan_trabajo`, etc.) **permanecen intactos**. Si se reactiva la bandera, los datos siguen ahí.
 
-3. **Reactivaión de "Colegio Protegido" (`PROTEGIDO`)**: Se reactivó el **2026-11-11** porque ya existe backend real (`backend/api/protegido.py`): los reportes llegan al servidor, los ve el personal docente y quedan auditados. **Sigue pendiente**:
+3. **Fase 1 (Multiusuario real) — 2026-11-14**: Mensajes, Actividades Grupales, Portal Padres y Aulas Virtuales pasaron a funcionar contra el backend real con sesión por cookie. Los módulos se cargan de forma lazy (`import()` en `src/app.js`) y cada uno tiene su lógica pura separada (`*-utils.js`) con pruebas propias. Ver `PHASE0_PREPARACION.md` para el detalle.
+
+4. **Reactivaión de "Colegio Protegido" (`PROTEGIDO`)**: Se reactivó el **2026-11-11** porque ya existe backend real (`backend/api/protegido.py`): los reportes llegan al servidor, los ve el personal docente y quedan auditados. **Sigue pendiente**:
    - Protocolo de actuación escrito y conocido por el colegio
    - Canal real de contacto al adulto responsable (psicólogo, orientador, dirección)
    - Notificación inmediata al adulto responsable (hoy es una cola que el docente consulta)
    - Definir la política de anonimato (hoy el reporte guarda el email del autor)
 
-4. **Registro / Roles**: Mientras `ROLES_DOCENTE` sea `false`, el formulario de registro **no muestra** el selector de rol y asigna `estudiante` por defecto. El usuario no puede elegir `docente`, `director`, `subdirector` ni `admin`.
+5. **Registro / Roles**: Mientras `ROLES_DOCENTE` sea `false`, el formulario de registro **no muestra** el selector de rol y asigna `estudiante` por defecto. El usuario no puede elegir `docente`, `director`, `subdirector` ni `admin`. El cambio de rango lo hace un administrador desde el panel de usuarios (escribe en la cuenta: el rol vigente se lee de `accounts.json` en cada request).
 
-5. **Notificaciones docente**: Mientras `ASISTENCIA_DOCENTE` sea `false`, el panel "Pendientes" en Inicio **no muestra** entregas de estudiantes (notificaciones de "tareas por corregir").
+6. **Notificaciones docente**: Mientras `ASISTENCIA_DOCENTE` sea `false`, el panel "Pendientes" en Inicio **no muestra** entregas de estudiantes (notificaciones de "tareas por corregir").
 
-6. **Sin sincronización**: Los datos viven **solo en este dispositivo** (localStorage). No hay servidor, no hay sincronización, no hay cuentas en la nube. El respaldo es un archivo JSON local.
+7. **Sin sincronización total**: las secciones personales (actividades, agenda, horario, exámenes…) siguen siendo 100% `localStorage`. Solo las que dicen "con backend" arriba comparten datos entre personas.
 
 ---
 

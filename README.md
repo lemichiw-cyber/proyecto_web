@@ -674,13 +674,22 @@ no hay cuentas en la nube.
 - Configuración (tema, volumen, URL de backend) · 13 temas visuales
 
 **Lo que funciona con backend (multiusuario, requiere sesión):**
-- **Colegio Protegido** — reportes de incidentes de seguridad escolar: el
-  reporte llega al servidor y lo ve el personal docente (ver abajo).
+- **Mensajes** — bandeja, conversaciones y envío entre el personal del colegio,
+  estudiantes y familias (`/api/mensajes`). Lo que escribe el docente llega al
+  estudiante: ya no vive sólo en el dispositivo.
+- **Actividades grupales** — proyectos en equipo con integrantes, chat interno,
+  entregas compartidas e invitaciones (`/api/grupales`).
+- **Portal Padres** — resumen académico (promedio, asistencia, tareas y notas)
+  de los hijos vinculados a la cuenta (`/api/padres`), sólo para cuentas con
+  rango *padres*.
+- **Aulas Virtuales** — aulas, inscripciones, tareas, entregas, notas y
+  asistencia compartidas (`/api/aulas`).
+- **Foros** y **Colegio Protegido** — discusión académica y reportes de
+  incidentes que llegan al servidor.
 
-**Lo que NO funciona (funciones MULTIUSUARIO — desactivadas por defecto):**
-- Foros · Mensajes · Actividades grupales · Aulas virtuales · Matrícula
-- Planificación docente · Asistencia · Roles docente/director/admin
-- Portal Padres
+**Lo que todavía NO funciona (sigue desactivado por defecto):**
+- Matrícula · Planificación docente · Asistencia docente · Roles
+  docente/director/admin · Experiencias · SABI
 - Estas funciones requieren **backend real con autenticación, base de datos
   con RLS y canales de comunicación reales**. Están desactivadas por defecto
   (`src/config/features.js`).
@@ -692,12 +701,20 @@ no hay cuentas en la nube.
 
 ## Hoja de ruta — Lo multiusuario
 
+**Fase 1 (hecha — 2026-11-14):** Mensajes · Actividades Grupales · Portal
+Padres · Aulas Virtuales · Foros · Colegio Protegido.
+Backend FastAPI real con sesión por cookie (`/api/auth/login`), persistencia
+JSON atómica fuera del código (`SAKURA_DATA_DIR`, modo 0600), auditoría
+(`audit.log`) y carga lazy en la PWA.
+
+**Fase 2 (pendiente):** Matrícula · Planificación docente · Asistencia
+docente · Roles docente/director/admin.
+
 | Función | Qué hace falta para activarla |
 |---------|-------------------------------|
-| Foros, Mensajes, Grupales | Backend real + WebSockets/polling + moderación + RLS en BD |
-| Aulas, Matrícula, Planificación, Asistencia | Backend real + BD con RLS + gestión de inscripciones/tareas/calificaciones/asistencia |
-| Roles docente/director/admin | Autenticación real (no editable en consola) + backend + RLS + auditoría |
-| Portal Padres | Backend real + BD con RLS + vínculo estudiante-padre verificado + auth real |
+| Matrícula | Que el frontend use `/api/matricula` en lugar de la sesión local |
+| Planificación / Asistencia docente | Backend real + RLS + registro y visibilidad por rol |
+| Roles docente/director/admin | Login/registro y panel de usuarios 100% contra `/api/accounts` + `/api/auth` |
 
 Ver `docs/FUNCIONES.md` para la tabla completa con estado y requisitos.
 
