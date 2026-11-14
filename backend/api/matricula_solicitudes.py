@@ -8,11 +8,16 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from audit import write as audit_write
 from paths import data_file
-from api.deps import require_auth, require_admin_or_director
+from api.auth import require_auth
 from db import write_json_atomic
 
 router = APIRouter(prefix="/api/matricula/solicitudes", tags=["matricula"])
 DATA_FILE = data_file("matricula_solicitudes.json", "SAKURA_MATRICULA_SOLICITUDES_FILE")
+
+def _require_admin_or_director(user: dict = Depends(require_auth)):
+    if user["rol"] not in {"admin","director"}:
+        raise HTTPException(status_code=403, detail="Rol insuficiente")
+    return user
 
 def _load():
     try:
@@ -47,6 +52,9 @@ class SolicitudOut(BaseModel):
     estado: str
     creado: str
 
+class EstadoIn(BaseModel):
+    estado: str
+
 @router.get("/", response_model=List[SolicitudOut])
 def listar_solicitudes(user=Depends(require_auth)):
     data = _load()
@@ -79,7 +87,10 @@ def crear_solicitud(payload: SolicitudIn, request: Request, user=Depends(require
     return item
 
 @router.patch("/{sid}")
-def actualizar_estado(sid: str, estado: str = Field(..., pattern="^(pendiente|aprobado|rechazado)$"), user=Depends(require_admin_or_director)):
+def actualizar_estado(sid: str, payload: EstadoIn, user=Depends(_require_admin_or_director)):
+    estado = payload.estado
+    if estado not in {"pendiente","aprobado","rechazado"}:
+        raise HTTPException(status_code=400, detail="Estado inválido")
     data = _load()
     for i, s in enumerate(data):
         if s["id"] == sid:
@@ -90,7 +101,7 @@ def actualizar_estado(sid: str, estado: str = Field(..., pattern="^(pendiente|ap
     raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
 @router.delete("/{sid}", status_code=204)
-def borrar_solicitud(sid: str, user=Depends(require_admin_or_director)):
+def borrar_solicitud(sid: str, user=Depends(_require_admin_or_director)):
     data = _load()
     new_data = [s for s in data if s["id"] != sid]
     if len(new_data) == len(data):
