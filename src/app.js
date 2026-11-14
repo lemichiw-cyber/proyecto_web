@@ -505,6 +505,10 @@ import { initForos } from "./modules/foros/foro-app.js";
         'sakura-player': 'SAKURA_PLAYER',
         'configuracion': 'CONFIGURACION',
         'respaldos': 'RESPALDOS',
+        'auth': 'ROLES_DOCENTE',
+        'asistencias': 'ASISTENCIA_DOCENTE',
+        'experiencias': 'EXPERIENCIAS',
+        'sabi': 'SABI',
       };
 
       var appsData = [

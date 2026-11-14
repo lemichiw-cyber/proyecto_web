@@ -227,7 +227,7 @@ class LoginIn(BaseModel):
 
 
 @router.post("/register", status_code=201)
-def register(request: Request, payload: RegisterIn = Body(...)):
+def register(request: Request, response: Response, payload: RegisterIn = Body(...)):
     email = payload.email.strip().lower()
     _check_rate_limit(request.client.host if request.client else "unknown", email)
     accounts = _load_accounts()
@@ -279,7 +279,19 @@ def register(request: Request, payload: RegisterIn = Body(...)):
         audit_write("auth.register", email, request.client.host if request.client else "")
     except Exception:
         pass
-    return {"ok": True, "email": email, "rol": rol, "nombre": account["nombre"]}
+    # Iniciar sesión automáticamente tras registro (cookie HttpOnly)
+    token = secrets.token_urlsafe(32)
+    sessions = _limpiar_expiradas(_load_sessions())
+    sessions[token] = {"email": email, "rol": rol, "creado": time.time()}
+    _save_sessions(sessions)
+    _samesite, _secure = _cookie_samesite(request)
+    response.set_cookie(
+        SESSION_COOKIE, token,
+        max_age=SESSION_COOKIE_MAX_AGE,
+        httponly=True, samesite=_samesite,
+        secure=_secure, path="/",
+    )
+    return {"ok": True, "token": token, "email": email, "rol": rol, "nombre": account["nombre"]}
 
 
 class DefinirContrasenaIn(BaseModel):
