@@ -27,7 +27,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 # Si se cargara después, la clave se leía como "" y la IA devolvía 503.
 load_dotenv()
 
-from api import accounts, admin, albums, artists, actividades, aulas, auth, debug, ide, library, lyrics, matricula, moderacion, playlists, protegido, push, search, songs, tareas_examenes, translate, ia
+from api import accounts, admin, albums, artists, actividades, aulas, auth, debug, ide, library, lyrics, matricula, moderacion, mensajes, grupales, padres, playlists, protegido, push, search, songs, tareas_examenes, translate, ia
 from api.deps import get_service
 
 # P2: Sentry opcional (sin dependencia obligatoria; si SENTRY_DSN existe y está instalado)
@@ -198,6 +198,9 @@ app.include_router(tareas_examenes.router)   # <-- tareas/exámenes por grupo
 app.include_router(moderacion.router)        # <-- moderación (reportes foros, P2)
 app.include_router(protegido.router)         # <-- Colegio Protegido (incidentes)
 app.include_router(aulas.router)             # <-- Aulas Virtuales (espacios de clase)
+app.include_router(mensajes.router)          # <-- Mensajes docente-estudiante
+app.include_router(grupales.router)          # <-- Actividades grupales workspace
+app.include_router(padres.router)            # <-- Portal padres
 app.include_router(ia.router)                # <-- IA generativa con NVIDIA NIM (P5)
 app.include_router(ide.router)               # <-- IDE en la nube para estudiantes de software
 
