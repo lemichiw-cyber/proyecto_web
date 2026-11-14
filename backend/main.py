@@ -27,7 +27,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 # Si se cargara después, la clave se leía como "" y la IA devolvía 503.
 load_dotenv()
 
-from api import accounts, admin, albums, artists, actividades, aulas, auth, debug, ide, library, lyrics, matricula, moderacion, mensajes, grupales, padres, playlists, protegido, push, search, songs, tareas_examenes, translate, ia
+from api import accounts, admin, albums, artists, actividades, aulas, auth, debug, ide, library, lyrics, matricula, matricula_solicitudes, moderacion, mensajes, grupales, padres, playlists, protegido, push, search, songs, tareas_examenes, translate, ia
 from api.deps import get_service
 
 # P2: Sentry opcional (sin dependencia obligatoria; si SENTRY_DSN existe y está instalado)
@@ -194,6 +194,7 @@ app.include_router(auth.router)              # <-- auth (login/register/me/logou
 app.include_router(push.router)              # <-- push (suscripciones y envío)
 app.include_router(actividades.router)       # <-- actividades (Postgres/Supabase)
 app.include_router(matricula.router)         # <-- matrícula por grupo
+app.include_router(matricula_solicitudes.router) # <-- solicitudes matrícula JSON Fase 2
 app.include_router(tareas_examenes.router)   # <-- tareas/exámenes por grupo
 app.include_router(moderacion.router)        # <-- moderación (reportes foros, P2)
 app.include_router(protegido.router)         # <-- Colegio Protegido (incidentes)

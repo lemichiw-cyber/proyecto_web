@@ -78,8 +78,8 @@ import { initForos } from "./modules/foros/foro-app.js";
       var usuarioActual = savedSession;
       var miGrupoId = null;
       apiMiGrupo().then(function (r) { if (r && r.grupo) miGrupoId = r.grupo.id; });
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','estudio','ide','sakura-player','configuracion','respaldos','auth'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','estudio','ide','auth'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','asistencias','estudio','ide','sakura-player','configuracion','respaldos','auth'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','asistencias','estudio','ide','auth'];
       function $(id) { return document.getElementById(id); }
 
       /* ===================================================================
@@ -787,7 +787,12 @@ import { initForos } from "./modules/foros/foro-app.js";
           });
         }
         if (app === 'planificacion') { planifActualizarUI(); renderPlanificaciones(); renderCuadro(); }
-        if (app === 'matricula') { matActualizarUI(); renderMatSolicitudes(); }
+        if (app === 'matricula') {
+          import('./modules/matricula/matricula-app.js').then(m => m.render()).catch(() => { matActualizarUI(); renderMatSolicitudes(); });
+        }
+        if (app === 'asistencias') {
+          import('./modules/asistencias/asistencias-app.js').then(m => m.render()).catch(() => { mostrarToast('Asistencias no disponibles offline.', 'info'); });
+        }
         if (app === 'auth') { renderAuth(); sincronizarCuentasBackend(); }
         if (app === 'protegido') sincronizarProtegido();
         if (app === 'aulas') {
