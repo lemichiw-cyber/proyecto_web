@@ -76,3 +76,68 @@ Si el backend no responde, cada módulo cae al respaldo local del dispositivo
 - Roles docente/coordinador en Aulas Virtuales, Asistencias y Matrícula
   (`ROLES_DOCENTE`, `ASISTENCIA_DOCENTE`, `MATRICULA` siguen apagados).
 - Notificaciones push de mensajes nuevos y de entregas grupales.
+
+---
+
+# Fase 2 – Roles reales y Matrícula
+
+Estado: **en preparación**.
+
+El backend ya tiene `api/auth.py`, `api/accounts.py`, `api/admin.py`,
+`api/matricula.py`, `api/tareas_examenes.py` y la asistencia dentro de
+`api/aulas.py`. Lo que falta es que el frontend deje de depender de la
+sesión local (`localStorage`) y use el servidor de punta a punta.
+
+## Objetivo
+
+1. **Autenticación real como camino principal** (`ROLES_DOCENTE`):
+   login, registro y cierre de sesión contra `/api/auth/*` (cookie
+   HttpOnly `cherrybomb_session`), con el respaldo local sólo como
+   *fallback* cuando no hay red.
+2. **Panel de usuarios real** (`app-auth`): crear cuentas, cambiar el rol
+   (estudiante, docente, director, subdirector, coordinador, padres,
+   admin), activar/desactivar y definir contraseñas, todo contra
+   `/api/accounts` + `/api/auth/definir-contrasena`.
+3. **Registro con selector de rol** gated por `ROLES_DOCENTE` (hoy el
+   registro público siempre asigna `estudiante`).
+4. **Matrícula real** (`MATRICULA`): solicitudes, aprobación y lista de
+   estudiantes por grupo contra `/api/matricula`.
+5. **Asistencia docente** (`ASISTENCIA_DOCENTE`): toma de asistencia
+   desde el aula y visibilidad por rol; habilita también las entregas
+   por corregir en el panel "Pendientes" del inicio.
+
+## Criterio de "listo" (igual que Fase 1)
+
+- Backend con router propio o reutilizado, persistencia atómica en
+  `SAKURA_DATA_DIR` (0600) y auditoría.
+- Frontend: módulo con lógica pura en `*-utils.js`, pruebas de utils y
+  de integración DOM, y carga lazy si es módulo nuevo.
+- Feature flag en `true` sólo cuando exista backend real verificado.
+- Suite completa en verde: `pytest` + `npm test` + `npm run build`.
+- Tabla de `docs/FUNCIONES.md` actualizada.
+
+---
+
+# Fase 3 – Experiencias, SABI y comunicaciones push
+
+Estado: **por definir**.
+
+Objetivo: cerrar las funciones multiusuario restantes que requieren canales reales
+y datos compartidos.
+
+1. **Experiencias educativas (`EXPERIENCIAS`)**
+   - Backend `/api/experiencias/*` con persistencia atómica en JSON (migrable a Postgres).
+   - Roles: creador, participantes; visibilidad por rol.
+   - Frontend módulo `src/modules/experiencias/` con carga lazy, utils y tests.
+
+2. **SABI / alertas del sistema (`SABI`)**
+   - Backend `/api/sabi/*` para alertas institucionales, difusión por rol/grupo.
+   - Canal de entrega: push + email opcional.
+   - UI en `app-sabi` con historial y creación para admin/director.
+
+3. **Push notifications**
+   - Integración completa de `/api/push/*` con notificaciones de Mensajes y Grupales.
+   - Suscripción al cargar la PWA; reintentos con cola offline.
+
+Criterio de listo igual que Fase 1/2.
+
