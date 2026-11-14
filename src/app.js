@@ -78,8 +78,8 @@ import { initForos } from "./modules/foros/foro-app.js";
       var usuarioActual = savedSession;
       var miGrupoId = null;
       apiMiGrupo().then(function (r) { if (r && r.grupo) miGrupoId = r.grupo.id; });
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','ide','sakura-player','configuracion','respaldos','auth'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','protegido','tareas','aulas','planificacion','matricula','estudio','ide','auth'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','estudio','ide','sakura-player','configuracion','respaldos','auth'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','estudio','ide','auth'];
       function $(id) { return document.getElementById(id); }
 
       /* ===================================================================
@@ -494,6 +494,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         'clases': 'CLASES',
         'mensajes': 'MENSAJES',
         'grupales': 'GRUPALES',
+        'parents': 'PADRES',
         'protegido': 'PROTEGIDO',
         'tareas': 'TAREAS',
         'aulas': 'AULAS',
@@ -516,6 +517,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         { id:'clases', icon:'video', label:'Clases en línea', desc:'Enlaces y reuniones', color:'var(--primary)' },
         { id:'mensajes', icon:'mail', label:'Mensajes', desc:'Bandeja de entrada', color:'var(--teal)' },
         { id:'grupales', icon:'users', label:'Act. grupales', desc:'Proyectos en equipo', color:'var(--orange)' },
+        { id:'parents', icon:'users-group', label:'Portal Padres', desc:'Seguimiento de tus hijos', color:'var(--teal)', roles:['padres','admin'] },
         { id:'protegido', icon:'shield-check', label:'Colegio Protegido', desc:'Seguridad escolar', color:'var(--red)' },
         { id:'tareas', icon:'clipboard-check', label:'Tareas', desc:'Gestión de actividades', color:'var(--pink)' },
         { id:'aulas', icon:'building-community', label:'Aulas Virtuales', desc:'Espacios de clase', color:'var(--purple)' },
@@ -625,7 +627,14 @@ import { initForos } from "./modules/foros/foro-app.js";
         el.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
         var visibleApps = appsData.filter(function (a) {
           var feature = appFeatures[a.id];
-          return !feature || isEnabled(feature);
+          if (feature && !isEnabled(feature)) return false;
+          // Las tarjetas con "roles" son sólo para esos rangos (ej. el
+          // Portal de Padres: los demás no tienen nada que ver ahí).
+          if (a.roles) {
+            var rol = usuarioActual ? String(usuarioActual.rol || '') : '';
+            if (a.roles.indexOf(rol) === -1) return false;
+          }
+          return true;
         });
         el.innerHTML = visibleApps.map(function (a) {
           var isProtected = appsProtegidas.indexOf(a.id) !== -1;
@@ -853,6 +862,45 @@ import { initForos } from "./modules/foros/foro-app.js";
               });
           } else if (window.__sakuraPlayerImport.then) {
             window.__sakuraPlayerImport.then(montarSakura);
+          }
+        }
+        if (app === 'mensajes') {
+          if (!window.__mensajesImport) {
+            window.__mensajesImport = import('./modules/comunicaciones/mensajes-app.js').then(function (mod) {
+              window.__mensajesApp = mod;
+              mod.init();
+            }).catch(function (e) {
+              console.error('[Mensajes] Error cargando módulo:', e);
+              mostrarToast('No se pudo cargar Mensajes.', 'error');
+            });
+          } else if (window.__mensajesImport.then) {
+            window.__mensajesImport.then(function () { if (window.__mensajesApp && window.__mensajesApp.init) window.__mensajesApp.init(); });
+          }
+        }
+        if (app === 'grupales') {
+          if (!window.__grupalesImport) {
+            window.__grupalesImport = import('./modules/grupales/grupales-app.js').then(function (mod) {
+              window.__grupalesApp = mod;
+              mod.init();
+            }).catch(function (e) {
+              console.error('[Grupales] Error cargando módulo:', e);
+              mostrarToast('No se pudo cargar Actividades Grupales.', 'error');
+            });
+          } else if (window.__grupalesImport.then) {
+            window.__grupalesImport.then(function () { if (window.__grupalesApp && window.__grupalesApp.init) window.__grupalesApp.init(); });
+          }
+        }
+        if (app === 'parents') {
+          if (!window.__padresImport) {
+            window.__padresImport = import('./modules/padres/padres-app.js').then(function (mod) {
+              window.__padresApp = mod;
+              mod.init();
+            }).catch(function (e) {
+              console.error('[Portal Padres] Error cargando módulo:', e);
+              mostrarToast('No se pudo cargar el Portal de Padres.', 'error');
+            });
+          } else if (window.__padresImport.then) {
+            window.__padresImport.then(function () { if (window.__padresApp && window.__padresApp.init) window.__padresApp.init(); });
           }
         }
         if (app === 'ide') {
@@ -1506,6 +1554,14 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (navAuth) navAuth.classList.toggle('hidden', !esAdmin());
         var appAuth = $('app-auth');
         if (appAuth && !appAuth.classList.contains('hidden') && !esAdmin()) mostrarApp('inicio');
+
+        // El Portal de Padres es para las cuentas con rango "padres"
+        // (la administración también puede verlo).
+        var navParents = $('nav-parents');
+        if (navParents) {
+          var rolParents = usuarioActual ? String(usuarioActual.rol || '') : '';
+          navParents.classList.toggle('hidden', !(rolParents === 'padres' || esAdmin()));
+        }
 
         aplicarTabsPorRol();
       }
@@ -4724,8 +4780,39 @@ import { initForos } from "./modules/foros/foro-app.js";
       renderClases();
       setInterval(avisarClases, 60000);
 
+      /* Botón "Nuevo mensaje": si el módulo real está cargado (backend
+         /api/mensajes) el flujo es el de servidor; si no, se usa el
+         respaldo local que había. */
+      var btnMsgAdd = $('btn-msg-add');
+      if (btnMsgAdd) {
+        btnMsgAdd.addEventListener('click', function () {
+          if (window.__mensajesApp && typeof window.__mensajesApp.nuevoMensaje === 'function') {
+            window.__mensajesApp.nuevoMensaje();
+            return;
+          }
+          if (!exigirPermiso('participar')) return;
+          dialogPrompt('Asunto:', 'Nuevo mensaje').then(function (asunto) {
+            if (!asunto) return;
+            dialogPrompt('Mensaje:', 'Contenido').then(function (contenido) {
+              mensajesItems.push({ asunto: asunto.trim(), contenido: (contenido || '').trim(), remitente: usuarioActual ? usuarioActual.username || usuarioActual.email : 'T\u00FA' });
+              guardarSeccion('mensajesItems', mensajesItems);
+              renderMensajes();
+              mostrarToast('Mensaje enviado.', 'success');
+            });
+          });
+        });
+      }
+
+      /* La bandeja de mensajes la maneja el módulo real (backend /api/mensajes):
+         ver src/modules/comunicaciones/mensajes-app.js. El listado local
+         (mensajesItems) queda sólo como respaldo histórico en el dispositivo. */
       function renderMensajes() {
         var el = $('msg-lista');
+        if (!el) return;
+        if (window.__mensajesApp && typeof window.__mensajesApp.render === 'function') {
+          window.__mensajesApp.render();
+          return;
+        }
         if (mensajesItems.length === 0) { el.innerHTML = emptyMsg('Bandeja vacía.', { icon: '✉️', title: 'Mensajes', desc: 'No tenés mensajes nuevos.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           mensajesItems.map(function (m, i) {
@@ -4742,22 +4829,14 @@ import { initForos } from "./modules/foros/foro-app.js";
           });
         });
       }
-      $('btn-msg-add').addEventListener('click', function () {
-        if (!exigirPermiso('participar')) return;
-        dialogPrompt('Asunto:', 'Nuevo mensaje').then(function (asunto) {
-          if (!asunto) return;
-          dialogPrompt('Mensaje:', 'Contenido').then(function (contenido) {
-            mensajesItems.push({ asunto: asunto.trim(), contenido: (contenido || '').trim(), remitente: usuarioActual ? usuarioActual.username || usuarioActual.email : 'T\u00FA' });
-            guardarSeccion('mensajesItems', mensajesItems);
-            renderMensajes();
-            mostrarToast('Mensaje enviado.', 'success');
-          });
-        });
-      });
-      renderMensajes();
 
       function renderGrupos() {
         var el = $('grupo-lista');
+        if (!el) return;
+        if (window.__grupalesApp && typeof window.__grupalesApp.render === 'function') {
+          window.__grupalesApp.render();
+          return;
+        }
         if (gruposItems.length === 0) { el.innerHTML = emptyMsg('No hay grupos activos.', { icon: '👥', title: 'Actividades grupales', desc: 'Creá un grupo para trabajar en equipo.' }); return; }
         el.innerHTML = '<div style="display:flex;flex-direction:column;gap:.5rem;">' +
           gruposItems.map(function (g, i) {
@@ -4774,18 +4853,27 @@ import { initForos } from "./modules/foros/foro-app.js";
           });
         });
       }
-      $('btn-grupo-add').addEventListener('click', function () {
-        if (!exigirPermiso('crear')) return;
-        dialogPrompt('Nombre del grupo:', 'Nuevo grupo').then(function (nombre) {
-          if (!nombre) return;
-          dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
-            gruposItems.push({ nombre: nombre.trim(), desc: (desc || '').trim() });
-            guardarSeccion('gruposItems', gruposItems);
-            renderGrupos();
-            mostrarToast('Grupo creado.', 'success');
+      /* Botón "Nuevo grupo": si el workspace real está cargado
+         (backend /api/grupales) manda el módulo; si no, el respaldo local. */
+      var btnGrupoAdd = $('btn-grupo-add');
+      if (btnGrupoAdd) {
+        btnGrupoAdd.addEventListener('click', function () {
+          if (window.__grupalesApp && typeof window.__grupalesApp.nuevoGrupo === 'function') {
+            window.__grupalesApp.nuevoGrupo();
+            return;
+          }
+          if (!exigirPermiso('crear')) return;
+          dialogPrompt('Nombre del grupo:', 'Nuevo grupo').then(function (nombre) {
+            if (!nombre) return;
+            dialogPrompt('Descripci\u00F3n (opcional):', 'Descripci\u00F3n').then(function (desc) {
+              gruposItems.push({ nombre: nombre.trim(), desc: (desc || '').trim() });
+              guardarSeccion('gruposItems', gruposItems);
+              renderGrupos();
+              mostrarToast('Grupo creado.', 'success');
+            });
           });
         });
-      });
+      }
       renderGrupos();
 
       /* ===================================================================

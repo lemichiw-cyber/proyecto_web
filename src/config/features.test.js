@@ -19,10 +19,31 @@ describe('features.js — Feature flags', () => {
   });
 
   it('Multiusuario features are disabled (false) by default', () => {
-    const multiusuario = ['MENSAJES', 'GRUPALES', 'ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'PADRES', 'SABI'];
+    // Los que siguen SIN backend real propio siguen apagados.
+    const multiusuario = ['ROLES_DOCENTE', 'ASISTENCIA_DOCENTE', 'MATRICULA', 'EXPERIENCIAS', 'SABI'];
     multiusuario.forEach(f => {
       expect(FEATURES[f]).toBe(false);
     });
+  });
+
+  it('MENSAJES está habilitado: ya hay backend de mensajes', () => {
+    // Mensajes pasó a usar el backend real (/api/mensajes): lo que escribe
+    // el docente llega al estudiante.
+    expect(FEATURES.MENSAJES).toBe(true);
+    expect(isEnabled('MENSAJES')).toBe(true);
+  });
+
+  it('GRUPALES está habilitado: ya hay backend de actividades grupales', () => {
+    // Actividades grupales pasó a usar el backend real (/api/grupales):
+    // el equipo ve los miembros, el chat y las entregas del grupo.
+    expect(FEATURES.GRUPALES).toBe(true);
+    expect(isEnabled('GRUPALES')).toBe(true);
+  });
+
+  it('PADRES está habilitado: ya hay backend del portal de padres', () => {
+    // El portal de padres lee el resumen académico real (/api/padres).
+    expect(FEATURES.PADRES).toBe(true);
+    expect(isEnabled('PADRES')).toBe(true);
   });
 
   it('PROTEGIDO está habilitado: ya hay backend de incidentes', () => {
@@ -84,6 +105,9 @@ describe('features.js — Feature flags', () => {
     expect(APP_TO_FEATURE.auth).toBe('ROLES_DOCENTE');
     expect(APP_TO_FEATURE.asistencias).toBe('ASISTENCIA_DOCENTE');
     expect(APP_TO_FEATURE.protegido).toBe('PROTEGIDO');
+    expect(APP_TO_FEATURE.mensajes).toBe('MENSAJES');
+    expect(APP_TO_FEATURE.grupales).toBe('GRUPALES');
+    expect(APP_TO_FEATURE.parents).toBe('PADRES');
   });
 
   it('Feature flag check does not depend on user role', () => {

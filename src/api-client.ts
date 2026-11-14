@@ -445,3 +445,150 @@ export function apiAulasBorrar(coleccion: ColeccionAulas, id: string): Promise<{
   return _apiJson("DELETE", "/api/aulas/" + encodeURIComponent(coleccion) + "/" + encodeURIComponent(id));
 }
 
+/* ===================================================================
+   Mensajes — comunicación directa (docente ↔ estudiante ↔ familia).
+   =================================================================== */
+
+export interface Mensaje {
+  id: string;
+  remitente: string;
+  remitente_nombre?: string;
+  destinatario: string;
+  asunto: string;
+  contenido: string;
+  creado: number;
+  leido: boolean;
+}
+
+export interface Conversacion {
+  email: string;
+  nombre: string;
+  rol?: string;
+  ultimo: { id: string; asunto: string; contenido: string; creado: number; de: string } | null;
+  no_leidos: number;
+  total: number;
+}
+
+export interface ContactoMensaje {
+  email: string;
+  nombre: string;
+  rol: string;
+}
+
+export function apiMensajesBandeja(): Promise<{ ok: boolean; count: number; conversaciones: Conversacion[] }> {
+  return _apiJson("GET", "/api/mensajes/bandeja");
+}
+
+export function apiMensajesConversacion(contacto: string): Promise<{
+  ok: boolean;
+  contacto: { email: string; nombre: string; rol?: string };
+  mensajes: Mensaje[];
+}> {
+  return _apiJson("GET", "/api/mensajes/conversacion/" + encodeURIComponent(contacto));
+}
+
+export function apiMensajesContactos(): Promise<{ ok: boolean; count: number; contactos: ContactoMensaje[] }> {
+  return _apiJson("GET", "/api/mensajes/contactos");
+}
+
+export function apiMensajeEnviar(
+  destinatario: string,
+  asunto: string,
+  contenido: string,
+): Promise<{ ok: boolean; id: string; mensaje: Mensaje }> {
+  return _apiJson("POST", "/api/mensajes/enviar", { destinatario, asunto, contenido });
+}
+
+export function apiMensajeBorrar(id: string): Promise<{ ok: boolean }> {
+  return _apiJson("DELETE", "/api/mensajes/" + encodeURIComponent(id));
+}
+
+/* ===================================================================
+   Actividades grupales — workspace colaborativo.
+   =================================================================== */
+
+export interface MiembroGrupo {
+  email: string;
+  nombre: string;
+  rol?: string;
+}
+
+/** Grupo de un proyecto colaborativo (Actividades Grupales). */
+export interface GrupoGrupales {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  materia?: string;
+  owner_id?: string;
+  owner_nombre?: string;
+  estado?: string;
+  creado?: number;
+  actualizado?: number;
+  miembros?: MiembroGrupo[];
+  total_mensajes?: number;
+  total_entregas?: number;
+}
+
+export function apiGrupalesLista(): Promise<{ ok: boolean; count: number; grupos: GrupoGrupales[] }> {
+  return _apiJson("GET", "/api/grupales/");
+}
+
+export function apiGrupalesDetalle(id: string): Promise<{
+  ok: boolean;
+  grupo: GrupoGrupales;
+  miembros: MiembroGrupo[];
+  mensajes: Mensaje[];
+  entregas: any[];
+}> {
+  return _apiJson("GET", "/api/grupales/" + encodeURIComponent(id));
+}
+
+export function apiGrupoCrear(datos: {
+  nombre: string;
+  descripcion?: string;
+  materia?: string;
+  miembros?: string[];
+}): Promise<{ ok: boolean; id: string; grupo: GrupoGrupales }> {
+  return _apiJson("POST", "/api/grupales/", datos);
+}
+
+export function apiGrupoMensaje(id: string, contenido: string): Promise<{ ok: boolean; id: string; mensaje: any }> {
+  return _apiJson("POST", "/api/grupales/" + encodeURIComponent(id) + "/mensajes", { contenido });
+}
+
+export function apiGrupoInvitar(id: string, email: string): Promise<{ ok: boolean }> {
+  return _apiJson("POST", "/api/grupales/" + encodeURIComponent(id) + "/miembros", { email });
+}
+
+export function apiGrupoEntregar(
+  id: string,
+  texto: string,
+  archivo = "",
+): Promise<{ ok: boolean; id: string; entrega: any }> {
+  return _apiJson("POST", "/api/grupales/" + encodeURIComponent(id) + "/entregas", {
+    grupo_id: id,
+    texto,
+    archivo,
+  });
+}
+
+export function apiGrupoBorrar(id: string): Promise<{ ok: boolean }> {
+  return _apiJson("DELETE", "/api/grupales/" + encodeURIComponent(id));
+}
+
+/* ===================================================================
+   Portal de padres — resumen del progreso de los hijos.
+   =================================================================== */
+
+export function apiPadresHijos(): Promise<{ ok: boolean; count: number; hijos: any[] }> {
+  return _apiJson("GET", "/api/padres/hijos");
+}
+
+export function apiPadresResumen(): Promise<{ ok: boolean; count: number; hijos: any[]; totales?: any }> {
+  return _apiJson("GET", "/api/padres/resumen");
+}
+
+export function apiPadresContactos(): Promise<{ ok: boolean; count: number; contactos: ContactoMensaje[] }> {
+  return _apiJson("GET", "/api/padres/contactos");
+}
+

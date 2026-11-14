@@ -31,15 +31,15 @@ export const FEATURES = {
   // ===== FUNCIONES MULTIUSUARIO (desactivadas por defecto) =====
   // Requieren backend real con autenticación, base de datos, RLS
   FOROS: true,             // app-foros
-  MENSAJES: false,          // app-mensajes
-  GRUPALES: false,          // app-grupales
+  MENSAJES: true,          // app-mensajes
+  GRUPALES: true,          // app-grupales
   PROTEGIDO: true,          // app-protegido (reportes de incidentes: backend /api/protegido)
   AULAS: true,              // app-aulas + aula_inscripciones, aula_tareas, aula_entregas, aula_calificaciones, aula_asistencia (backend /api/aulas)
   ROLES_DOCENTE: false,     // app-auth (panel admin), app-asistencias (requieren backend)
   ASISTENCIA_DOCENTE: false, // app-asistencias
   MATRICULA: false,         // app-matricula (inscripciones, estudiantes_db)
   EXPERIENCIAS: false,      // app-experiencias (si requiere datos de otros)
-  PADRES: false,            // app-parents (portal padres)
+  PADRES: true,             // app-parents (portal padres: backend /api/padres)
   SABI: false,              // app-sabi (alertas/sistema comunicación)
 };
 
