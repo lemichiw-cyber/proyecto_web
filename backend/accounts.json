@@ -1,0 +1,46 @@
+{
+  "admin@bachillerato.edu": {
+    "rol": "admin",
+    "nombre": "Administrador",
+    "activo": true,
+    "semestre": null,
+    "creado": null,
+    "password_hash": "$2b$12$tUfMpBhqBnXsOVmIMiWqn.j9c8f6SHN6t7V5ivZ8BZ2shLX3HBMOm",
+    "password_creado": 1794404799.6545095
+  },
+  "admin@gmail.com": {
+    "rol": "admin",
+    "nombre": "Administrador",
+    "activo": true,
+    "semestre": null,
+    "password_hash": "$2b$12$tUfMpBhqBnXsOVmIMiWqn.j9c8f6SHN6t7V5ivZ8BZ2shLX3HBMOm",
+    "password_creado": 1794404799.6545095
+  },
+  "profe@bachillerato.edu": {
+    "email": "profe@bachillerato.edu",
+    "password_hash": null,
+    "rol": "coordinador",
+    "nombre": "Profe",
+    "activo": true,
+    "semestre": null,
+    "creado": "2026-11-11T13:46:40.213502+00:00"
+  },
+  "admin@bachillerato.onm": {
+    "email": "admin@bachillerato.onm",
+    "password_hash": "pbkdf2$c267e69ad30595d5ebefbb6478b3b119$74fab8c7c316599e3f7fc3340b98c464b23132bd5072afd27bb69afa8b9681e6",
+    "rol": "estudiante",
+    "nombre": "luffy",
+    "activo": true,
+    "semestre": null,
+    "creado": "2026-11-12T22:19:33.313530+00:00"
+  },
+  "t@x.com": {
+    "email": "t@x.com",
+    "password_hash": "pbkdf2$9f52e040b00bcce7e5b24edfefd65855$1d3e86cd18299bbb1450b6cc51010f7e796101b34c2b18ec7edc85ae241601fc",
+    "rol": "estudiante",
+    "nombre": "T",
+    "activo": true,
+    "semestre": null,
+    "creado": "2026-11-14T20:09:37.909611+00:00"
+  }
+}
