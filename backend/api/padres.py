@@ -106,7 +106,8 @@ def _hijos_de(email_padre: str) -> list[dict]:
 @router.get("/hijos")
 def hijos(user: dict = Depends(require_auth)):
     """Hijos vinculados al padre autenticado."""
-    if str(user.get("rol") or "").strip().lower() != "padres":
+    rol = str(user.get("rol") or "").strip().lower()
+    if rol not in {"padres", "admin"}:
         raise HTTPException(status_code=403, detail="Sólo las cuentas de padres pueden ver esta sección")
     lista = _hijos_de(_email(user.get("email")))
     return {"ok": True, "count": len(lista), "hijos": lista}
@@ -115,7 +116,8 @@ def hijos(user: dict = Depends(require_auth)):
 @router.get("/resumen")
 def resumen(user: dict = Depends(require_auth)):
     """Resumen académico de los hijos: tareas, exámenes, entregas y notas."""
-    if str(user.get("rol") or "").strip().lower() != "padres":
+    rol = str(user.get("rol") or "").strip().lower()
+    if rol not in {"padres", "admin"}:
         raise HTTPException(status_code=403, detail="Sólo las cuentas de padres pueden ver esta sección")
     lista_hijos = _hijos_de(_email(user.get("email")))
     emails = {h["email"] for h in lista_hijos}
