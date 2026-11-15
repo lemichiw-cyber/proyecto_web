@@ -42,6 +42,7 @@ from api.auth import require_auth
 from audit import write as audit_write
 from db import write_json_atomic
 from paths import data_file
+from api.notify import send_push
 
 router = APIRouter(prefix="/api/mensajes", tags=["mensajes"])
 
@@ -277,6 +278,11 @@ def enviar(payload: EnviarIn, user: dict = Depends(require_auth)):
     data[mid] = msg
     _save(data)
     audit_write("mensajes.enviar", mi, destino)
+    # Notificación push opcional al destinatario
+    try:
+        send_push(destino, f"Nuevo mensaje: {asunto}", f"De: {_nombre_de(mi)}", url="/#app=mensajes")
+    except Exception:
+        pass
     return {"ok": True, "id": mid, "mensaje": msg}
 
 

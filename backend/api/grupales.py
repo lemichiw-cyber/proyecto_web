@@ -41,6 +41,7 @@ from api.auth import require_auth
 from audit import write as audit_write
 from db import write_json_atomic
 from paths import data_file
+from api.notify import send_push
 
 router = APIRouter(prefix="/api/grupales", tags=["grupales"])
 
@@ -315,6 +316,14 @@ def enviar_mensaje(grupo_id: str, payload: MensajeIn, user: dict = Depends(requi
     data["grupos"][gid]["actualizado"] = time.time()
     _save(data)
     audit_write("grupales.mensaje", email, gid)
+    # Notificación push a miembros
+    try:
+        grupo_nombre = data["grupos"][gid].get("nombre", gid)
+        miembros = [m["email"] for m in data.get("miembros", {}).values() if isinstance(m, dict) and _id(m.get("grupo_id")) == gid and _email(m.get("email")) != email]
+        for dest in set(miembros):
+            send_push(dest, f"Nueva mensaje en {grupo_nombre}", f"De {_nombre_de(email)}: {contenido[:120]}", url=f"/#app=grupales&grupo={gid}")
+    except Exception:
+        pass
     return {"ok": True, "id": mid, "mensaje": data["mensajes"][mid]}
 
 
@@ -372,6 +381,14 @@ def entregar(grupo_id: str, payload: EntregaIn, user: dict = Depends(require_aut
     data["grupos"][gid]["actualizado"] = time.time()
     _save(data)
     audit_write("grupales.entrega", email, gid)
+    # Notificación push a miembros
+    try:
+        grupo_nombre = data["grupos"][gid].get("nombre", gid)
+        miembros = [m["email"] for m in data.get("miembros", {}).values() if isinstance(m, dict) and _id(m.get("grupo_id")) == gid and _email(m.get("email")) != email]
+        for dest in set(miembros):
+            send_push(dest, f"Nueva entrega en {grupo_nombre}", f"De {_nombre_de(email)}: {(texto[:80] if texto else 'Archivo adjunto')}", url=f"/#app=grupales&grupo={gid}")
+    except Exception:
+        pass
     return {"ok": True, "id": eid, "entrega": data["entregas"][eid]}
 
 
