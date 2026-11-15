@@ -41,6 +41,7 @@ export const FEATURES = {
   EXPERIENCIAS: false,      // app-experiencias (si requiere datos de otros)
   PADRES: true,             // app-parents (portal padres: backend /api/padres)
   SABI: false,              // app-sabi (alertas/sistema comunicación)
+  CANVA: true,              // app-canva (editor de diseño tipo Canva)
 };
 
 /**
@@ -102,6 +103,7 @@ export const APP_TO_FEATURE = {
   'experiencias': 'EXPERIENCIAS',
   'parents': 'PADRES',
   'sabi': 'SABI',
+  'canva': 'CANVA',
   'picker': 'PICKER',
   'digital': 'DIGITAL',
 };
