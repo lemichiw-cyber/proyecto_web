@@ -509,6 +509,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         'asistencias': 'ASISTENCIA_DOCENTE',
         'experiencias': 'EXPERIENCIAS',
         'sabi': 'SABI',
+        'canva': 'CANVA',
       };
 
       var appsData = [
@@ -527,6 +528,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         { id:'aulas', icon:'building-community', label:'Aulas Virtuales', desc:'Espacios de clase', color:'var(--purple)' },
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
+        { id:'canva', icon:'image', label:'Canva', desc:'Editor de diseño', color:'#4f46e5' },
         { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
         { id:'ide', icon:'code', label:'IDE', desc:'Editor de código con ejecución', color:'#0EA5E9' },
         { id:'sakura-player', icon:'headphones', label:'Sakura Player', desc:'Música con YouTube Music', color:'#FF4FD8' },
