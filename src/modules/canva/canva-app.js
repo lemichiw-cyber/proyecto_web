@@ -204,8 +204,17 @@ export async function render() {
   // Buttons
   document.getElementById('canva-nuevo').onclick=()=>{ limpiarLona(); diseñoActualNombre='Sin título'; document.getElementById('canva-titulo').textContent='Diseño sin título'; };
   document.getElementById('canva-guardar').onclick=guardarDiseño;
-  document.getElementById('canva-export').onclick=()=>{
-    const canvas=document.createElement('canvas'); canvas.width=800; canvas.height=600; const ctx=canvas.getContext('2d'); ctx.fillStyle='white'; ctx.fillRect(0,0,800,600); ctx.fillStyle='#666'; ctx.font='16px sans-serif'; ctx.fillText('Exportado desde Canva Cherry-Bomb',40,40); const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download=(diseñoActualNombre||'diseno')+'.png'; a.click();
+  document.getElementById('canva-export').onclick=async ()=>{
+    // Carga html2canvas si no está disponible
+    if (!window.html2canvas) {
+      await new Promise(res=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload=res; document.head.appendChild(s);
+      });
+    }
+    const canvas = await window.html2canvas(lona, {backgroundColor:'#ffffff',scale:2});
+    const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download=(diseñoActualNombre||'diseno')+'.png'; a.click();
   };
 
   // Drag
