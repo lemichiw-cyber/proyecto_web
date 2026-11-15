@@ -56,9 +56,14 @@ async function cargar() {
       estado.contactos = Array.isArray(c && c.contactos) ? c.contactos : [];
     } catch (e) { /* los contactos son opcionales */ }
   } catch (e) {
-    estado.error = e && e.message && e.message.indexOf('403') !== -1
-      ? 'Esta sección es sólo para cuentas de padres de familia.'
-      : 'No se pudo conectar con el servidor.';
+    const msg = e && e.message ? e.message : '';
+    if (msg.indexOf('403') !== -1) {
+      estado.error = 'Esta sección es sólo para cuentas de padres de familia.';
+    } else if (msg.indexOf('401') !== -1) {
+      estado.error = 'Debés iniciar sesión para ver el Portal Padres.';
+    } else {
+      estado.error = 'No se pudo conectar con el servidor.';
+    }
     estado.hijos = [];
   }
   estado.cargando = false;
