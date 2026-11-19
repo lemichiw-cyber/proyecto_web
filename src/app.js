@@ -688,9 +688,9 @@ import { initForos } from "./modules/foros/foro-app.js";
             '<div class="icon" style="background:' + (locked ? 'var(--gray-200)' : a.color + '20') + '"><img src="' + iconSrc(a.icon) + '" style="width:24px;height:24px;display:block" alt=""></div>' +
             '<h4>' + a.label + '</h4><p>' + (locked ? '🔒 ' : '') + a.desc + '</p></div>';
         }
-        var html = coreApps.map(cardHtml).join('');
+        var cardsHtml = coreApps.map(cardHtml).join('');
         if (restApps.length > 0) {
-          html += '<div class="app-card app-card-more" onclick="$(\'modal-mas-apps\').classList.add(\'open\');lockBody()">' +
+          cardsHtml += '<div class="app-card app-card-more" onclick="$(\'modal-mas-apps\').classList.add(\'open\');lockBody()">' +
             '<div class="icon" style="background:var(--gray-200)"><img src="' + iconSrc('menu-2') + '" style="width:24px;height:24px;display:block" alt=""></div>' +
             '<h4>Más</h4><p>' + restApps.length + ' aplicaciones</p></div>';
           // Render modal de apps restantes si no existe
@@ -709,7 +709,7 @@ import { initForos } from "./modules/foros/foro-app.js";
           var grid = $('modal-mas-apps-grid');
           if (grid) grid.innerHTML = restApps.map(cardHtml).join('');
         }
-        el.innerHTML = html;
+        el.innerHTML = cardsHtml;
       }
 
       function mostrarPróximamente(appId) {
