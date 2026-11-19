@@ -1,4 +1,4 @@
-import { getApiBase } from '../../api-base.js';
+import { getApiBase } from '../../api-base';
 import { fetchExperiencias, crearExperiencia, borrarExperiencia } from './experiencias-utils.js';
 
 export async function render() {

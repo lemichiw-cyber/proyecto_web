@@ -1,4 +1,4 @@
-import { getApiBase } from '../../api-base.js';
+import { getApiBase } from '../../api-base';
 import { fetchSolicitudes, crearSolicitud, actualizarSolicitud, borrarSolicitud } from './matricula-utils.js';
 
 let cargado = false;

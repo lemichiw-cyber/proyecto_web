@@ -849,6 +849,75 @@
       backdrop-filter: var(--glass-blur-modal);
       -webkit-backdrop-filter: var(--glass-blur-modal);
       box-shadow: var(--glass-rim), 0 26px 64px rgba(6,70,110,.30), 0 8px 20px rgba(6,70,110,.14);
+      overflow: hidden;
+    }
+    /* Ventanas emergentes estilo Windows XP Luna (receta y2k-retrofuturism):
+       barra de título glossy azul hielo con brillo especular, cuerpo de cristal
+       líquido (tokens --glass-*) y cierre rojo aqua. Solo CSS: el header
+       .flex-between existente se hospeda en la barra; los diálogos
+       .modal-dialog (sin header) quedan como cristal puro. */
+    /* shortcut: :has() (Chrome 105+/Safari 15.4+/Firefox 121+); si algún navegador
+       antiguo no lo soporta, el modal se ve sin barra y el header fluye normal. */
+    /* La ventana reserva el hueco de la barra de título */
+    [data-theme="frutiger"] .modal:has(> .flex-between:first-child) { padding-top: 2.75rem; }
+    /* Barra de título: azul Luna + gloss especular + filo superior tipo lozenge */
+    [data-theme="frutiger"] .modal:has(> .flex-between:first-child)::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2.25rem;
+      background-image:
+        linear-gradient(180deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,.14) 46%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, #a9d6ff 0%, #5c9fea 42%, #2f6fc2 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 -1px 0 rgba(12,44,92,.5);
+      border-top-left-radius: 19px;
+      border-top-right-radius: 19px;
+      pointer-events: none;
+    }
+    /* El header existente se mueve dentro de la barra */
+    [data-theme="frutiger"] .modal > .flex-between:first-child {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 2;
+      height: 2.25rem;
+      margin: 0;
+      padding: 0 .8rem;
+      flex-wrap: nowrap;
+    }
+    [data-theme="frutiger"] .modal > .flex-between:first-child h3 {
+      margin: 0;
+      min-width: 0;
+      font-size: .8125rem;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(10,40,90,.6);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    [data-theme="frutiger"] .modal > .flex-between:first-child h3 svg { width: 15px; height: 15px; stroke: #fff; }
+    /* Botón de cierre: rojo glossy aqua (el botón icónico de Luna) */
+    [data-theme="frutiger"] .modal .modal-close {
+      width: 22px; height: 22px;
+      min-width: 22px;
+      padding: 0;
+      border-radius: 4px;
+      border: 1px solid rgba(158,32,18,.65);
+      background-image: linear-gradient(180deg, #ffa08f 0%, #e5492f 46%, #bd2417 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(90,15,10,.4);
+      color: #fff;
+      font-size: .9375rem;
+      font-weight: 700;
+      line-height: 1;
+      text-shadow: 0 1px 1px rgba(120,20,10,.65);
+    }
+    [data-theme="frutiger"] .modal .modal-close:hover {
+      background-image: linear-gradient(180deg, #ffb5a5 0%, #ef5b3e 46%, #cc2f1f 100%);
+      color: #fff;
+    }
+    [data-theme="frutiger"] .modal .modal-close:active {
+      background-image: linear-gradient(180deg, #bd2417 0%, #e5492f 60%, #ffa08f 100%);
+      box-shadow: inset 0 2px 3px rgba(90,15,10,.5);
     }
     [data-theme="frutiger"] .vol-pop {
       background-color: rgba(255,255,255,.52);

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Maqueta Dashboard por Tema - Cherry-Bomb</title>
+<style>
+:root{
+  --bg:#f8fafc; --card:#fff; --text:#0f172a; --muted:#64748b; --accent:#0ea5e9;
+}
+[data-theme="light"]{--bg:#f8fafc;--card:#fff;--text:#0f172a}
+[data-theme="dark"]{--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--muted:#94a3b8}
+[data-theme="pastel"]{--bg:#f0d9e8;--card:#fff;--text:#0f172a}
+[data-theme="sunset"]{--bg:#2a1810;--card:#3a2418;--text:#fde68a;--muted:#fbbf24}
+[data-theme="dawn"]{--bg:#faf0d0;--card:#fff;--text:#1a1a1a}
+[data-theme="ocean"]{--bg:#d0e8f0;--card:#fff;--text:#0f172a}
+[data-theme="mlp"]{--bg:#e8d0f0;--card:#fff;--text:#0f172a}
+[data-theme="chicawa"]{--bg:#f5f5f5;--card:#fff;--text:#0f172a}
+[data-theme="sakura"]{--bg:#160C1E;--card:#2a1a32;--text:#fde2f3;--muted:#c4b5d0}
+[data-theme="paraiso"]{--bg:#0d0b14;--card:#1a1625;--text:#e9e5f1;--muted:#a5a1b8}
+[data-theme="pastel"]{--bg:#eaf7ff;--card:#fff;--text:#0f172a;--accent:#2bb7ff}
+[data-theme="dreamcore"]{--bg:#eeecfb;--card:#fff;--text:#1e1b4b}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px;transition:.3s}
+h1{margin:0 0 8px}
+.controls{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+select,button{padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;background:var(--card);color:var(--text)}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:8px 12px;border-radius:999px;border:1px solid #cbd5e1;background:var(--card);cursor:pointer}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hero{background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.04)}
+.card h3{margin:0 0 4px;font-size:16px}
+.card p{margin:0 0 12px;color:var(--muted);font-size:13px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#f1f5f9;font-size:11px}
+.role{display:none}
+.role.active{display:block}
+</style>
+</head>
+<body data-theme="pastel">
+<h1>Maqueta Dashboard por Tema - Cherry-Bomb</h1>
+<div class="controls">
+<label>Tema:
+<select id="themeSelect">
+<option value="light">light</option>
+<option value="dark">dark</option>
+<option value="pastel">pastel</option>
+<option value="sunset">sunset</option>
+<option value="dawn">dawn</option>
+<option value="ocean">ocean</option>
+<option value="mlp">mlp</option>
+<option value="chicawa">chicawa</option>
+<option value="sakura">sakura</option>
+<option value="paraiso">paraiso</option>
+<option value="frutiger" selected>frutiger</option>
+<option value="dreamcore">dreamcore</option>
+</select>
+</label>
+</div>
+
+<div class="tabs">
+<button class="tab active" data-role="estudiante">Estudiante</button>
+<button class="tab" data-role="docente">Docente</button>
+<button class="tab" data-role="padre">Padre</button>
+<button class="tab" data-role="admin">Admin</button>
+</div>
+
+<div id="estudiante" class="role active">
+<div class="hero"><strong>¡Bienvenido, Estudiante!</strong> Pendientes hoy 3 · Clases hoy 4</div>
+<div class="grid">
+<div class="card"><h3>1. Pendientes - Actividades + Tareas</h3><p>Entregas vencidas y próximas 24h</p></div>
+<div class="card"><h3>2. Horario del día</h3><p>Clases actuales y próximas</p></div>
+<div class="card"><h3>3. Aulas Virtuales</h3><p>Acceso rápido a tus aulas activas</p></div>
+<div class="card"><h3>4. Exámenes</h3><p>Próximos exámenes y simuladores</p></div>
+<div class="card"><h3>5. Agenda</h3><p>Plan diario personal</p></div>
+<div class="card"><h3>6. Mensajes</h3><p>Bandeja de entrada</p></div>
+</div>
+</div>
+
+<div id="docente" class="role">
+<div class="hero"><strong>¡Bienvenido, Docente!</strong> Entregas pendientes 12 · Clases hoy 5</div>
+<div class="grid">
+<div class="card"><h3>1. Aulas Virtuales</h3><p>Tareas, entregas, calificaciones</p></div>
+<div class="card"><h3>2. Planificación</h3><p>Jornalización y cuadro de notas</p></div>
+<div class="card"><h3>3. Pendientes de corrección</h3><p>Entregas sin calificar</p></div>
+<div class="card"><h3>4. Horario</h3><p>Clases del día</p></div>
+<div class="card"><h3>5. Exámenes</h3><p>Crear y publicar exámenes</p></div>
+<div class="card"><h3>6. Mensajes grupales</h3><p>Comunicación con cursos</p></div>
+</div>
+</div>
+
+<div id="padre" class="role">
+<div class="hero"><strong>Portal Padres</strong> Hijo: Ana · Asistencia 95% · Tareas pendientes 2</div>
+<div class="grid">
+<div class="card"><h3>1. Portal Padres</h3><p>Seguimiento académico</p></div>
+<div class="card"><h3>2. Asistencias</h3><p>Registro de asistencia</p></div>
+<div class="card"><h3>3. Tareas del hijo</h3><p>Entregas pendientes</p></div>
+<div class="card"><h3>4. Calificaciones</h3><p>Notas por materia</p></div>
+<div class="card"><h3>5. Comunicación</h3><p>Mensajes del docente</p></div>
+<div class="card"><h3>6. Calendario escolar</h3><p>Eventos importantes</p></div>
+</div>
+</div>
+
+<div id="admin" class="role">
+<div class="hero"><strong>Panel administrativo</strong> Usuarios activos 342 · Matrículas pendientes 18</div>
+<div class="grid">
+<div class="card"><h3>1. Gestión de usuarios</h3><p>Crear/editar roles</p></div>
+<div class="card"><h3>2. Matrícula</h3><p>Inscripciones en línea</p></div>
+<div class="card"><h3>3. Asistencias</h3><p>Reportes</p></div>
+<div class="card"><h3>4. Colegio Protegido</h3><p>Incidentes y seguridad</p></div>
+<div class="card"><h3>5. Aulas Virtuales</h3><p>Supervisión general</p></div>
+<div class="card"><h3>6. Respaldos</h3><p>Exportar/importar datos</p></div>
+</div>
+</div>
+
+<script>
+const sel = document.getElementById('themeSelect');
+sel.addEventListener('change', e=>{
+  document.body.setAttribute('data-theme', e.target.value);
+});
+document.querySelectorAll('.tab').forEach(b=>{
+ b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.role').forEach(r=>r.classList.remove('active'));
+  document.getElementById(b.dataset.role).classList.add('active');
+ });
+});
+</script>
+</body>
+</html>

@@ -19,7 +19,6 @@ export const FEATURES = {
   CLASES: true,             // app-clases
   TAREAS: true,             // app-tareas (bachillerato_tareas)
   ESTUDIO: true,            // app-estudio (Pomodoro)
-  IDE: true,                // app-ide (editor de código)
   SAKURA_PLAYER: true,      // app-sakura-player
   RESPALDOS: true,          // app-respaldos
   CONFIGURACION: true,      // app-configuracion
@@ -41,7 +40,6 @@ export const FEATURES = {
   EXPERIENCIAS: false,      // app-experiencias (si requiere datos de otros)
   PADRES: true,             // app-parents (portal padres: backend /api/padres)
   SABI: false,              // app-sabi (alertas/sistema comunicación)
-  CANVA: true,              // app-canva (editor de diseño tipo Canva)
 };
 
 /**
@@ -93,7 +91,6 @@ export const APP_TO_FEATURE = {
   'planificacion': 'PLANIFICACION',
   'matricula': 'MATRICULA',
   'estudio': 'ESTUDIO',
-  'ide': 'IDE',
   'sakura-player': 'SAKURA_PLAYER',
   'configuracion': 'CONFIGURACION',
   'respaldos': 'RESPALDOS',
@@ -103,7 +100,6 @@ export const APP_TO_FEATURE = {
   'experiencias': 'EXPERIENCIAS',
   'parents': 'PADRES',
   'sabi': 'SABI',
-  'canva': 'CANVA',
   'picker': 'PICKER',
   'digital': 'DIGITAL',
 };

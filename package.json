@@ -20,6 +20,8 @@
     "node": "^18.0.0 || >=20.0.0"
   },
   "dependencies": {
+    "fabric": "^6.9.1",
+    "jspdf": "^3.0.4",
     "monaco-editor": "^0.52.2",
     "serve": "^14.2.1"
   },

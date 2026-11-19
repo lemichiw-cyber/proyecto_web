@@ -78,8 +78,8 @@ import { initForos } from "./modules/foros/foro-app.js";
       var usuarioActual = savedSession;
       var miGrupoId = null;
       apiMiGrupo().then(function (r) { if (r && r.grupo) miGrupoId = r.grupo.id; });
-      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','asistencias','estudio','ide','sakura-player','configuracion','respaldos','auth','canva'];
-      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','asistencias','estudio','ide','auth'];
+      var apps = ['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','asistencias','estudio','sakura-player','configuracion','respaldos','auth'];
+      var appsProtegidas = ['actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','parents','protegido','tareas','aulas','planificacion','matricula','asistencias','estudio','auth'];
       function $(id) { return document.getElementById(id); }
 
       /* ===================================================================
@@ -501,7 +501,6 @@ import { initForos } from "./modules/foros/foro-app.js";
         'planificacion': 'PLANIFICACION',
         'matricula': 'MATRICULA',
         'estudio': 'ESTUDIO',
-        'ide': 'IDE',
         'sakura-player': 'SAKURA_PLAYER',
         'configuracion': 'CONFIGURACION',
         'respaldos': 'RESPALDOS',
@@ -509,7 +508,6 @@ import { initForos } from "./modules/foros/foro-app.js";
         'asistencias': 'ASISTENCIA_DOCENTE',
         'experiencias': 'EXPERIENCIAS',
         'sabi': 'SABI',
-        'canva': 'CANVA',
       };
 
       var appsData = [
@@ -528,9 +526,7 @@ import { initForos } from "./modules/foros/foro-app.js";
         { id:'aulas', icon:'building-community', label:'Aulas Virtuales', desc:'Espacios de clase', color:'var(--purple)' },
         { id:'planificacion', icon:'clipboard-data', label:'Planificación', desc:'Jornalización docente', color:'#A78BFA' },
         { id:'matricula', icon:'user-plus', label:'Matrícula', desc:'Inscripciones en línea', color:'var(--teal)' },
-        { id:'canva', icon:'palette', label:'Canva', desc:'Editor de diseño', color:'#4f46e5' },
         { id:'estudio', icon:'clock', label:'Estudio', desc:'Técnica Pomodoro', color:'var(--amber)' },
-        { id:'ide', icon:'code', label:'IDE', desc:'Editor de código con ejecución', color:'#0EA5E9' },
         { id:'sakura-player', icon:'headphones', label:'Sakura Player', desc:'Música con YouTube Music', color:'#FF4FD8' },
         { id:'configuracion', icon:'settings', label:'Configuración', desc:'Personaliza tu experiencia', color:'#94A3B8' },
         { id:'respaldos', icon:'device-floppy', label:'Respaldos', desc:'Exportar / Importar mis datos', color:'#4ADE80' },
@@ -628,27 +624,92 @@ import { initForos } from "./modules/foros/foro-app.js";
           hoyBox.style.display = 'block';
           hoyBox.classList.remove('hidden');
         } else if (hoyBox) { hoyBox.style.display = 'none'; hoyBox.classList.add('hidden'); }
-        // App cards - filter by feature flags
+        // App cards - filter by feature flags + orden por rol
         var el = $('inicio-apps');
         el.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
+        var rolActual = usuarioActual ? String(usuarioActual.rol || '').toLowerCase() : '';
+        var roleCore = {
+          'estudiante': ['actividades','horario','aulas','examenes','agenda','mensajes'],
+          'docente': ['aulas','planificacion','tareas','horario','examenes','mensajes'],
+          'padres': ['parents','aulas','agenda','calendario','mensajes','configuracion'],
+          'admin': ['parents','matricula','aulas','planificacion','protegido','respaldos'],
+          'director': ['parents','matricula','aulas','planificacion','protegido','respaldos'],
+          'subdirector': ['parents','matricula','aulas','planificacion','protegido','respaldos']
+        };
+        var coreList = roleCore[rolActual] || [];
         var visibleApps = appsData.filter(function (a) {
           var feature = appFeatures[a.id];
           if (feature && !isEnabled(feature)) return false;
-          // Las tarjetas con "roles" son sólo para esos rangos (ej. el
-          // Portal de Padres: los demás no tienen nada que ver ahí).
           if (a.roles) {
             var rol = usuarioActual ? String(usuarioActual.rol || '') : '';
             if (a.roles.indexOf(rol) === -1) return false;
           }
           return true;
         });
-        el.innerHTML = visibleApps.map(function (a) {
+        // Ordenar: primero core por rol, luego el resto
+        visibleApps.sort(function(a,b){
+          var ia = coreList.indexOf(a.id);
+          var ib = coreList.indexOf(b.id);
+          var aIn = ia !== -1;
+          var bIn = ib !== -1;
+          if (aIn && !bIn) return -1;
+          if (!aIn && bIn) return 1;
+          if (aIn && bIn) return ia - ib;
+          return 0;
+        });
+        // Fusionar Actividades + Tareas en Pendientes para estudiante
+        if (rolActual === 'estudiante') {
+          var hasAct = visibleApps.some(function(a){return a.id==='actividades';});
+          var hasTar = visibleApps.some(function(a){return a.id==='tareas';});
+          if (hasAct && hasTar) {
+            var actIdx = visibleApps.findIndex(function(a){return a.id==='actividades';});
+            var tarIdx = visibleApps.findIndex(function(a){return a.id==='tareas';});
+            var merged = {
+              id:'pendientes',
+              icon:'clipboard-check',
+              label:'Pendientes',
+              desc:'Actividades y Tareas',
+              color:'#56CCF2'
+            };
+            // Eliminar tareas y reemplazar actividades por merged
+            visibleApps.splice(Math.max(actIdx,tarIdx),1);
+            visibleApps.splice(Math.min(actIdx,tarIdx),1,merged);
+          }
+        }
+        // Separar core visible y resto para botón Más
+        var coreCount = 6;
+        var coreApps = visibleApps.slice(0, coreCount);
+        var restApps = visibleApps.slice(coreCount);
+        function cardHtml(a){
           var isProtected = appsProtegidas.indexOf(a.id) !== -1;
           var locked = !logueado && isProtected;
-          return '<div class="app-card' + (locked ? ' app-card-locked' : '') + '" onclick="' + (locked ? "mostrarToast('Inicia sesión para acceder.','error');document.getElementById('btn-login').click()" : "mostrarApp('" + a.id + "')") + '">' +
+          var onclick = locked ? "mostrarToast('Inicia sesión para acceder.','error');document.getElementById('btn-login').click()" : "mostrarApp('" + a.id + "')";
+          return '<div class="app-card' + (locked ? ' app-card-locked' : '') + '" onclick="' + onclick + '">' +
             '<div class="icon" style="background:' + (locked ? 'var(--gray-200)' : a.color + '20') + '"><img src="' + iconSrc(a.icon) + '" style="width:24px;height:24px;display:block" alt=""></div>' +
             '<h4>' + a.label + '</h4><p>' + (locked ? '🔒 ' : '') + a.desc + '</p></div>';
-        }).join('');
+        }
+        var html = coreApps.map(cardHtml).join('');
+        if (restApps.length > 0) {
+          html += '<div class="app-card app-card-more" onclick="$(\'modal-mas-apps\').classList.add(\'open\');lockBody()">' +
+            '<div class="icon" style="background:var(--gray-200)"><img src="' + iconSrc('menu-2') + '" style="width:24px;height:24px;display:block" alt=""></div>' +
+            '<h4>Más</h4><p>' + restApps.length + ' aplicaciones</p></div>';
+          // Render modal de apps restantes si no existe
+          if (!$('modal-mas-apps')) {
+            var overlay = document.createElement('div');
+            overlay.id = 'modal-mas-apps';
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = '<div class="modal" style="max-width:720px">' +
+              '<div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0">Más aplicaciones</h3><button class="btn btn-icon" onclick="$(\'modal-mas-apps\').classList.remove(\'open\');unlockBody()">&times;</button></div>' +
+              '<div id="modal-mas-apps-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>' +
+            '</div>';
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function(e){ if(e.target===overlay){ overlay.classList.remove('open'); unlockBody(); }});
+          }
+          // Actualizar contenido del modal cada vez que se renderiza
+          var grid = $('modal-mas-apps-grid');
+          if (grid) grid.innerHTML = restApps.map(cardHtml).join('');
+        }
+        el.innerHTML = html;
       }
 
       function mostrarPróximamente(appId) {
@@ -795,9 +856,6 @@ import { initForos } from "./modules/foros/foro-app.js";
         if (app === 'asistencias') {
           import('./modules/asistencias/asistencias-app.js').then(m => m.render()).catch(() => { mostrarToast('Asistencias no disponibles offline.', 'info'); });
         }
-        if (app === 'canva') {
-          import('./modules/canva/canva-app.js').then(m => m.render()).catch(() => { mostrarToast('Canva no disponible offline.', 'error'); });
-        }
         if (app === 'auth') { renderAuth(); sincronizarCuentasBackend(); }
         if (app === 'protegido') sincronizarProtegido();
         if (app === 'aulas') {
@@ -915,19 +973,6 @@ import { initForos } from "./modules/foros/foro-app.js";
             });
           } else if (window.__padresImport.then) {
             window.__padresImport.then(function () { if (window.__padresApp && window.__padresApp.init) window.__padresApp.init(); });
-          }
-        }
-        if (app === 'ide') {
-          if (!window.__ideImport) {
-            window.__ideImport = import('./modules/ide/ide-app.js').then(function (mod) {
-              window.__ideApp = mod;
-              mod.init();
-            }).catch(function (e) {
-              console.error('[IDE] Error cargando módulo:', e);
-              mostrarToast('No se pudo cargar el IDE.', 'error');
-            });
-          } else if (window.__ideImport.then) {
-            window.__ideImport.then(function () { if (window.__ideApp && window.__ideApp.init) window.__ideApp.init(); });
           }
         }
       };

@@ -1,4 +1,4 @@
-import { getApiBase } from '../../api-base.js';
+import { getApiBase } from '../../api-base';
 import { fetchAsistencias } from './asistencias-utils.js';
 
 export async function render() {

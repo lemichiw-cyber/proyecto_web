@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Mockup dreamcore</title><style>
+:root{--bg:#eeecfb;--card:#fff;--text:#1e1b4b;--muted:#64748b;--accent:#8b5cf6}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{padding:8px 12px;border-radius:999px;border:1px solid #cbd5e1;background:var(--card);cursor:pointer}
+.tab.active{background:var(--accent);color:#fff}
+.role{display:none}
+.role.active{display:block}
+.hero{background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:16px}
+.icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+img{width:20px;height:20px}
+</style></head><body>
+<h1>Mockup Dashboard - Tema dreamcore</h1>
+<div class="tabs">
+<button class="tab active" data-role="estudiante">Estudiante</button>
+<button class="tab " data-role="docente">Docente</button>
+<button class="tab " data-role="padre">Padre</button>
+<button class="tab " data-role="admin">Admin</button>
+</div>
+<div id="estudiante" class="role active">
+<div class="hero"><strong>Estudiante Dashboard</strong></div>
+<div class="grid">
+<div class="card"><div class="icon" style="background:#56CCF222"><img src="icons/clipboard-list.svg" alt="clipboard-list"></div><h3>Pendientes - Actividades + Tareas</h3><p>Entregas vencidas y próximas 24h</p></div>
+<div class="card"><div class="icon" style="background:#f59e0b22"><img src="icons/calendar-time.svg" alt="calendar-time"></div><h3>Horario del día</h3><p>Clases actuales y próximas</p></div>
+<div class="card"><div class="icon" style="background:#8b5cf622"><img src="icons/building-community.svg" alt="building-community"></div><h3>Aulas Virtuales</h3><p>Acceso rápido a tus aulas activas</p></div>
+<div class="card"><div class="icon" style="background:#8b5cf622"><img src="icons/file-text.svg" alt="file-text"></div><h3>Exámenes</h3><p>Próximos exámenes y simuladores</p></div>
+<div class="card"><div class="icon" style="background:#22c55e22"><img src="icons/calendar-check.svg" alt="calendar-check"></div><h3>Agenda</h3><p>Plan diario personal</p></div>
+<div class="card"><div class="icon" style="background:#14b8a622"><img src="icons/mail.svg" alt="mail"></div><h3>Mensajes</h3><p>Bandeja de entrada</p></div>
+</div></div>
+<div id="docente" class="role ">
+<div class="hero"><strong>Docente Dashboard</strong></div>
+<div class="grid">
+<div class="card"><div class="icon" style="background:#8b5cf622"><img src="icons/building-community.svg" alt="building-community"></div><h3>Aulas Virtuales</h3><p>Acceso rápido a tus aulas activas</p></div>
+<div class="card"><div class="icon" style="background:#A78BFA22"><img src="icons/clipboard-data.svg" alt="clipboard-data"></div><h3>Planificación</h3><p>Jornalización y cuadro de notas</p></div>
+<div class="card"><div class="icon" style="background:#56CCF222"><img src="icons/clipboard-list.svg" alt="clipboard-list"></div><h3>Pendientes de corrección</h3><p>Entregas sin calificar</p></div>
+<div class="card"><div class="icon" style="background:#f59e0b22"><img src="icons/calendar-time.svg" alt="calendar-time"></div><h3>Horario</h3><p>Clases actuales y próximas</p></div>
+<div class="card"><div class="icon" style="background:#8b5cf622"><img src="icons/file-text.svg" alt="file-text"></div><h3>Exámenes</h3><p>Próximos exámenes y simuladores</p></div>
+<div class="card"><div class="icon" style="background:#f9731622"><img src="icons/users.svg" alt="users"></div><h3>Mensajes grupales</h3><p>Comunicación con cursos</p></div>
+</div></div>
+<div id="padre" class="role ">
+<div class="hero"><strong>Padre Dashboard</strong></div>
+<div class="grid">
+<div class="card"><div class="icon" style="background:#14b8a622"><img src="icons/users-group.svg" alt="users-group"></div><h3>Portal Padres</h3><p>Seguimiento académico</p></div>
+<div class="card"><div class="icon" style="background:#ef444422"><img src="icons/shield-check.svg" alt="shield-check"></div><h3>Asistencias</h3><p>Registro de asistencia</p></div>
+<div class="card"><div class="icon" style="background:#ec489922"><img src="icons/clipboard-check.svg" alt="clipboard-check"></div><h3>Tareas del hijo</h3><p>Entregas pendientes</p></div>
+<div class="card"><div class="icon" style="background:#8b5cf622"><img src="icons/file-text.svg" alt="file-text"></div><h3>Calificaciones</h3><p>Notas por materia</p></div>
+<div class="card"><div class="icon" style="background:#14b8a622"><img src="icons/mail.svg" alt="mail"></div><h3>Comunicación</h3><p>Mensajes del docente</p></div>
+<div class="card"><div class="icon" style="background:#ec489922"><img src="icons/calendar.svg" alt="calendar"></div><h3>Calendario escolar</h3><p>Eventos importantes</p></div>
+</div></div>
+<div id="admin" class="role ">
+<div class="hero"><strong>Admin Dashboard</strong></div>
+<div class="grid">
+<div class="card"><div class="icon" style="background:#14b8a622"><img src="icons/user-plus.svg" alt="user-plus"></div><h3>Gestión de usuarios</h3><p>Crear/editar roles</p></div>
+<div class="card"><div class="icon" style="background:#14b8a622"><img src="icons/user-plus.svg" alt="user-plus"></div><h3>Matrícula</h3><p>Inscripciones en línea</p></div>
+<div class="card"><div class="icon" style="background:#ef444422"><img src="icons/shield-check.svg" alt="shield-check"></div><h3>Asistencias</h3><p>Registro de asistencia</p></div>
+<div class="card"><div class="icon" style="background:#ef444422"><img src="icons/shield-check.svg" alt="shield-check"></div><h3>Colegio Protegido</h3><p>Incidentes y seguridad</p></div>
+<div class="card"><div class="icon" style="background:#8b5cf622"><img src="icons/building-community.svg" alt="building-community"></div><h3>Aulas Virtuales</h3><p>Acceso rápido a tus aulas activas</p></div>
+<div class="card"><div class="icon" style="background:#4ADE8022"><img src="icons/device-floppy.svg" alt="device-floppy"></div><h3>Respaldos</h3><p>Exportar/importar datos</p></div>
+</div></div>
+<script>
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".role").forEach(r=>r.classList.remove("active"));document.getElementById(b.dataset.role).classList.add("active");}));
+</script></body></html>

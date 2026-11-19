@@ -123,6 +123,9 @@ unicode: "ea05"
       </a>
       <button class="sidebar-close" id="btn-sidebar-close">&times;</button>
     </div>
+    <div class="sidebar-search" style="padding:0.75rem 1rem">
+      <input id="sidebar-search" type="search" placeholder="Buscar aplicación..." style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid var(--gray-300);background:var(--gray-50);color:var(--text);font-size:0.9rem">
+    </div>
     <nav class="sidebar-nav" aria-label="Navegación principal">
       <ul>
         <li><a data-app="inicio" class="active"><span class="nav-icon"><!--
@@ -458,9 +461,7 @@ unicode: "eb4b"
 </svg>
 </span> Matrícula</a></li>
 <li><a data-app="asistencias"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 13l3 3 4-4 5 5"/></svg></span> Asistencias</a></li>
-<li><a data-app="canva"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span> Canva</a></li>
 <li><a data-app="estudio"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> Estudio</a></li>
-<li><a data-app="ide"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span> IDE</a></li>
 <li><a data-app="sakura-player"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span> Sakura Player</a></li>
 <li id="nav-auth" class="hidden"><a data-app="auth"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Usuarios</a></li>
 <li><a data-app="configuracion"><span class="nav-icon"><svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /></svg></span> Configuración</a></li>
@@ -2941,14 +2942,6 @@ unicode: "ea6f"
       </div>
     </section>
 
-    <!-- ===== CANVA ===== -->
-    <section id="app-canva" class="section hidden">
-      <div class="container">
-        <h2 class="section-title">Canva · Editor de diseño</h2>
-        <p class="section-sub">Crea diseños con texto, formas e imágenes. Editor simplificado tipo Canva.</p>
-      </div>
-    </section>
-
     <!-- ===== SABI ===== -->
     <section id="app-sabi" class="section hidden">
       <div class="container">
@@ -3872,43 +3865,6 @@ unicode: "eb1c"
       </div>
     </section>
 
-    <!-- ===== IDE - Editor de Código ===== -->
-    <section id="app-ide" class="section hidden">
-      <div class="container">
-        <h2 class="section-title">IDE – Editor de código</h2>
-        <p class="section-sub">Escribí, ejecutá y depurá código en la nube. Soporte para Python, JavaScript, TypeScript, Java, C y C++.</p>
-
-        <div class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-          <div>
-            <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">
-              <select id="ide-lenguaje" style="flex:1;"></select>
-              <button id="ide-nuevo" class="btn btn-outline btn-sm" title="Nuevo archivo">Nuevo</button>
-              <button id="ide-ejecutar" class="btn btn-primary btn-sm">▶ Ejecutar</button>
-              <button id="ide-depurar" class="btn btn-outline btn-sm" disabled title="Depurar (solo Python)">🐛 Depurar</button>
-            </div>
-            <div id="ide-editor" style="height:420px;border:1px solid var(--gray-200);border-radius:.5rem;background:#1e1e1e;"></div>
-            <div style="display:flex;gap:.5rem;margin-top:.5rem;">
-              <input id="ide-entrada" placeholder="Entrada estándar (opcional)" style="flex:1;">
-              <button id="ide-limpiar" class="btn btn-outline btn-sm">Limpiar</button>
-            </div>
-          </div>
-          <div>
-            <h3 style="margin:0 0 .5rem;font-size:1rem;">Salida</h3>
-            <pre id="ide-salida" style="height:420px;margin:0;padding:.75rem;background:#0f172a;color:#e2e8f0;border-radius:.5rem;overflow:auto;white-space:pre-wrap;font-size:.85rem;"></pre>
-            <div style="margin-top:.5rem;">
-              <h4 style="margin:.5rem 0;font-size:.9rem;">Depurador</h4>
-              <div id="ide-depurador" style="height:200px;background:#0b1020;color:#cbd5e1;border-radius:.5rem;padding:.5rem;overflow:auto;font-size:.8rem;"></div>
-              <div style="display:flex;gap:.5rem;margin-top:.5rem;">
-                <button id="ide-dbg-prev" class="btn btn-outline btn-sm" disabled>◀ Anterior</button>
-                <button id="ide-dbg-next" class="btn btn-outline btn-sm" disabled>Siguiente ▶</button>
-                <span id="ide-dbg-info" style="flex:1;font-size:.8rem;color:var(--gray-500);"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <div id="app-respaldos" class="section hidden">
       <div class="container">
         <h2 class="section-title"><svg width="20" height="20" class="icon-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" /><path d="M3 10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" /><path d="M3 3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3" /></svg> Respaldos</h2>
@@ -4036,7 +3992,41 @@ unicode: "eb1c"
   <script type="module" src="/src/global-delegator.js"></script>
   <script type="module" src="/src/main.ts"></script>
 
-  
+  <script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var search = document.getElementById('sidebar-search');
+    if(!search) return;
+    search.addEventListener('input', function(){
+      var q = this.value.trim().toLowerCase();
+      document.querySelectorAll('.sidebar-nav ul > li').forEach(function(li){
+        var txt = li.innerText.toLowerCase();
+        li.style.display = txt.includes(q) ? '' : 'none';
+      });
+    });
+    // Agrupar sidebar
+    var groups = [
+      {name:'Académico', apps:['inicio','actividades','examenes','foros','agenda','calendario','horario','clases','mensajes','grupales','aulas','tareas']},
+      {name:'Gestión', apps:['parents','protegido','planificacion','matricula','asistencias']},
+      {name:'Herramientas', apps:['estudio','sakura-player','configuracion']}
+    ];
+    var ul = document.querySelector('.sidebar-nav ul');
+    if(!ul) return;
+    var items = Array.from(ul.children);
+    ul.innerHTML = '';
+    groups.forEach(function(g){
+      var h = document.createElement('li');
+      h.className = 'sidebar-group';
+      h.style.cssText = 'padding:.5rem 1rem;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-500);pointer-events:none';
+      h.textContent = g.name;
+      ul.appendChild(h);
+      g.apps.forEach(function(app){
+        var li = items.find(function(it){ return it.querySelector('a[data-app="'+app+'"]'); });
+        if(li){ ul.appendChild(li); }
+      });
+    });
+  });
+  </script>
+
 </body>
 </html>
 

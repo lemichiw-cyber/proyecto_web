@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="frutiger">
+<head>
+<meta charset="UTF-8">
+<title>Maqueta Dashboard Cherry-Bomb por Rol</title>
+<style>
+:root{--bg:#eaf7ff;--card:#fff;--text:#0f172a;--muted:#64748b}
+[data-theme="frutiger"]{--bg:#eaf7ff}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px}
+h1{margin:0 0 8px}
+h2{margin:28px 0 12px}
+.role{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+.card{background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.04)}
+.card h3{margin:0 0 4px;font-size:16px}
+.card p{margin:0 0 12px;color:var(--muted);font-size:13px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#f1f5f9;font-size:11px}
+.hero{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:16px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{padding:8px 12px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;cursor:pointer}
+.tab.active{background:#0ea5e9;color:#fff;border-color:#0ea5e9}
+.role{display:none}
+.role.active{display:grid}
+</style>
+</head>
+<body>
+<h1>Maqueta Dashboard Cherry-Bomb por Rol</h1>
+<div class="tabs">
+<button class="tab active" data-role="estudiante">Estudiante</button>
+<button class="tab" data-role="docente">Docente</button>
+<button class="tab" data-role="padre">Padre</button>
+<button class="tab" data-role="admin">Admin</button>
+</div>
+
+<div id="estudiante" class="role active">
+<div class="hero"><strong>¡Bienvenido, Estudiante!</strong> Pendientes hoy 3 · Clases hoy 4 · Próximo examen viernes</div>
+<div class="card"><h3>1. Pendientes - Actividades + Tareas</h3><p>Entregas vencidas y próximas 24h</p><span class="badge">core</span></div>
+<div class="card"><h3>2. Horario del día</h3><p>Clases actuales y próximas</p><span class="badge">core</span></div>
+<div class="card"><h3>3. Aulas Virtuales</h3><p>Acceso rápido a tus aulas activas</p><span class="badge">core</span></div>
+<div class="card"><h3>4. Exámenes</h3><p>Próximos exámenes y simuladores</p><span class="badge">core</span></div>
+<div class="card"><h3>5. Agenda</h3><p>Plan diario personal</p><span class="badge">core</span></div>
+<div class="card"><h3>6. Mensajes</h3><p>Bandeja de entrada</p><span class="badge">core</span></div>
+<h2 style="font-size:14px">Más</h2>
+<div class="card"><h3>Foros</h3><p>Secundario</p></div>
+<div class="card"><h3>Calendario</h3><p>Secundario</p></div>
+<div class="card"><h3>Estudio Pomodoro</h3><p>Secundario</p></div>
+</div>
+
+<div id="docente" class="role">
+<div class="hero"><strong>¡Bienvenido, Docente!</strong> Entregas pendientes 12 · Clases hoy 5</div>
+<div class="card"><h3>1. Aulas Virtuales</h3><p>Tareas, entregas, calificaciones</p><span class="badge">core</span></div>
+<div class="card"><h3>2. Planificación</h3><p>Jornalización y cuadro de notas</p><span class="badge">core</span></div>
+<div class="card"><h3>3. Pendientes de corrección</h3><p>Entregas sin calificar</p><span class="badge">core</span></div>
+<div class="card"><h3>4. Horario</h3><p>Clases del día</p><span class="badge">core</span></div>
+<div class="card"><h3>5. Exámenes</h3><p>Crear y publicar exámenes</p><span class="badge">core</span></div>
+<div class="card"><h3>6. Mensajes grupales</h3><p>Comunicación con cursos</p><span class="badge">core</span></div>
+</div>
+
+<div id="padre" class="role">
+<div class="hero"><strong>Portal Padres</strong> Hijo: Ana · Asistencia 95% · Tareas pendientes 2</div>
+<div class="card"><h3>1. Portal Padres</h3><p>Seguimiento académico</p><span class="badge">core</span></div>
+<div class="card"><h3>2. Asistencias</h3><p>Registro de asistencia</p><span class="badge">core</span></div>
+<div class="card"><h3>3. Tareas del hijo</h3><p>Entregas pendientes</p><span class="badge">core</span></div>
+<div class="card"><h3>4. Calificaciones</h3><p>Notas por materia</p><span class="badge">core</span></div>
+<div class="card"><h3>5. Comunicación</h3><p>Mensajes del docente</p><span class="badge">core</span></div>
+<div class="card"><h3>6. Calendario escolar</h3><p>Eventos importantes</p><span class="badge">core</span></div>
+</div>
+
+<div id="admin" class="role">
+<div class="hero"><strong>Panel administrativo</strong> Usuarios activos 342 · Matrículas pendientes 18</div>
+<div class="card"><h3>1. Gestión de usuarios</h3><p>Crear/editar roles</p><span class="badge">core</span></div>
+<div class="card"><h3>2. Matrícula</h3><p>Inscripciones en línea</p><span class="badge">core</span></div>
+<div class="card"><h3>3. Asistencias</h3><p>Reportes</p><span class="badge">core</span></div>
+<div class="card"><h3>4. Colegio Protegido</h3><p>Incidentes y seguridad</p><span class="badge">core</span></div>
+<div class="card"><h3>5. Aulas Virtuales</h3><p>Supervisión general</p><span class="badge">core</span></div>
+<div class="card"><h3>6. Respaldos</h3><p>Exportar/importar datos</p><span class="badge">core</span></div>
+</div>
+
+<script>
+document.querySelectorAll('.tab').forEach(b=>{
+ b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.role').forEach(r=>r.classList.remove('active'));
+  document.getElementById(b.dataset.role).classList.add('active');
+ });
+});
+</script>
+</body>
+</html>
