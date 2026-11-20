@@ -57,7 +57,9 @@ unicode: "ec42"
       </a>
       <div class="flex-1"></div>
       <div class="header-access" role="group" aria-label="Accesibilidad y tema">
-        <button id="btn-theme" class="btn-ghost header-access-btn" title="Cambiar tema" data-onclick="abrirTemas"><!--
+        <button id="btn-header-access" class="btn-ghost header-access-btn" aria-expanded="false" aria-controls="header-access-panel" title="Accesibilidad y herramientas">⋮</button>
+        <div id="header-access-panel" class="header-access-panel hidden">
+          <button id="btn-theme" class="btn-ghost header-access-btn" title="Cambiar tema" data-onclick="abrirTemas"><!--
 tags: [night, dark mode, moon, climate, forecast, meteorology, atmospheric, conditions]
 category: Weather
 version: "1.0"
@@ -75,12 +77,12 @@ unicode: "eaf8"
 >
   <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" />
 </svg>
-        </button>
-        <button id="btn-font-dec" class="btn-ghost header-access-btn" title="Letra más pequeña" aria-label="Reducir letra">A−</button>
-        <button id="btn-font-inc" class="btn-ghost header-access-btn" title="Letra más grande" aria-label="Aumentar letra">A+</button>
-        <button id="btn-contrast" class="btn-ghost header-access-btn" title="Alto contraste" aria-label="Alto contraste">◐</button>
-        <div class="vol-control hidden" id="vol-control">
-          <button class="btn-vol-toggle btn-ghost header-access-btn" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
+          </button>
+          <button id="btn-font-dec" class="btn-ghost header-access-btn" title="Letra más pequeña" aria-label="Reducir letra">A−</button>
+          <button id="btn-font-inc" class="btn-ghost header-access-btn" title="Letra más grande" aria-label="Aumentar letra">A+</button>
+          <button id="btn-contrast" class="btn-ghost header-access-btn" title="Alto contraste" aria-label="Alto contraste">◐</button>
+          <div class="vol-control hidden" id="vol-control">
+            <button class="btn-vol-toggle btn-ghost header-access-btn" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
 tags: [speaker, volume, loud, speaker-high]
 category: Media
 version: "1.0"
@@ -92,8 +94,9 @@ unicode: "ea05"
   <path id="vol-wave2" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
 </svg>
 </button>
-          <div class="vol-pop" id="vol-pop">
-            <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volumen">
+            <div class="vol-pop" id="vol-pop">
+              <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volumen">
+            </div>
           </div>
         </div>
       </div>
@@ -4028,6 +4031,21 @@ unicode: "eb1c"
         if(li){ ul.appendChild(li); }
       });
     });
+  });
+  }
+  // Header access dropdown
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('btn-header-access');
+    var panel = document.getElementById('header-access-panel');
+    if(!btn || !panel) return;
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = panel.classList.contains('hidden');
+      document.querySelectorAll('.header-access-panel').forEach(function(p){ p.classList.add('hidden'); });
+      if(open){ panel.classList.remove('hidden'); btn.setAttribute('aria-expanded','true'); }
+      else { panel.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+    });
+    document.addEventListener('click', function(){ panel.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); });
   });
   </script>
 
