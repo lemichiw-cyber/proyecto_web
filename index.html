@@ -56,7 +56,8 @@ unicode: "ec42"
         <span>Cherry-Bomb</span>
       </a>
       <div class="flex-1"></div>
-      <button id="btn-theme" class="btn-theme-toggle" title="Cambiar tema" data-onclick="abrirTemas"><!--
+      <div class="header-access" role="group" aria-label="Accesibilidad y tema">
+        <button id="btn-theme" class="btn-ghost header-access-btn" title="Cambiar tema" data-onclick="abrirTemas"><!--
 tags: [night, dark mode, moon, climate, forecast, meteorology, atmospheric, conditions]
 category: Weather
 version: "1.0"
@@ -74,12 +75,12 @@ unicode: "eaf8"
 >
   <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" />
 </svg>
-</button>
-      <button id="btn-font-dec" class="btn-ghost" title="Letra más pequeña" aria-label="Reducir letra">A−</button>
-      <button id="btn-font-inc" class="btn-ghost" title="Letra más grande" aria-label="Aumentar letra">A+</button>
-      <button id="btn-contrast" class="btn-ghost" title="Alto contraste" aria-label="Alto contraste">◐</button>
-      <div class="vol-control hidden" id="vol-control">
-        <button class="btn-vol-toggle" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
+        </button>
+        <button id="btn-font-dec" class="btn-ghost header-access-btn" title="Letra más pequeña" aria-label="Reducir letra">A−</button>
+        <button id="btn-font-inc" class="btn-ghost header-access-btn" title="Letra más grande" aria-label="Aumentar letra">A+</button>
+        <button id="btn-contrast" class="btn-ghost header-access-btn" title="Alto contraste" aria-label="Alto contraste">◐</button>
+        <div class="vol-control hidden" id="vol-control">
+          <button class="btn-vol-toggle btn-ghost header-access-btn" id="btn-vol" title="Volumen" aria-label="Volumen"><!--
 tags: [speaker, volume, loud, speaker-high]
 category: Media
 version: "1.0"
@@ -91,21 +92,24 @@ unicode: "ea05"
   <path id="vol-wave2" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
 </svg>
 </button>
-        <div class="vol-pop" id="vol-pop">
-          <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volumen">
+          <div class="vol-pop" id="vol-pop">
+            <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volumen">
+          </div>
         </div>
       </div>
-      <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
-        <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
+      <div class="header-user" id="header-user">
+        <div id="user-info" class="hidden" style="display:none;align-items:center;gap:.5rem;">
+          <span id="user-email-display" style="color:var(--gray-700);font-weight:500;font-size:.82rem;"></span>
+        </div>
+        <button type="button" id="btn-logout-top" class="btn btn-sm btn-logout-top hidden" style="display:none;" title="Salir de la cuenta" aria-label="Salir de la cuenta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span class="btn-logout-label">Salir</span>
+        </button>
       </div>
-      <button type="button" id="btn-logout-top" class="btn btn-sm btn-logout-top hidden" style="display:none;" title="Salir de la cuenta" aria-label="Salir de la cuenta">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-        <span class="btn-logout-label">Salir</span>
-      </button>
     </div>
     <div id="app-offline-banner" class="app-offline-banner hidden" role="status" aria-live="polite">
       <span class="app-offline-dot" aria-hidden="true"></span>

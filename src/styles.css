@@ -1822,3 +1822,27 @@ body.alto-contraste :is(input, select, textarea) { border-width: 2px; }
 
 /* Espaciado consistente entre secciones de inicio */
 #app-inicio > .section { padding: 2rem 0 3rem; }
+
+/* ===== HEADER HIERARQUÍA - Todos los temas ===== */
+.app-header { position:sticky; top:0; z-index:100; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: var(--bg-card); border-bottom:1px solid var(--border); }
+.app-header .container { display:flex; align-items:center; gap:.75rem; padding:.6rem 1rem; }
+.app-header .logo-link { display:flex; align-items:center; gap:.5rem; font-weight:700; color:var(--text); text-decoration:none; }
+.app-header .hamburger { background:transparent; border:none; padding:.5rem; border-radius:8px; cursor:pointer; }
+.app-header .header-access { display:flex; align-items:center; gap:.25rem; margin-left:auto; padding:.25rem; background: var(--gray-50); border-radius:10px; border:1px solid var(--border); }
+.app-header .header-access-btn { background:transparent; border:none; padding:.4rem .5rem; border-radius:8px; cursor:pointer; font-size:.9rem; color:var(--text); }
+.app-header .header-access-btn:hover { background:var(--gray-100); }
+.app-header .header-user { display:flex; align-items:center; gap:.5rem; margin-left:.5rem; }
+.app-header #user-info { padding:.25rem .5rem; border-radius:8px; background:var(--gray-50); border:1px solid var(--border); }
+.app-header .btn-logout-top { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .75rem; border-radius:10px; background:var(--gray-100); border:1px solid var(--border); font-weight:600; }
+.app-header .btn-logout-top:hover { background:var(--gray-200); }
+
+[data-theme="frutiger"] .app-header { background: rgba(255,255,255,.85); }
+[data-theme="frutiger"] .app-header .header-access,
+[data-theme="frutiger"] .app-header #user-info { background: rgba(255,255,255,.7); border-color: rgba(0,0,0,.06); }
+
+@media (max-width:768px) {
+  .app-header .header-access { gap:.1rem; padding:.2rem; }
+  .app-header .header-access-btn { padding:.35rem; }
+  .app-header .header-user #user-email-display { display:none; }
+  .app-header .btn-logout-label { display:none; }
+}
